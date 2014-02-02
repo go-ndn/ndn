@@ -1,4 +1,4 @@
-package tlv
+package packet
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 
 func TestReadByte(t *testing.T) {
 	buf := bytes.NewReader([]byte{0xFF, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77})
-	r, o := ReadByte(buf)
+	r, o, _ := ReadByte(buf)
 	if o != 8 {
 		t.Error("not reading the right length")
 	}
@@ -26,15 +26,15 @@ func TestWriteByte(t *testing.T) {
 
 func TestParse(t *testing.T) {
 	v := new(tlv)
-	r := v.Parse([]byte{0xF0, 0x02, 0x01})
-	if ToInt(v.Type) != 240 {
+	r, _ := v.Parse([]byte{0xF0, 0x02, 0x01})
+	if n, _ := ToInt(v.Type); n != 240 {
 		t.Error("type %d, %d", v.Type, 240)
 	}
 
 	if len(r) != 1 || r[0] != 1 {
 		t.Error("remain %d, %d", len(r), r[0])
 	}
-	r = v.Parse([]byte{0xF0, 0x4, 0x01, 0x02})
+	r, _ = v.Parse([]byte{0xF0, 0x4, 0x01, 0x02})
 	if v.Value[0] != 1 || v.Value[1] != 2 {
 		t.Error("value %d, %d", v.Value[0], v.Value[1])
 	}
@@ -46,7 +46,7 @@ func TestParse(t *testing.T) {
 func TestDump(t *testing.T) {
 	v := new(tlv)
 	v.Parse([]byte{0xF0, 0x4, 0x01, 0x02})
-	if !EqualBytes(v.Dump(), []byte{0xF0, 0x4, 0x01, 0x02}) {
+	if b, _ := v.Dump(); !EqualBytes(b, []byte{0xF0, 0x4, 0x01, 0x02}) {
 		t.Error(v.Dump())
 	}
 }
