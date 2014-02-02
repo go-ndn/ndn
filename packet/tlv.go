@@ -117,7 +117,20 @@ func (this *tlv) Dump() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	buf.Write(this.Value)
+	if len(this.Value) != 0 && len(this.Children) != 0 {
+		return nil, errors.New("value and children cannot both exist")
+	}
+	if len(this.Value) == 0 {
+		for i := range this.Children {
+			b, err := this.Children[i].Dump()
+			if err != nil {
+				return nil, err
+			}
+			buf.Write(b)
+		}
+	} else {
+		buf.Write(this.Value)
+	}
 	return buf.Bytes(), nil
 }
 
