@@ -11,7 +11,7 @@ func TestReadByte(t *testing.T) {
 	if o != 8 {
 		t.Error("not reading the right length")
 	}
-	if r.(uint64) != 4822678189205111 {
+	if r != 4822678189205111 {
 		t.Error("not reading the right value", r)
 	}
 }
@@ -27,7 +27,7 @@ func TestWriteByte(t *testing.T) {
 func TestParse(t *testing.T) {
 	v := new(TLV)
 	r, _ := v.Parse([]byte{0xF0, 0x02, 0x01})
-	if n, _ := ToInt(v.Type); n != 240 {
+	if v.Type != 240 {
 		t.Error("type %d, %d", v.Type, 240)
 	}
 

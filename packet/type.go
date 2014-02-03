@@ -139,7 +139,7 @@ func NodeMatcher(n Node, raw []byte) (tlv *TLV, remain []byte, err error) {
 		if err != nil {
 			return
 		}
-		if n.Type != tlv.GetType() {
+		if n.Type != tlv.Type {
 			err = errors.New(WRONG_TYPE)
 			return
 		}
