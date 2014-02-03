@@ -7,26 +7,37 @@ import (
 	"errors"
 )
 
-type tlv struct {
+type TLV struct {
 	Type     interface{}
 	Length   interface{}
 	Value    []byte
-	Children []*tlv
+	Children []*TLV
 }
 
-func ToInt(v interface{}) (uint64, error) {
+func (this *TLV) GetType() uint64 {
+	ret, _ := ToInt(this.Type)
+	return ret
+}
+
+func (this *TLV) GetLength() uint64 {
+	ret, _ := ToInt(this.Length)
+	return ret
+}
+
+func ToInt(v interface{}) (ret uint64, err error) {
 	switch v.(type) {
 	case uint8:
-		return uint64(v.(uint8)), nil
+		ret = uint64(v.(uint8))
 	case uint16:
-		return uint64(v.(uint16)), nil
+		ret = uint64(v.(uint16))
 	case uint32:
-		return uint64(v.(uint32)), nil
+		ret = uint64(v.(uint32))
 	case uint64:
-		return v.(uint64), nil
+		ret = v.(uint64)
 	default:
-		return 0, errors.New("unknown type")
+		err = errors.New(UNKNOWN_NUM_TYPE)
 	}
+	return
 }
 
 func ReadByte(buf *bytes.Reader) (result interface{}, offset uint64, err error) {
@@ -66,7 +77,7 @@ func ReadByte(buf *bytes.Reader) (result interface{}, offset uint64, err error) 
 	return
 }
 
-func WriteByte(buf *bytes.Buffer, v interface{}) error {
+func WriteByte(buf *bytes.Buffer, v interface{}) (err error) {
 	switch v.(type) {
 	case uint16:
 		buf.WriteByte(0xFD)
@@ -75,16 +86,13 @@ func WriteByte(buf *bytes.Buffer, v interface{}) error {
 	case uint64:
 		buf.WriteByte(0xFF)
 	}
-	err := binary.Write(buf, binary.BigEndian, v)
-	if err != nil {
-		return err
-	}
-	return nil
+	err = binary.Write(buf, binary.BigEndian, v)
+	return
 }
 
-func (this *tlv) Parse(raw []byte) ([]byte, error) {
+func (this *TLV) Parse(raw []byte) ([]byte, error) {
 	if len(raw) == 0 {
-		return nil, errors.New("empty buffer")
+		return nil, errors.New(EMPTY_PARSE_BUFFER)
 	}
 	buf := bytes.NewReader(raw)
 	t, tl, err := ReadByte(buf)
@@ -107,7 +115,7 @@ func (this *tlv) Parse(raw []byte) ([]byte, error) {
 	return raw[length:], nil
 }
 
-func (this *tlv) Dump() ([]byte, error) {
+func (this *TLV) Dump() ([]byte, error) {
 	buf := new(bytes.Buffer)
 	err := WriteByte(buf, this.Type)
 	if err != nil {
@@ -118,11 +126,11 @@ func (this *tlv) Dump() ([]byte, error) {
 		return nil, err
 	}
 	if len(this.Value) != 0 && len(this.Children) != 0 {
-		return nil, errors.New("value and children cannot both exist")
+		return nil, errors.New(VALUE_CHILDREN_COEXIST)
 	}
 	if len(this.Value) == 0 {
-		for i := range this.Children {
-			b, err := this.Children[i].Dump()
+		for _, c := range this.Children {
+			b, err := c.Dump()
 			if err != nil {
 				return nil, err
 			}
@@ -132,18 +140,4 @@ func (this *tlv) Dump() ([]byte, error) {
 		buf.Write(this.Value)
 	}
 	return buf.Bytes(), nil
-}
-
-func ReadList(raw []byte) ([]*tlv, error) {
-	ret := []*tlv{}
-	var err error
-	for len(raw) != 0 {
-		v := new(tlv)
-		raw, err = v.Parse(raw)
-		if err != nil {
-			return nil, err
-		}
-		ret = append(ret, v)
-	}
-	return ret, nil
 }

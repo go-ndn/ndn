@@ -25,7 +25,7 @@ func TestWriteByte(t *testing.T) {
 }
 
 func TestParse(t *testing.T) {
-	v := new(tlv)
+	v := new(TLV)
 	r, _ := v.Parse([]byte{0xF0, 0x02, 0x01})
 	if n, _ := ToInt(v.Type); n != 240 {
 		t.Error("type %d, %d", v.Type, 240)
@@ -44,7 +44,7 @@ func TestParse(t *testing.T) {
 }
 
 func TestDump(t *testing.T) {
-	v := new(tlv)
+	v := new(TLV)
 	v.Parse([]byte{0xF0, 0x4, 0x01, 0x02})
 	if b, _ := v.Dump(); !EqualBytes(b, []byte{0xF0, 0x4, 0x01, 0x02}) {
 		t.Error(v.Dump())
