@@ -37,7 +37,7 @@ const (
 	KEY_LOCATOR
 	CERTIFICATE_NAME
 	WITNESS
-	SIGNATURE_BITS // FIXME, raw 32 byte signature
+	SIGNATURE_BITS
 )
 
 func nodeType(t uint64) string {
@@ -196,20 +196,46 @@ var (
 	}}
 )
 
-func MatchNode(n Node, raw []byte) (tlv *TLV, remain []byte, err error) {
-	fmt.Printf("%v %v\n", n, raw)
+func ParseData(raw []byte) (data *TLV, err error) {
+	data, remain, err := matchNode(DataFormat, raw)
+	if err != nil {
+		return
+	}
+	if len(remain) != 0 {
+		err = errors.New(BUFFER_NOT_EMPTY)
+	}
+	return
+}
+
+func ParseInterest(raw []byte) (interest *TLV, err error) {
+	interest, remain, err := matchNode(InterestFormat, raw)
+	if err != nil {
+		return
+	}
+	if len(remain) != 0 {
+		err = errors.New(BUFFER_NOT_EMPTY)
+	}
+	return
+}
+
+// prefix match one node
+func matchNode(n Node, raw []byte) (tlv *TLV, remain []byte, err error) {
+	//fmt.Printf("%v %v\n", n, raw)
 	tlv = new(TLV)
 	remain, err = tlv.Parse(raw)
 	if err != nil {
 		return
 	}
+	// type does not match; don't touch remain
 	if n.Type != tlv.Type {
 		err = errors.New(WRONG_TYPE)
 		remain = raw
 		return
 	}
+	// turn tlv.value into children
 	if len(n.Children) != 0 {
 		b := tlv.Value
+		// value and children are mutual exclusive
 		tlv.Value = nil
 
 		for _, c := range n.Children {
@@ -223,43 +249,44 @@ func MatchNode(n Node, raw []byte) (tlv *TLV, remain []byte, err error) {
 			}
 		}
 		if len(b) != 0 {
-			err = errors.New(LEFT_OVER)
+			err = errors.New(BUFFER_NOT_EMPTY)
 			return
 		}
 	}
 	return
 }
 
+// prefix match and-node once; ignore count
 func matchGroupAndNode(n Node, raw []byte) (matched []*TLV, remain []byte, err error) {
 	remain = raw
-	for _, cc := range n.Children {
-		var mm []*TLV
-		mm, remain, err = matchChildNode(cc, remain)
+	for _, c := range n.Children {
+		var m []*TLV
+		m, remain, err = matchChildNode(c, remain)
 		if err != nil {
+			// and: one fails and all fail
 			return
 		}
-		for _, m := range mm {
-			matched = append(matched, m)
-		}
+		matched = append(matched, m...)
 	}
 	return
 }
 
+// prefix match or-node once; ignore count
 func matchGroupOrNode(n Node, raw []byte) (matched []*TLV, remain []byte, err error) {
 	remain = raw
-	for _, cc := range n.Children {
-		var mm []*TLV
-		mm, remain, err = matchChildNode(cc, remain)
+	for _, c := range n.Children {
+		var m []*TLV
+		m, remain, err = matchChildNode(c, remain)
 		if err != nil {
+			// or: ignore error and try another
 			err = nil
 			continue
 		} else {
-			for _, m := range mm {
-				matched = append(matched, m)
-			}
+			matched = append(matched, m...)
 			break
 		}
 	}
+	// OR should at least have one match;
 	if len(matched) == 0 {
 		err = errors.New(WRONG_TYPE)
 		return
@@ -267,6 +294,7 @@ func matchGroupOrNode(n Node, raw []byte) (matched []*TLV, remain []byte, err er
 	return
 }
 
+// perform match once for and/or/other type; handle count
 func matchChildNode(n Node, raw []byte) (matched []*TLV, remain []byte, err error) {
 	remain = raw
 	count := 0
@@ -279,24 +307,23 @@ func matchChildNode(n Node, raw []byte) (matched []*TLV, remain []byte, err erro
 			mm, remain, err = matchGroupOrNode(n, remain)
 		default:
 			var m *TLV
-			m, remain, err = MatchNode(n, remain)
+			m, remain, err = matchNode(n, remain)
 			if err == nil {
 				mm = append(mm, m)
 			}
 		}
 		if err != nil {
-			//fmt.Println(err)
 			err = nil
 			break
 		}
-		for _, m := range mm {
-			matched = append(matched, m)
-		}
+		matched = append(matched, mm...)
 		count++
+		// if only need one, don't get greedy
 		if n.Count == ONE || n.Count == ZERO_OR_ONE {
 			break
 		}
 	}
+	// check for not enough count
 	switch n.Count {
 	case ONE:
 		if count != 1 {

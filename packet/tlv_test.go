@@ -88,7 +88,7 @@ func TestParseSimpleInterest(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	ip, err := ParseInterestPacket(b)
+	ip, err := ParseInterest(b)
 	if err != nil {
 		t.Error(err)
 	}
