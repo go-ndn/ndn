@@ -68,9 +68,9 @@ func WriteByte(buf *bytes.Buffer, v uint64) (err error) {
 	return
 }
 
-func (this *TLV) Parse(raw []byte) ([]byte, error) {
+func (this *TLV) Decode(raw []byte) ([]byte, error) {
 	if len(raw) == 0 {
-		return nil, errors.New(EMPTY_PARSE_BUFFER)
+		return nil, errors.New(EMPTY_BUFFER)
 	}
 	buf := bytes.NewReader(raw)
 	t, tl, err := ReadByte(buf)
@@ -104,6 +104,24 @@ func (this *TLV) Add(n *TLV) {
 	this.Children = append(this.Children, n)
 }
 
+func (this *TLV) Get(t uint64) *TLV {
+	for _, c := range this.Children {
+		if c.Type == t {
+			return c
+		}
+	}
+	return nil
+}
+
+func (this *TLV) Remove(t uint64) {
+	for i, c := range this.Children {
+		if c.Type == t {
+			this.Children = append(this.Children[:i], this.Children[i+1:]...)
+			break
+		}
+	}
+}
+
 func CountBytes(v uint64) uint64 {
 	switch {
 	case v > math.MaxUint32:
@@ -117,7 +135,7 @@ func CountBytes(v uint64) uint64 {
 	}
 }
 
-func (this *TLV) Dump() ([]byte, error) {
+func (this *TLV) Encode() ([]byte, error) {
 	buf := new(bytes.Buffer)
 	err := WriteByte(buf, this.Type)
 	if err != nil {
@@ -133,7 +151,7 @@ func (this *TLV) Dump() ([]byte, error) {
 	}
 	if len(this.Value) == 0 {
 		for _, c := range this.Children {
-			b, err := c.Dump()
+			b, err := c.Encode()
 			if err != nil {
 				return nil, err
 			}

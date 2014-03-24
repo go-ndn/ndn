@@ -3,12 +3,13 @@ package packet
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 const (
 	// common
 	NAME uint64 = iota
-	NAME_COMPONTENT
+	NAME_COMPONENT
 	GROUP_AND // only useful for parsing
 	GROUP_OR  // only useful for parsing
 	// interest
@@ -44,8 +45,8 @@ func nodeType(t uint64) string {
 	switch t {
 	case NAME:
 		return "NAME"
-	case NAME_COMPONTENT:
-		return "NAME_COMPONTENT"
+	case NAME_COMPONENT:
+		return "NAME_COMPONENT"
 	case INTEREST:
 		return "INTEREST"
 	case SELECTORS:
@@ -134,18 +135,18 @@ func (this Node) String() string {
 var (
 	InterestFormat = Node{Type: INTEREST, Children: []Node{
 		// name
-		{Type: NAME, Children: []Node{{Type: NAME_COMPONTENT, Count: ZERO_OR_MORE}}},
+		{Type: NAME, Children: []Node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
 		// selectors
 		{Type: SELECTORS, Count: ZERO_OR_ONE, Children: []Node{
 			{Type: MIN_SUFFIX_COMPONENT, Count: ZERO_OR_ONE},
 			{Type: MAX_SUFFIX_COMPONENT, Count: ZERO_OR_ONE},
 			{Type: PUBLISHER_PUBLICKEY_LOCATOR, Count: ZERO_OR_ONE, Children: []Node{
-				{Type: NAME, Children: []Node{{Type: NAME_COMPONTENT, Count: ZERO_OR_MORE}}},
+				{Type: NAME, Children: []Node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
 			}},
 			{Type: EXCLUDE, Count: ZERO_OR_ONE, Children: []Node{
 				{Type: ANY, Count: ZERO_OR_ONE},
 				{Type: GROUP_AND, Count: ONE_OR_MORE, Children: []Node{
-					{Type: NAME_COMPONTENT},
+					{Type: NAME_COMPONENT},
 					{Type: ANY, Count: ZERO_OR_ONE},
 				}},
 			}},
@@ -162,7 +163,7 @@ var (
 
 	DataFormat = Node{Type: DATA, Children: []Node{
 		// name
-		{Type: NAME, Children: []Node{{Type: NAME_COMPONTENT, Count: ZERO_OR_MORE}}},
+		{Type: NAME, Children: []Node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
 		// meta info
 		{Type: META_INFO, Children: []Node{
 			{Type: CONTENT_TYPE, Count: ZERO_OR_ONE},
@@ -177,7 +178,7 @@ var (
 				{Type: SIGNATURE_SHA256_WITH_RSA, Children: []Node{
 					{Type: KEY_LOCATOR, Children: []Node{
 						{Type: CERTIFICATE_NAME, Children: []Node{
-							{Type: NAME, Children: []Node{{Type: NAME_COMPONTENT, Count: ZERO_OR_MORE}}},
+							{Type: NAME, Children: []Node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
 						}},
 					}},
 					{Type: SIGNATURE_BITS},
@@ -185,7 +186,7 @@ var (
 				{Type: SIGNATURE_SHA256_WITH_RSA_AND_MERKLE, Children: []Node{
 					{Type: KEY_LOCATOR, Children: []Node{
 						{Type: CERTIFICATE_NAME, Children: []Node{
-							{Type: NAME, Children: []Node{{Type: NAME_COMPONTENT, Count: ZERO_OR_MORE}}},
+							{Type: NAME, Children: []Node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
 						}},
 					}},
 					{Type: WITNESS},
@@ -196,7 +197,7 @@ var (
 	}}
 )
 
-func ParseData(raw []byte) (data *TLV, err error) {
+func DecodeData(raw []byte) (data *TLV, err error) {
 	data, remain, err := matchNode(DataFormat, raw)
 	if err != nil {
 		return
@@ -207,7 +208,7 @@ func ParseData(raw []byte) (data *TLV, err error) {
 	return
 }
 
-func ParseInterest(raw []byte) (interest *TLV, err error) {
+func DecodeInterest(raw []byte) (interest *TLV, err error) {
 	interest, remain, err := matchNode(InterestFormat, raw)
 	if err != nil {
 		return
@@ -222,7 +223,7 @@ func ParseInterest(raw []byte) (interest *TLV, err error) {
 func matchNode(n Node, raw []byte) (tlv *TLV, remain []byte, err error) {
 	//fmt.Printf("%v %v\n", n, raw)
 	tlv = new(TLV)
-	remain, err = tlv.Parse(raw)
+	remain, err = tlv.Decode(raw)
 	if err != nil {
 		return
 	}
@@ -337,4 +338,26 @@ func matchChildNode(n Node, raw []byte) (matched []*TLV, remain []byte, err erro
 		}
 	}
 	return
+}
+
+// /example/prefix
+func Name(s string) (tlv *TLV) {
+	tlv = new(TLV)
+	tlv.Type = NAME
+	for _, comp := range strings.Split(s, "/") {
+		c := new(TLV)
+		c.Type = NAME_COMPONENT
+		c.Value = []byte(comp)
+		tlv.Add(c)
+	}
+	return
+}
+
+// tlv type = name
+func Uri(tlv *TLV) string {
+	comp := []string{}
+	for _, c := range tlv.Children {
+		comp = append(comp, string(c.Value))
+	}
+	return strings.Join(comp, "/")
 }

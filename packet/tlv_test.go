@@ -24,9 +24,9 @@ func TestWriteByte(t *testing.T) {
 	}
 }
 
-func TestParse(t *testing.T) {
+func TestDecode(t *testing.T) {
 	v := new(TLV)
-	r, _ := v.Parse([]byte{0xF0, 0x02, 0x01})
+	r, _ := v.Decode([]byte{0xF0, 0x02, 0x01})
 	if v.Type != 240 {
 		t.Error("type %d, %d", v.Type, 240)
 	}
@@ -34,7 +34,7 @@ func TestParse(t *testing.T) {
 	if len(r) != 1 || r[0] != 1 {
 		t.Error("remain %d, %d", len(r), r[0])
 	}
-	r, _ = v.Parse([]byte{0xF0, 0x4, 0x01, 0x02})
+	r, _ = v.Decode([]byte{0xF0, 0x4, 0x01, 0x02})
 	if v.Value[0] != 1 || v.Value[1] != 2 {
 		t.Error("value %d, %d", v.Value[0], v.Value[1])
 	}
@@ -43,15 +43,23 @@ func TestParse(t *testing.T) {
 	}
 }
 
-func TestDump(t *testing.T) {
+func TestEncode(t *testing.T) {
 	v := new(TLV)
-	v.Parse([]byte{0xF0, 0x4, 0x01, 0x02})
-	if b, _ := v.Dump(); !EqualBytes(b, []byte{0xF0, 0x4, 0x01, 0x02}) {
-		t.Error(v.Dump())
+	v.Decode([]byte{0xF0, 0x4, 0x01, 0x02})
+	if b, _ := v.Encode(); !EqualBytes(b, []byte{0xF0, 0x4, 0x01, 0x02}) {
+		t.Error(v.Encode())
 	}
 }
 
-func TestParseSimpleInterest(t *testing.T) {
+func TestName(t *testing.T) {
+	s1 := "/ucla/edu/cs/ndn"
+	s2 := Uri(Name(s1))
+	if s1 != s2 {
+		t.Error("expected %v, got %v", s1, s2)
+	}
+}
+
+func TestDecodeSimpleInterest(t *testing.T) {
 	name := new(TLV)
 	name.Type = NAME
 	nonce := new(TLV)
@@ -65,7 +73,7 @@ func TestParseSimpleInterest(t *testing.T) {
 	exclude := new(TLV)
 	exclude.Type = EXCLUDE
 	namecomp := new(TLV)
-	namecomp.Type = NAME_COMPONTENT
+	namecomp.Type = NAME_COMPONENT
 	exclude.Add(namecomp)
 	exclude.Add(namecomp)
 	exclude.Add(namecomp)
@@ -84,18 +92,18 @@ func TestParseSimpleInterest(t *testing.T) {
 	interest.Add(nonce)
 	interest.Add(lifetime)
 
-	b, err := interest.Dump()
+	b, err := interest.Encode()
 	if err != nil {
 		t.Error(err)
 	}
-	ip, err := ParseInterest(b)
+	ip, err := DecodeInterest(b)
 	if err != nil {
 		t.Error(err)
 	}
 	if len(ip.Children) != len(interest.Children) {
 		t.Error("children count", "expected", len(interest.Children), "actual", len(ip.Children))
 	}
-	b2, _ := ip.Dump()
+	b2, _ := ip.Encode()
 	if !EqualBytes(b, b2) {
 		t.Error(b, b2)
 	}
