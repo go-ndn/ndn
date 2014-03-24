@@ -5,7 +5,7 @@ import (
 )
 
 func ParseInterestPacket(raw []byte) (interest *TLV, err error) {
-	interest, remain, err := NodeMatcher(InterestFormat, raw)
+	interest, remain, err := MatchNode(InterestFormat, raw)
 	if err != nil {
 		return
 	}

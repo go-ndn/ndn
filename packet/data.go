@@ -5,7 +5,7 @@ import (
 )
 
 func ParseDataPacket(raw []byte) (data *TLV, err error) {
-	data, remain, err := NodeMatcher(DataFormat, raw)
+	data, remain, err := MatchNode(DataFormat, raw)
 	if err != nil {
 		return
 	}

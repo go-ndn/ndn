@@ -1,0 +1,9 @@
+package packet
+
+const (
+	WRONG_COUNT            = "WRONG_COUNT"
+	EMPTY_PARSE_BUFFER     = "EMPTY_PARSE_BUFFER"
+	VALUE_CHILDREN_COEXIST = "VALUE_CHILDREN_COEXIST"
+	LEFT_OVER              = "LEFT_OVER"
+	WRONG_TYPE             = "WRONG_TYPE"
+)

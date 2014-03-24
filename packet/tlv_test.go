@@ -51,6 +51,56 @@ func TestDump(t *testing.T) {
 	}
 }
 
+func TestParseSimpleInterest(t *testing.T) {
+	name := new(TLV)
+	name.Type = NAME
+	nonce := new(TLV)
+	nonce.Type = NONCE
+	// create selector
+	selectors := new(TLV)
+	selectors.Type = SELECTORS
+
+	max := new(TLV)
+	max.Type = MAX_SUFFIX_COMPONENT
+	exclude := new(TLV)
+	exclude.Type = EXCLUDE
+	namecomp := new(TLV)
+	namecomp.Type = NAME_COMPONTENT
+	exclude.Add(namecomp)
+	exclude.Add(namecomp)
+	exclude.Add(namecomp)
+	exclude.Add(namecomp)
+
+	selectors.Add(max)
+	selectors.Add(exclude)
+
+	lifetime := new(TLV)
+	lifetime.Type = INTEREST_LIFETIME
+
+	interest := new(TLV)
+	interest.Type = INTEREST
+	interest.Add(name)
+	interest.Add(selectors)
+	interest.Add(nonce)
+	interest.Add(lifetime)
+
+	b, err := interest.Dump()
+	if err != nil {
+		t.Error(err)
+	}
+	ip, err := ParseInterestPacket(b)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(ip.Children) != len(interest.Children) {
+		t.Error("children count", "expected", len(interest.Children), "actual", len(ip.Children))
+	}
+	b2, _ := ip.Dump()
+	if !EqualBytes(b, b2) {
+		t.Error(b, b2)
+	}
+}
+
 func EqualBytes(a []byte, b []byte) bool {
 	if len(a) != len(b) {
 		return false

@@ -10,7 +10,6 @@ import (
 
 type TLV struct {
 	Type     uint64
-	Length   uint64
 	Value    []byte
 	Children []*TLV
 }
@@ -83,14 +82,39 @@ func (this *TLV) Parse(raw []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	this.Length = l
-	if err != nil {
-		return nil, err
-	}
 	if tl+ll < l && uint64(len(raw)) >= l {
 		this.Value = raw[tl+ll : l]
 	}
 	return raw[l:], nil
+}
+
+func (this *TLV) Length() (length uint64) {
+	length = CountBytes(this.Type)
+	if len(this.Value) == 0 {
+		for _, c := range this.Children {
+			length += c.Length()
+		}
+	} else {
+		length += uint64(len(this.Value))
+	}
+	return CountBytes(length+CountBytes(length)) + length
+}
+
+func (this *TLV) Add(n *TLV) {
+	this.Children = append(this.Children, n)
+}
+
+func CountBytes(v uint64) uint64 {
+	switch {
+	case v > math.MaxUint32:
+		return 8
+	case v > math.MaxUint16:
+		return 4
+	case v > math.MaxUint8:
+		return 2
+	default:
+		return 1
+	}
 }
 
 func (this *TLV) Dump() ([]byte, error) {
@@ -99,7 +123,8 @@ func (this *TLV) Dump() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = WriteByte(buf, this.Length)
+
+	err = WriteByte(buf, this.Length())
 	if err != nil {
 		return nil, err
 	}
