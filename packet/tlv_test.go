@@ -2,6 +2,7 @@ package packet
 
 import (
 	"bytes"
+	//"fmt"
 	"testing"
 )
 
@@ -54,6 +55,31 @@ func TestEncode(t *testing.T) {
 func TestName(t *testing.T) {
 	s1 := "/ucla/edu/cs/ndn"
 	s2 := Uri(Name(s1))
+	if s1 != s2 {
+		t.Error("expected %v, got %v", s1, s2)
+	}
+}
+
+func TestIO(t *testing.T) {
+	v1 := true
+	tlv := new(TLV)
+	tlv.Write(v1)
+	var v2 bool
+	tlv.Read(&v2)
+	if !v2 {
+		t.Error("should be true %v", tlv.Value)
+	}
+	f1 := 0.5
+	tlv.Write(f1)
+	var f2 float64
+	tlv.Read(&f2)
+	if f1 != f2 {
+		t.Error("expected %v, got %v", f1, f2)
+	}
+	s1 := "hello"
+	tlv.Write(s1)
+	var s2 string
+	tlv.Read(&s2)
 	if s1 != s2 {
 		t.Error("expected %v, got %v", s1, s2)
 	}

@@ -82,7 +82,7 @@ func (this *TLV) Decode(raw []byte) ([]byte, error) {
 		return nil, err
 	}
 	if tl+ll < l && uint64(len(raw)) >= l {
-		this.Value = raw[tl+ll : l]
+		this.Write(raw[tl+ll : l])
 	}
 	return raw[l:], nil
 }
@@ -112,18 +112,30 @@ func (this *TLV) Get(t uint64) *TLV {
 	return nil
 }
 
-func (this *TLV) String() string {
-	return string(this.Value)
+func (this *TLV) Read(v interface{}) {
+	switch v.(type) {
+	case *string:
+		*v.(*string) = string(this.Value)
+	case *bool:
+		*v.(*bool) = len(this.Value) == 1 && this.Value[0] == 0x01
+	default:
+		binary.Read(bytes.NewBuffer(this.Value), binary.BigEndian, v)
+	}
 }
 
-func (this *TLV) Varint() (v int64) {
-	v, _ = binary.ReadVarint(bytes.NewBuffer(this.Value))
-	return
-}
-
-func (this *TLV) Uvarint() (v uint64) {
-	v, _ = binary.ReadUvarint(bytes.NewBuffer(this.Value))
-	return
+func (this *TLV) Write(v interface{}) {
+	switch v.(type) {
+	case nil:
+		this.Value = nil
+	case string:
+		this.Value = []byte(v.(string))
+	case bool:
+		this.Value = []byte{0x01}
+	default:
+		buf := new(bytes.Buffer)
+		binary.Write(buf, binary.BigEndian, v)
+		this.Value = buf.Bytes()
+	}
 }
 
 func (this *TLV) Remove(t uint64) {

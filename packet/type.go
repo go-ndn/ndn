@@ -237,7 +237,7 @@ func matchNode(n Node, raw []byte) (tlv *TLV, remain []byte, err error) {
 	if len(n.Children) != 0 {
 		b := tlv.Value
 		// value and children are mutual exclusive
-		tlv.Value = nil
+		tlv.Write(nil)
 
 		for _, c := range n.Children {
 			var matched []*TLV
@@ -347,7 +347,7 @@ func Name(s string) (tlv *TLV) {
 	for _, comp := range strings.Split(s, "/") {
 		c := new(TLV)
 		c.Type = NAME_COMPONENT
-		c.Value = []byte(comp)
+		c.Write(comp)
 		tlv.Add(c)
 	}
 	return
