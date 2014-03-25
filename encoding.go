@@ -3,42 +3,45 @@ package ndn
 import (
 	"errors"
 	"fmt"
-	"strings"
 )
+
+/*
+	NDN packet encoding with TLV
+*/
 
 const (
 	// common
-	NAME uint64 = iota
-	NAME_COMPONENT
-	GROUP_AND // only useful for parsing
-	GROUP_OR  // only useful for parsing
+	NAME           uint64 = 7
+	NAME_COMPONENT        = 8
+	GROUP_AND             = 0 // only useful for parsing
+	GROUP_OR              = 1 // only useful for parsing
 	// interest
-	INTEREST
-	SELECTORS
-	NONCE
-	MIN_SUFFIX_COMPONENT
-	MAX_SUFFIX_COMPONENT
-	PUBLISHER_PUBLICKEY_LOCATOR
-	EXCLUDE
-	ANY
-	CHILD_SELECTOR
-	MUST_BE_FRESH
-	SCOPE
-	INTEREST_LIFETIME
+	INTEREST                    = 5
+	SELECTORS                   = 9
+	NONCE                       = 10
+	MIN_SUFFIX_COMPONENTS       = 13
+	MAX_SUFFIX_COMPONENTS       = 14
+	PUBLISHER_PUBLICKEY_LOCATOR = 15
+	EXCLUDE                     = 16
+	ANY                         = 19
+	CHILD_SELECTOR              = 17
+	MUST_BE_FRESH               = 18
+	SCOPE                       = 11
+	INTEREST_LIFETIME           = 12
 	//data
-	DATA
-	META_INFO
-	CONTENT_TYPE
-	FRESHNESS_PERIOD
-	CONTENT
-	SIGNATURE
-	DIGEST_SHA256
-	SIGNATURE_SHA256_WITH_RSA
-	SIGNATURE_SHA256_WITH_RSA_AND_MERKLE
-	KEY_LOCATOR
-	CERTIFICATE_NAME
-	WITNESS
-	SIGNATURE_BITS
+	DATA                                 = 6
+	META_INFO                            = 20
+	CONTENT_TYPE                         = 24
+	FRESHNESS_PERIOD                     = 25
+	CONTENT                              = 21
+	SIGNATURE                            = 248
+	DIGEST_SHA256                        = 254
+	SIGNATURE_SHA256_WITH_RSA            = 253
+	SIGNATURE_SHA256_WITH_RSA_AND_MERKLE = 252
+	KEY_LOCATOR                          = 28
+	CERTIFICATE_NAME                     = 251
+	WITNESS                              = 250
+	SIGNATURE_BITS                       = 249
 )
 
 func nodeType(t uint64) string {
@@ -47,16 +50,20 @@ func nodeType(t uint64) string {
 		return "NAME"
 	case NAME_COMPONENT:
 		return "NAME_COMPONENT"
+	case GROUP_AND:
+		return "GROUP_AND"
+	case GROUP_OR:
+		return "GROUP_OR"
 	case INTEREST:
 		return "INTEREST"
 	case SELECTORS:
 		return "SELECTORS"
 	case NONCE:
 		return "NONCE"
-	case MIN_SUFFIX_COMPONENT:
-		return "MIN_SUFFIX_COMPONENT"
-	case MAX_SUFFIX_COMPONENT:
-		return "MAX_SUFFIX_COMPONENT"
+	case MIN_SUFFIX_COMPONENTS:
+		return "MIN_SUFFIX_COMPONENTS"
+	case MAX_SUFFIX_COMPONENTS:
+		return "MAX_SUFFIX_COMPONENTS"
 	case PUBLISHER_PUBLICKEY_LOCATOR:
 		return "PUBLISHER_PUBLICKEY_LOCATOR"
 	case EXCLUDE:
@@ -138,8 +145,8 @@ var (
 		{Type: NAME, Children: []Node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
 		// selectors
 		{Type: SELECTORS, Count: ZERO_OR_ONE, Children: []Node{
-			{Type: MIN_SUFFIX_COMPONENT, Count: ZERO_OR_ONE},
-			{Type: MAX_SUFFIX_COMPONENT, Count: ZERO_OR_ONE},
+			{Type: MIN_SUFFIX_COMPONENTS, Count: ZERO_OR_ONE},
+			{Type: MAX_SUFFIX_COMPONENTS, Count: ZERO_OR_ONE},
 			{Type: PUBLISHER_PUBLICKEY_LOCATOR, Count: ZERO_OR_ONE, Children: []Node{
 				{Type: NAME, Children: []Node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
 			}},
@@ -237,7 +244,7 @@ func matchNode(n Node, raw []byte) (tlv *TLV, remain []byte, err error) {
 	if len(n.Children) != 0 {
 		b := tlv.Value
 		// value and children are mutual exclusive
-		tlv.Write(nil)
+		tlv.Value = nil
 
 		for _, c := range n.Children {
 			var matched []*TLV
@@ -338,40 +345,4 @@ func matchChildNode(n Node, raw []byte) (matched []*TLV, remain []byte, err erro
 		}
 	}
 	return
-}
-
-// /example/prefix
-func packet(s string) (tlv *TLV) {
-	tlv = new(TLV)
-	name := new(TLV)
-	name.Type = NAME
-	for _, comp := range strings.Split(s, "/") {
-		c := new(TLV)
-		c.Type = NAME_COMPONENT
-		c.Write(comp)
-		name.Add(c)
-	}
-	tlv.Add(name)
-	return
-}
-
-func Interest(s string) (tlv *TLV) {
-	tlv = packet(s)
-	tlv.Type = INTEREST
-	return
-}
-
-func Data(s string) (tlv *TLV) {
-	tlv = packet(s)
-	tlv.Type = DATA
-	return
-}
-
-// tlv type = name
-func (this *TLV) Uri() string {
-	comp := []string{}
-	for _, c := range this.Get(NAME).Children {
-		comp = append(comp, string(c.Value))
-	}
-	return strings.Join(comp, "/")
 }
