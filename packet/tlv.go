@@ -3,7 +3,6 @@ package packet
 import (
 	"bytes"
 	"encoding/binary"
-	//"log"
 	"errors"
 	"math"
 )
@@ -111,6 +110,20 @@ func (this *TLV) Get(t uint64) *TLV {
 		}
 	}
 	return nil
+}
+
+func (this *TLV) String() string {
+	return string(this.Value)
+}
+
+func (this *TLV) Varint() (v int64) {
+	v, _ = binary.ReadVarint(bytes.NewBuffer(this.Value))
+	return
+}
+
+func (this *TLV) Uvarint() (v uint64) {
+	v, _ = binary.ReadUvarint(bytes.NewBuffer(this.Value))
+	return
 }
 
 func (this *TLV) Remove(t uint64) {
