@@ -1,4 +1,4 @@
-package packet
+package ndn
 
 const (
 	WRONG_COUNT            = "WRONG_COUNT"

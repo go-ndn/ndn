@@ -1,4 +1,4 @@
-package packet
+package ndn
 
 import (
 	"errors"
@@ -341,22 +341,36 @@ func matchChildNode(n Node, raw []byte) (matched []*TLV, remain []byte, err erro
 }
 
 // /example/prefix
-func Name(s string) (tlv *TLV) {
+func packet(s string) (tlv *TLV) {
 	tlv = new(TLV)
-	tlv.Type = NAME
+	name := new(TLV)
+	name.Type = NAME
 	for _, comp := range strings.Split(s, "/") {
 		c := new(TLV)
 		c.Type = NAME_COMPONENT
 		c.Write(comp)
-		tlv.Add(c)
+		name.Add(c)
 	}
+	tlv.Add(name)
+	return
+}
+
+func Interest(s string) (tlv *TLV) {
+	tlv = packet(s)
+	tlv.Type = INTEREST
+	return
+}
+
+func Data(s string) (tlv *TLV) {
+	tlv = packet(s)
+	tlv.Type = DATA
 	return
 }
 
 // tlv type = name
-func Uri(tlv *TLV) string {
+func (this *TLV) Uri() string {
 	comp := []string{}
-	for _, c := range tlv.Children {
+	for _, c := range this.Get(NAME).Children {
 		comp = append(comp, string(c.Value))
 	}
 	return strings.Join(comp, "/")

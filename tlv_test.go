@@ -1,4 +1,4 @@
-package packet
+package ndn
 
 import (
 	"bytes"
@@ -49,14 +49,6 @@ func TestEncode(t *testing.T) {
 	v.Decode([]byte{0xF0, 0x4, 0x01, 0x02})
 	if b, _ := v.Encode(); !EqualBytes(b, []byte{0xF0, 0x4, 0x01, 0x02}) {
 		t.Error(v.Encode())
-	}
-}
-
-func TestName(t *testing.T) {
-	s1 := "/ucla/edu/cs/ndn"
-	s2 := Uri(Name(s1))
-	if s1 != s2 {
-		t.Error("expected %v, got %v", s1, s2)
 	}
 }
 
