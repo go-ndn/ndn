@@ -221,10 +221,11 @@ func matchNode(n Node, raw []byte) (tlv *TLV, remain []byte, err error) {
 	}
 	// type does not match; don't touch remain
 	if n.Type != tlv.Type {
-		err = errors.New(WRONG_TYPE)
+		err = errors.New(fmt.Sprintf("%s: expected %s, got %s", WRONG_TYPE, nodeType(n.Type), nodeType(tlv.Type)))
 		remain = raw
 		return
 	}
+	fmt.Println(nodeType(tlv.Type))
 	// turn tlv.value into children
 	if len(n.Children) != 0 {
 		b := tlv.Value
@@ -281,7 +282,7 @@ func matchGroupOrNode(n Node, raw []byte) (matched []*TLV, remain []byte, err er
 	}
 	// OR should at least have one match;
 	if len(matched) == 0 {
-		err = errors.New(WRONG_TYPE)
+		err = errors.New(fmt.Sprintf("%s: %s", WRONG_TYPE, nodeType(n.Type)))
 		return
 	}
 	return
@@ -320,12 +321,12 @@ func matchChildNode(n Node, raw []byte) (matched []*TLV, remain []byte, err erro
 	switch n.Count {
 	case ONE:
 		if count != 1 {
-			err = errors.New(WRONG_COUNT)
+			err = errors.New(fmt.Sprintf("%s: %s %s", WRONG_COUNT, nodeType(n.Type), nodeCount(n.Count)))
 			return
 		}
 	case ONE_OR_MORE:
 		if count == 0 {
-			err = errors.New(WRONG_COUNT)
+			err = errors.New(fmt.Sprintf("%s: %s %s", WRONG_COUNT, nodeType(n.Type), nodeCount(n.Count)))
 			return
 		}
 	}

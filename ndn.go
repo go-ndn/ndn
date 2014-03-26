@@ -7,6 +7,7 @@ import (
 	"math"
 	"strings"
 	//"fmt"
+	"crypto/rand"
 )
 
 /*
@@ -95,6 +96,20 @@ type Interest struct {
 	InterestLifeTime uint64
 }
 
+func NewNonce() []byte {
+	b := make([]byte, 4)
+	rand.Read(b)
+	return b
+}
+
+func NewInterest(name string) *Interest {
+	return &Interest{
+		Name:             name,
+		Nonce:            NewNonce(),
+		InterestLifeTime: 4000,
+	}
+}
+
 type Selectors struct {
 	MinSuffixComponents       uint64
 	MaxSuffixComponents       uint64
@@ -118,9 +133,11 @@ func (this *Interest) Encode() (raw []byte, err error) {
 	selectors.Add(minSuffixComponents)
 
 	// MaxSuffixComponents
-	maxSuffixComponents := NewTLV(MAX_SUFFIX_COMPONENTS)
-	maxSuffixComponents.Value, err = encodeNonNeg(this.Selectors.MaxSuffixComponents)
-	selectors.Add(maxSuffixComponents)
+	if this.Selectors.MaxSuffixComponents != 0 {
+		maxSuffixComponents := NewTLV(MAX_SUFFIX_COMPONENTS)
+		maxSuffixComponents.Value, err = encodeNonNeg(this.Selectors.MaxSuffixComponents)
+		selectors.Add(maxSuffixComponents)
+	}
 
 	// PublisherPublicKeyLocator
 	if this.Selectors.PublisherPublicKeyLocator != nil {
@@ -237,6 +254,12 @@ type Data struct {
 	Signature Signature
 }
 
+func NewData(name string) *Data {
+	return &Data{
+		Name: name,
+	}
+}
+
 type MetaInfo struct {
 	ContentType     uint64
 	FreshnessPeriod uint64
@@ -244,8 +267,10 @@ type MetaInfo struct {
 }
 
 const (
-	DIGEST_SHA_256             uint64 = 0
-	SIGNATURE_SHA_256_WITH_RSA        = 1
+	CONTENT_TYPE_BLOB uint64 = 0
+	CONTENT_TYPE_LINK        = 1
+	CONTENT_TYPE_KEY         = 2
+	CONTENT_TYPE_NACK        = 3 // TBD
 )
 
 type Signature struct {
@@ -253,6 +278,11 @@ type Signature struct {
 	Info  []*TLV
 	Value []byte
 }
+
+const (
+	SIGNATURE_TYPE_DIGEST_SHA_256             uint64 = 0
+	SIGNATURE_TYPE_SIGNATURE_SHA_256_WITH_RSA        = 1
+)
 
 func (this *Data) Encode() (raw []byte, err error) {
 	data := NewTLV(DATA)

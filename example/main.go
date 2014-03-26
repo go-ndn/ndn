@@ -6,17 +6,15 @@ import (
 )
 
 func main() {
-	interest := ndn.Interest{
-		Name: "/facebook/users",
-	}
+	interest := ndn.NewInterest("/facebook/users")
 
 	interest.Selectors.MinSuffixComponents = 3
-	interest.Selectors.MaxSuffixComponents = 5
+	//interest.Selectors.MaxSuffixComponents = 5
 	interest.Selectors.ChildSelector = 4
 	interest.Selectors.MustBeFresh = true
 	interest.Scope = 8
 	interest.InterestLifeTime = 9
-	interest.Nonce = []byte{0x1, 0x2, 0x3}
+	//interest.Nonce = []byte{0x1, 0x2, 0x3}
 	b, err := interest.Encode()
 	if err != nil {
 		fmt.Println("encode", err)
@@ -51,4 +49,10 @@ func main() {
 		fmt.Println("decode", err, b)
 	}
 	fmt.Printf("%#v\n", data_decode)
+
+	fmt.Println("---")
+	face := ndn.NewFace("borges.metwi.ucla.edu")
+	i3 := ndn.NewInterest("/")
+	d3 := <-face.Dial(i3)
+	fmt.Printf("%#v\n", d3)
 }
