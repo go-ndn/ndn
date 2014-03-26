@@ -16,7 +16,7 @@ func TestReadByte(t *testing.T) {
 
 func TestWriteByte(t *testing.T) {
 	buf := new(bytes.Buffer)
-	writeByte(buf, uint64(4822678189205111))
+	writeByte(buf, 4822678189205111)
 	if !bytes.Equal(buf.Bytes(), []byte{0xFF, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77}) {
 		t.Errorf("expected %v, got %v", []byte{0xFF, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77}, buf.Bytes())
 	}

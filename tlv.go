@@ -55,7 +55,7 @@ func writeByte(buf *bytes.Buffer, v uint64) (err error) {
 	switch {
 	case v > math.MaxUint32:
 		buf.WriteByte(0xFF)
-		err = binary.Write(buf, binary.BigEndian, uint64(v))
+		err = binary.Write(buf, binary.BigEndian, v)
 	case v > math.MaxUint16:
 		buf.WriteByte(0xFE)
 		err = binary.Write(buf, binary.BigEndian, uint32(v))
