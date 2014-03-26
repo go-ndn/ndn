@@ -243,6 +243,11 @@ type MetaInfo struct {
 	FinalBlockId    string
 }
 
+const (
+	DIGEST_SHA_256             uint64 = 0
+	SIGNATURE_SHA_256_WITH_RSA        = 1
+)
+
 type Signature struct {
 	Type  uint64
 	Info  []*TLV

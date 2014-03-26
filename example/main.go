@@ -34,6 +34,7 @@ func main() {
 	}
 	data.MetaInfo.ContentType = 2
 	data.MetaInfo.FreshnessPeriod = 3
+	data.MetaInfo.FinalBlockId = "hello"
 	data.Content = []byte{0x1, 0x2, 0x3}
 
 	data.Signature.Type = 1
