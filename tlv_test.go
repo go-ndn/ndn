@@ -17,7 +17,7 @@ func TestReadByte(t *testing.T) {
 func TestWriteByte(t *testing.T) {
 	buf := new(bytes.Buffer)
 	writeByte(buf, uint64(4822678189205111))
-	if !equalBytes(buf.Bytes(), []byte{0xFF, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77}) {
+	if !bytes.Equal(buf.Bytes(), []byte{0xFF, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77}) {
 		t.Errorf("expected %v, got %v", []byte{0xFF, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77}, buf.Bytes())
 	}
 }
@@ -54,7 +54,7 @@ func TestDecode(t *testing.T) {
 func TestEncode(t *testing.T) {
 	v := new(TLV)
 	v.Decode([]byte{0xF0, 0x2, 0x01, 0x02})
-	if b, _ := v.Encode(); !equalBytes(b, []byte{0xF0, 0x2, 0x01, 0x02}) {
+	if b, _ := v.Encode(); !bytes.Equal(b, []byte{0xF0, 0x2, 0x01, 0x02}) {
 		t.Errorf("expected %v, got %v", []byte{0xF0, 0x2, 0x01, 0x02}, b)
 	}
 }
@@ -104,19 +104,7 @@ func TestDecodeSimpleInterest(t *testing.T) {
 		t.Errorf("expected %v, got %v", len(interest.Children), len(ip.Children))
 	}
 	b2, _ := ip.Encode()
-	if !equalBytes(b, b2) {
+	if !bytes.Equal(b, b2) {
 		t.Errorf("expected %v, got %v", b, b2)
 	}
-}
-
-func equalBytes(a []byte, b []byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := 0; i < len(a); i++ {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
