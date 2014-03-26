@@ -29,7 +29,9 @@ func TestData(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-
+	// name order changes
+	data.Name = ""
+	data_decode.Name = ""
 	b1, err := json.Marshal(data)
 	if err != nil {
 		t.Error(err)
@@ -65,6 +67,9 @@ func TestInterest(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	// name order changes
+	interest.Name = ""
+	interest_decode.Name = ""
 	b1, err := json.Marshal(interest)
 	if err != nil {
 		t.Error(err)
