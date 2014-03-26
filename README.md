@@ -19,4 +19,4 @@ import "github.com/taylorchu/ndn"
 
 packet format
 =============
-the current implementation follows [ndn packet format specification 0.1](http://named-data.net/wp-content/uploads/2013/11/packetformat.pdf)
+the current implementation follows [ndn doc](http://named-data.net/doc/ndn-tlv/)
