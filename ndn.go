@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"math"
+	"sort"
 	"strings"
 	//"fmt"
 	"crypto/rand"
@@ -25,7 +26,9 @@ func uriEncode(tlv *TLV) string {
 
 func uriDecode(s string) *TLV {
 	tlv := NewTLV(NAME)
-	for _, part := range strings.Split(s, "/") {
+	parts := strings.Split(strings.TrimLeft(s, "/"), "/")
+	sort.Strings(parts)
+	for _, part := range parts {
 		c := NewTLV(NAME_COMPONENT)
 		c.Value = []byte(part)
 		tlv.Add(c)
