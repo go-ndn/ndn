@@ -36,7 +36,7 @@ func encodeNonNeg(v uint64) (raw []byte, err error) {
 	buf := new(bytes.Buffer)
 	switch {
 	case v > math.MaxUint32:
-		err = binary.Write(buf, binary.BigEndian, uint64(v))
+		err = binary.Write(buf, binary.BigEndian, v)
 	case v > math.MaxUint16:
 		err = binary.Write(buf, binary.BigEndian, uint32(v))
 	case v > math.MaxUint8:
@@ -49,7 +49,7 @@ func encodeNonNeg(v uint64) (raw []byte, err error) {
 }
 
 func decodeNonNeg(raw []byte) (v uint64, err error) {
-	buf := bytes.NewReader(raw)
+	buf := bytes.NewBuffer(raw)
 	switch len(raw) {
 	case 8:
 		var v64 uint64
@@ -57,7 +57,7 @@ func decodeNonNeg(raw []byte) (v uint64, err error) {
 		if err != nil {
 			return
 		}
-		v = uint64(v64)
+		v = v64
 	case 4:
 		var v32 uint32
 		err = binary.Read(buf, binary.BigEndian, &v32)

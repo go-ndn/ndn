@@ -18,12 +18,11 @@ type TLV struct {
 	Children []*TLV
 }
 
-func readByte(buf *bytes.Reader) (result uint64, offset uint64, err error) {
+func readByte(buf *bytes.Buffer) (result uint64, err error) {
 	b, err := buf.ReadByte()
 	if err != nil {
 		return
 	}
-	offset = 1
 	switch b {
 	case 0xFF:
 		var v64 uint64
@@ -32,7 +31,6 @@ func readByte(buf *bytes.Reader) (result uint64, offset uint64, err error) {
 			return
 		}
 		result = v64
-		offset += 8
 	case 0xFE:
 		var v32 uint32
 		err = binary.Read(buf, binary.BigEndian, &v32)
@@ -40,7 +38,6 @@ func readByte(buf *bytes.Reader) (result uint64, offset uint64, err error) {
 			return
 		}
 		result = uint64(v32)
-		offset += 4
 	case 0xFD:
 		var v16 uint16
 		err = binary.Read(buf, binary.BigEndian, &v16)
@@ -48,7 +45,6 @@ func readByte(buf *bytes.Reader) (result uint64, offset uint64, err error) {
 			return
 		}
 		result = uint64(v16)
-		offset += 2
 	default:
 		result = uint64(b)
 	}
@@ -73,39 +69,29 @@ func writeByte(buf *bytes.Buffer, v uint64) (err error) {
 }
 
 func (this *TLV) Decode(raw []byte) ([]byte, error) {
-	max := uint64(len(raw))
-	if max == 0 {
-		return nil, errors.New(EMPTY_BUFFER)
-	}
-	buf := bytes.NewReader(raw)
-	t, tl, err := readByte(buf)
+	buf := bytes.NewBuffer(raw)
+	t, err := readByte(buf)
 	if err != nil {
 		return nil, err
 	}
 	this.Type = t
-	l, ll, err := readByte(buf)
+	l, err := readByte(buf)
 	if err != nil {
 		return nil, err
 	}
-	if tl+ll < l && max >= l {
-		this.Value = raw[tl+ll : l]
-	}
-	if max > l {
-		return raw[l:], nil
-	}
-	return nil, nil
+	this.Value = buf.Next(int(l))
+	return buf.Bytes(), nil
 }
 
 func (this *TLV) Length() (length uint64) {
-	length = countBytes(this.Type)
 	if len(this.Value) == 0 {
 		for _, c := range this.Children {
-			length += c.Length()
+			l := c.Length()
+			length += countBytes(c.Type) + countBytes(l) + l
 		}
 	} else {
-		length += uint64(len(this.Value))
+		length = uint64(len(this.Value))
 	}
-	length += countBytes(length + countBytes(length))
 	return
 }
 
