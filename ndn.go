@@ -98,8 +98,8 @@ type Interest struct {
 type Selectors struct {
 	MinSuffixComponents       uint64
 	MaxSuffixComponents       uint64
-	PublisherPublicKeyLocator string
-	Exclude                   []string
+	PublisherPublicKeyLocator *TLV // only child
+	Exclude                   *TLV // itself
 	ChildSelector             uint64
 	MustBeFresh               bool
 }
@@ -123,11 +123,16 @@ func (this *Interest) Encode() (raw []byte, err error) {
 	selectors.Add(maxSuffixComponents)
 
 	// PublisherPublicKeyLocator
-	publisherPublicKeyLocator := NewTLV(PUBLISHER_PUBLICKEY_LOCATOR)
-	publisherPublicKeyLocator.Add(uriDecode(this.Selectors.PublisherPublicKeyLocator))
-	selectors.Add(publisherPublicKeyLocator)
+	if this.Selectors.PublisherPublicKeyLocator != nil {
+		publisherPublicKeyLocator := NewTLV(KEY_LOCATOR)
+		publisherPublicKeyLocator.Add(this.Selectors.PublisherPublicKeyLocator)
+		selectors.Add(publisherPublicKeyLocator)
+	}
 
-	// FIXME: EXCLUDE
+	// EXCLUDE
+	if this.Selectors.Exclude != nil {
+		selectors.Add(this.Selectors.Exclude)
+	}
 
 	// ChildSelector
 	childSelector := NewTLV(CHILD_SELECTOR)
@@ -193,12 +198,12 @@ func (this *Interest) Decode(raw []byte) error {
 						return err
 					}
 				case PUBLISHER_PUBLICKEY_LOCATOR:
-					if len(cc.Children) != 1 || cc.Children[0].Type != NAME {
+					if len(cc.Children) != 1 {
 						return errors.New(nodeType(PUBLISHER_PUBLICKEY_LOCATOR))
 					}
-					this.Selectors.PublisherPublicKeyLocator = uriEncode(cc.Children[0])
+					this.Selectors.PublisherPublicKeyLocator = cc.Children[0]
 				case EXCLUDE:
-					// FIXME
+					this.Selectors.Exclude = cc
 				case CHILD_SELECTOR:
 					this.Selectors.ChildSelector, err = decodeNonNeg(cc.Value)
 					if err != nil {
@@ -235,12 +240,13 @@ type Data struct {
 type MetaInfo struct {
 	ContentType     uint64
 	FreshnessPeriod uint64
+	FinalBlockId    string
 }
 
 type Signature struct {
-	KeyLocator    string
-	Witness       []byte
-	SignatureBits []byte
+	Type  uint64
+	Info  []*TLV
+	Value []byte
 }
 
 func (this *Data) Encode() (raw []byte, err error) {
@@ -261,12 +267,19 @@ func (this *Data) Encode() (raw []byte, err error) {
 	metaInfo.Add(contentType)
 
 	// FreshnessPeriod
-	FreshnessPeriod := NewTLV(FRESHNESS_PERIOD)
-	FreshnessPeriod.Value, err = encodeNonNeg(this.MetaInfo.FreshnessPeriod)
+	freshnessPeriod := NewTLV(FRESHNESS_PERIOD)
+	freshnessPeriod.Value, err = encodeNonNeg(this.MetaInfo.FreshnessPeriod)
 	if err != nil {
 		return
 	}
-	metaInfo.Add(FreshnessPeriod)
+	metaInfo.Add(freshnessPeriod)
+
+	// FinalBlockId
+	finalBlockId := NewTLV(FINAL_BLOCK_ID)
+	comp := NewTLV(NAME_COMPONENT)
+	comp.Value = []byte(this.MetaInfo.FinalBlockId)
+	finalBlockId.Add(comp)
+	metaInfo.Add(finalBlockId)
 
 	data.Add(metaInfo)
 
@@ -275,40 +288,25 @@ func (this *Data) Encode() (raw []byte, err error) {
 	content.Value = this.Content
 	data.Add(content)
 
-	// signature
-	signature := NewTLV(SIGNATURE)
-	if len(this.Signature.KeyLocator) == 0 && len(this.Signature.Witness) == 0 {
-		// DIGEST_SHA256
-		digest := NewTLV(DIGEST_SHA256)
-		digest.Value = this.Signature.SignatureBits
-		signature.Add(digest)
-	} else {
-		// SIGNATURE_SHA256_WITH_RSA
-		rsa := NewTLV(SIGNATURE_SHA256_WITH_RSA)
-		// KEY_LOCATOR
-		keyLocator := NewTLV(KEY_LOCATOR)
-		certificateName := NewTLV(CERTIFICATE_NAME)
-		certificateName.Add(uriDecode(this.Signature.KeyLocator))
-		keyLocator.Add(certificateName)
-		rsa.Add(keyLocator)
-
-		if len(this.Signature.Witness) != 0 {
-			// SIGNATURE_SHA256_WITH_RSA_AND_MERKLE
-			rsa.Type = SIGNATURE_SHA256_WITH_RSA_AND_MERKLE
-
-			Witness := NewTLV(WITNESS)
-			Witness.Value = this.Signature.Witness
-			rsa.Add(Witness)
-		}
-
-		// signature bits
-		signatureBits := NewTLV(SIGNATURE_BITS)
-		signatureBits.Value = this.Signature.SignatureBits
-		rsa.Add(signatureBits)
-
-		signature.Add(rsa)
+	// signature info
+	signatureInfo := NewTLV(SIGNATURE_INFO)
+	// signature type
+	signatureType := NewTLV(SIGNATURE_TYPE)
+	signatureType.Value, err = encodeNonNeg(this.Signature.Type)
+	if err != nil {
+		return
 	}
-	data.Add(signature)
+	signatureInfo.Add(signatureType)
+	// add other info
+	for _, c := range this.Signature.Info {
+		signatureInfo.Add(c)
+	}
+	data.Add(signatureInfo)
+
+	// signature value
+	signatureValue := NewTLV(SIGNATURE_VALUE)
+	signatureValue.Value = this.Signature.Value
+	data.Add(signatureValue)
 
 	// final encode
 	raw, err = data.Encode()
@@ -337,36 +335,30 @@ func (this *Data) Decode(raw []byte) error {
 					if err != nil {
 						return err
 					}
+				case FINAL_BLOCK_ID:
+					if len(cc.Children) != 1 ||
+						cc.Children[0].Type != NAME_COMPONENT {
+						return errors.New(nodeType(FINAL_BLOCK_ID))
+					}
+					this.MetaInfo.FinalBlockId = string(cc.Children[0].Value)
 				}
 			}
 		case CONTENT:
 			this.Content = c.Value
-		case SIGNATURE:
+		case SIGNATURE_INFO:
 			for _, cc := range c.Children {
 				switch cc.Type {
-				case DIGEST_SHA256:
-					this.Signature.SignatureBits = cc.Value
-				case SIGNATURE_SHA256_WITH_RSA:
-					fallthrough
-				case SIGNATURE_SHA256_WITH_RSA_AND_MERKLE:
-					for _, ccc := range cc.Children {
-						switch ccc.Type {
-						case KEY_LOCATOR:
-							if len(ccc.Children) != 1 ||
-								ccc.Children[0].Type != CERTIFICATE_NAME ||
-								len(ccc.Children[0].Children) != 1 ||
-								ccc.Children[0].Children[0].Type != NAME {
-								return errors.New(nodeType(CERTIFICATE_NAME))
-							}
-							this.Signature.KeyLocator = uriEncode(ccc.Children[0].Children[0])
-						case SIGNATURE_BITS:
-							this.Signature.SignatureBits = ccc.Value
-						case WITNESS:
-							this.Signature.Witness = ccc.Value
-						}
+				case SIGNATURE_TYPE:
+					this.Signature.Type, err = decodeNonNeg(cc.Value)
+					if err != nil {
+						return err
 					}
+				default:
+					this.Signature.Info = append(this.Signature.Info, cc)
 				}
 			}
+		case SIGNATURE_VALUE:
+			this.Signature.Value = c.Value
 		}
 	}
 	return nil

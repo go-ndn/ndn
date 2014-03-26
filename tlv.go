@@ -157,6 +157,9 @@ func countBytes(v uint64) (c uint64) {
 }
 
 func (this *TLV) Encode() ([]byte, error) {
+	if this.Type == 0 {
+		return nil, errors.New(WRONG_TYPE)
+	}
 	buf := new(bytes.Buffer)
 	err := writeByte(buf, this.Type)
 	if err != nil {

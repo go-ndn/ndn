@@ -10,56 +10,57 @@ import (
 */
 
 const (
-	// common
-	NAME           uint64 = 7
-	NAME_COMPONENT        = 8
-	GROUP_AND             = 0 // only useful for parsing
-	GROUP_OR              = 1 // only useful for parsing
-	// interest
-	INTEREST                    = 5
-	SELECTORS                   = 9
-	NONCE                       = 10
-	MIN_SUFFIX_COMPONENTS       = 13
-	MAX_SUFFIX_COMPONENTS       = 14
-	PUBLISHER_PUBLICKEY_LOCATOR = 15
-	EXCLUDE                     = 16
-	ANY                         = 19
-	CHILD_SELECTOR              = 17
-	MUST_BE_FRESH               = 18
-	SCOPE                       = 11
-	INTEREST_LIFETIME           = 12
-	//data
-	DATA                                 = 6
-	META_INFO                            = 20
-	CONTENT_TYPE                         = 24
-	FRESHNESS_PERIOD                     = 25
-	CONTENT                              = 21
-	SIGNATURE                            = 248
-	DIGEST_SHA256                        = 254
-	SIGNATURE_SHA256_WITH_RSA            = 253
-	SIGNATURE_SHA256_WITH_RSA_AND_MERKLE = 252
-	KEY_LOCATOR                          = 28
-	CERTIFICATE_NAME                     = 251
-	WITNESS                              = 250
-	SIGNATURE_BITS                       = 249
+	GROUP_AND                   uint64 = 1 // only useful for parsing
+	GROUP_OR                           = 2 // only useful for parsing
+	INTEREST                           = 5
+	DATA                               = 6
+	NAME                               = 7
+	NAME_COMPONENT                     = 8
+	SELECTORS                          = 9
+	NONCE                              = 10
+	SCOPE                              = 11
+	INTEREST_LIFETIME                  = 12
+	MIN_SUFFIX_COMPONENTS              = 13
+	MAX_SUFFIX_COMPONENTS              = 14
+	PUBLISHER_PUBLICKEY_LOCATOR        = 15
+	EXCLUDE                            = 16
+	CHILD_SELECTOR                     = 17
+	MUST_BE_FRESH                      = 18
+	ANY                                = 19
+	META_INFO                          = 20
+	CONTENT                            = 21
+	SIGNATURE_INFO                     = 22
+	SIGNATURE_VALUE                    = 23
+	CONTENT_TYPE                       = 24
+	FRESHNESS_PERIOD                   = 25
+	FINAL_BLOCK_ID                     = 26
+	SIGNATURE_TYPE                     = 27
+	KEY_LOCATOR                        = 28
+	KEY_LOCATOR_DIGEST                 = 29
 )
 
 func nodeType(t uint64) string {
 	switch t {
-	case NAME:
-		return "NAME"
-	case NAME_COMPONENT:
-		return "NAME_COMPONENT"
 	case GROUP_AND:
 		return "GROUP_AND"
 	case GROUP_OR:
 		return "GROUP_OR"
 	case INTEREST:
 		return "INTEREST"
+	case DATA:
+		return "DATA"
+	case NAME:
+		return "NAME"
+	case NAME_COMPONENT:
+		return "NAME_COMPONENT"
 	case SELECTORS:
 		return "SELECTORS"
 	case NONCE:
 		return "NONCE"
+	case SCOPE:
+		return "SCOPE"
+	case INTEREST_LIFETIME:
+		return "INTEREST_LIFETIME"
 	case MIN_SUFFIX_COMPONENTS:
 		return "MIN_SUFFIX_COMPONENTS"
 	case MAX_SUFFIX_COMPONENTS:
@@ -68,42 +69,32 @@ func nodeType(t uint64) string {
 		return "PUBLISHER_PUBLICKEY_LOCATOR"
 	case EXCLUDE:
 		return "EXCLUDE"
-	case ANY:
-		return "ANY"
 	case CHILD_SELECTOR:
 		return "CHILD_SELECTOR"
 	case MUST_BE_FRESH:
 		return "MUST_BE_FRESH"
-	case SCOPE:
-		return "SCOPE"
-	case INTEREST_LIFETIME:
-		return "INTEREST_LIFETIME"
-	case DATA:
-		return "DATA"
+	case ANY:
+		return "ANY"
 	case META_INFO:
 		return "META_INFO"
+	case CONTENT:
+		return "CONTENT"
+	case SIGNATURE_INFO:
+		return "SIGNATURE_INFO"
+	case SIGNATURE_VALUE:
+		return "SIGNATURE_VALUE"
 	case CONTENT_TYPE:
 		return "CONTENT_TYPE"
 	case FRESHNESS_PERIOD:
 		return "FRESHNESS_PERIOD"
-	case CONTENT:
-		return "CONTENT"
-	case SIGNATURE:
-		return "SIGNATURE"
-	case DIGEST_SHA256:
-		return "DIGEST_SHA256"
-	case SIGNATURE_SHA256_WITH_RSA:
-		return "SIGNATURE_SHA256_WITH_RSA"
-	case SIGNATURE_SHA256_WITH_RSA_AND_MERKLE:
-		return "SIGNATURE_SHA256_WITH_RSA_AND_MERKLE"
+	case FINAL_BLOCK_ID:
+		return "FINAL_BLOCK_ID"
+	case SIGNATURE_TYPE:
+		return "SIGNATURE_TYPE"
 	case KEY_LOCATOR:
 		return "KEY_LOCATOR"
-	case CERTIFICATE_NAME:
-		return "CERTIFICATE_NAME"
-	case WITNESS:
-		return "WITNESS"
-	case SIGNATURE_BITS:
-		return "SIGNATURE_BITS"
+	case KEY_LOCATOR_DIGEST:
+		return "KEY_LOCATOR_DIGEST"
 	}
 	return "UNKNOWN"
 }
@@ -147,8 +138,11 @@ var (
 		{Type: SELECTORS, Count: ZERO_OR_ONE, Children: []Node{
 			{Type: MIN_SUFFIX_COMPONENTS, Count: ZERO_OR_ONE},
 			{Type: MAX_SUFFIX_COMPONENTS, Count: ZERO_OR_ONE},
-			{Type: PUBLISHER_PUBLICKEY_LOCATOR, Count: ZERO_OR_ONE, Children: []Node{
-				{Type: NAME, Children: []Node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
+			{Type: KEY_LOCATOR, Count: ZERO_OR_ONE, Children: []Node{
+				{Type: GROUP_OR, Children: []Node{
+					{Type: NAME, Children: []Node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
+					{Type: KEY_LOCATOR_DIGEST},
+				}},
 			}},
 			{Type: EXCLUDE, Count: ZERO_OR_ONE, Children: []Node{
 				{Type: ANY, Count: ZERO_OR_ONE},
@@ -175,32 +169,23 @@ var (
 		{Type: META_INFO, Children: []Node{
 			{Type: CONTENT_TYPE, Count: ZERO_OR_ONE},
 			{Type: FRESHNESS_PERIOD, Count: ZERO_OR_ONE},
+			{Type: FINAL_BLOCK_ID, Count: ZERO_OR_ONE, Children: []Node{
+				{Type: NAME_COMPONENT},
+			}},
 		}},
 		// content
 		{Type: CONTENT},
 		// signature
-		{Type: SIGNATURE, Children: []Node{
-			{Type: GROUP_OR, Children: []Node{
-				{Type: DIGEST_SHA256},
-				{Type: SIGNATURE_SHA256_WITH_RSA, Children: []Node{
-					{Type: KEY_LOCATOR, Children: []Node{
-						{Type: CERTIFICATE_NAME, Children: []Node{
-							{Type: NAME, Children: []Node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
-						}},
-					}},
-					{Type: SIGNATURE_BITS},
-				}},
-				{Type: SIGNATURE_SHA256_WITH_RSA_AND_MERKLE, Children: []Node{
-					{Type: KEY_LOCATOR, Children: []Node{
-						{Type: CERTIFICATE_NAME, Children: []Node{
-							{Type: NAME, Children: []Node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
-						}},
-					}},
-					{Type: WITNESS},
-					{Type: SIGNATURE_BITS},
+		{Type: SIGNATURE_INFO, Children: []Node{
+			{Type: SIGNATURE_TYPE},
+			{Type: KEY_LOCATOR, Count: ZERO_OR_ONE, Children: []Node{
+				{Type: GROUP_OR, Children: []Node{
+					{Type: NAME, Children: []Node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
+					{Type: KEY_LOCATOR_DIGEST},
 				}},
 			}},
 		}},
+		{Type: SIGNATURE_VALUE},
 	}}
 )
 

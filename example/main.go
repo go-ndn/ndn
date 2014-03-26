@@ -14,7 +14,6 @@ func main() {
 	interest.Selectors.MaxSuffixComponents = 5
 	interest.Selectors.ChildSelector = 4
 	interest.Selectors.MustBeFresh = true
-	interest.Selectors.PublisherPublicKeyLocator = "/ucla/edu/cs"
 	interest.Scope = 8
 	interest.InterestLifeTime = 9
 	interest.Nonce = []byte{0x1, 0x2, 0x3}
@@ -37,9 +36,8 @@ func main() {
 	data.MetaInfo.FreshnessPeriod = 3
 	data.Content = []byte{0x1, 0x2, 0x3}
 
-	data.Signature.SignatureBits = []byte{0x6, 0x5, 0x4}
-	data.Signature.KeyLocator = "/my/home"
-	data.Signature.Witness = []byte{0x1, 0x2, 0x3}
+	data.Signature.Type = 1
+	data.Signature.Value = []byte{0x1, 0x2, 0x3}
 
 	b, err = data.Encode()
 	if err != nil {
