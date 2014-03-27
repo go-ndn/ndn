@@ -15,7 +15,7 @@ import (
 type TLV struct {
 	Type     uint64
 	Value    []byte
-	Children []*TLV
+	Children []TLV
 }
 
 func readByte(buf *bytes.Buffer) (result uint64, err error) {
@@ -95,7 +95,7 @@ func (this *TLV) Length() (length uint64) {
 	return
 }
 
-func (this *TLV) Add(n *TLV) {
+func (this *TLV) Add(n TLV) {
 	this.Children = append(this.Children, n)
 }
 

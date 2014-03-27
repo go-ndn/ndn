@@ -27,6 +27,7 @@ func main() {
 	}
 	fmt.Printf("%#v\n", interest_decode)
 
+	fmt.Println("---")
 	data := ndn.Data{
 		Name: "/google/search",
 	}

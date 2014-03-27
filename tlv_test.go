@@ -23,7 +23,7 @@ func TestWriteByte(t *testing.T) {
 }
 
 func TestDecode(t *testing.T) {
-	v := new(TLV)
+	v := TLV{}
 	r, _ := v.Decode([]byte{0xF0, 0x01, 0x01, 0x01})
 	if v.Type != 240 {
 		t.Errorf("expected %v, got %v", 240, v.Type)
@@ -40,7 +40,7 @@ func TestDecode(t *testing.T) {
 		t.Errorf("expected %v, got %v", 2, v.Value[1])
 	}
 
-	v2 := new(TLV)
+	v2 := TLV{}
 	r, _ = v2.Decode([]byte{0xFD, 0, 0XFD, 0x00})
 
 	if v2.Type != 253 {
@@ -52,7 +52,7 @@ func TestDecode(t *testing.T) {
 }
 
 func TestEncode(t *testing.T) {
-	v := new(TLV)
+	v := TLV{}
 	v.Decode([]byte{0xF0, 0x2, 0x01, 0x02})
 	if b, _ := v.Encode(); !bytes.Equal(b, []byte{0xF0, 0x2, 0x01, 0x02}) {
 		t.Errorf("expected %v, got %v", []byte{0xF0, 0x2, 0x01, 0x02}, b)
@@ -60,19 +60,19 @@ func TestEncode(t *testing.T) {
 }
 
 func TestDecodeSimpleInterest(t *testing.T) {
-	name := new(TLV)
+	name := TLV{}
 	name.Type = NAME
-	nonce := new(TLV)
+	nonce := TLV{}
 	nonce.Type = NONCE
 	// create selector
-	selectors := new(TLV)
+	selectors := TLV{}
 	selectors.Type = SELECTORS
 
-	max := new(TLV)
+	max := TLV{}
 	max.Type = MAX_SUFFIX_COMPONENTS
-	exclude := new(TLV)
+	exclude := TLV{}
 	exclude.Type = EXCLUDE
-	namecomp := new(TLV)
+	namecomp := TLV{}
 	namecomp.Type = NAME_COMPONENT
 	exclude.Add(namecomp)
 	exclude.Add(namecomp)
@@ -82,10 +82,10 @@ func TestDecodeSimpleInterest(t *testing.T) {
 	selectors.Add(max)
 	selectors.Add(exclude)
 
-	lifetime := new(TLV)
+	lifetime := TLV{}
 	lifetime.Type = INTEREST_LIFETIME
 
-	interest := new(TLV)
+	interest := TLV{}
 	interest.Type = INTEREST
 	interest.Add(name)
 	interest.Add(selectors)

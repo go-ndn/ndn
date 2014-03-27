@@ -27,14 +27,14 @@ func (this *Face) Dial(i *Interest) (d *Data, err error) {
 	if err != nil {
 		return
 	}
-	
+
 	// dial
 	conn, err := net.Dial("tcp", this.Host+":6363")
 	if err != nil {
 		return
 	}
 	defer conn.Close()
-	conn.SetDeadline(time.Now().Add(30*time.Second))
+	conn.SetDeadline(time.Now().Add(30 * time.Second))
 	// write interest
 	conn.Write(ib)
 	r := &Data{}

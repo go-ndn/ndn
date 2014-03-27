@@ -189,7 +189,7 @@ var (
 	}}
 )
 
-func DecodeData(raw []byte) (data *TLV, err error) {
+func DecodeData(raw []byte) (data TLV, err error) {
 	data, remain, err := matchNode(DataFormat, raw)
 	if err != nil {
 		return
@@ -200,7 +200,7 @@ func DecodeData(raw []byte) (data *TLV, err error) {
 	return
 }
 
-func DecodeInterest(raw []byte) (interest *TLV, err error) {
+func DecodeInterest(raw []byte) (interest TLV, err error) {
 	interest, remain, err := matchNode(InterestFormat, raw)
 	if err != nil {
 		return
@@ -212,9 +212,9 @@ func DecodeInterest(raw []byte) (interest *TLV, err error) {
 }
 
 // prefix match one node
-func matchNode(n Node, raw []byte) (tlv *TLV, remain []byte, err error) {
+func matchNode(n Node, raw []byte) (tlv TLV, remain []byte, err error) {
 	//fmt.Printf("%v %v\n", n, raw)
-	tlv = new(TLV)
+	tlv = TLV{}
 	remain, err = tlv.Decode(raw)
 	if err != nil {
 		return
@@ -233,7 +233,7 @@ func matchNode(n Node, raw []byte) (tlv *TLV, remain []byte, err error) {
 		tlv.Value = nil
 
 		for _, c := range n.Children {
-			var matched []*TLV
+			var matched []TLV
 			matched, b, err = matchChildNode(c, b)
 			if err != nil {
 				return
@@ -251,10 +251,10 @@ func matchNode(n Node, raw []byte) (tlv *TLV, remain []byte, err error) {
 }
 
 // prefix match and-node once; ignore count
-func matchGroupAndNode(n Node, raw []byte) (matched []*TLV, remain []byte, err error) {
+func matchGroupAndNode(n Node, raw []byte) (matched []TLV, remain []byte, err error) {
 	remain = raw
 	for _, c := range n.Children {
-		var m []*TLV
+		var m []TLV
 		m, remain, err = matchChildNode(c, remain)
 		if err != nil {
 			// and: one fails and all fail
@@ -266,10 +266,10 @@ func matchGroupAndNode(n Node, raw []byte) (matched []*TLV, remain []byte, err e
 }
 
 // prefix match or-node once; ignore count
-func matchGroupOrNode(n Node, raw []byte) (matched []*TLV, remain []byte, err error) {
+func matchGroupOrNode(n Node, raw []byte) (matched []TLV, remain []byte, err error) {
 	remain = raw
 	for _, c := range n.Children {
-		var m []*TLV
+		var m []TLV
 		m, remain, err = matchChildNode(c, remain)
 		if err != nil {
 			// or: ignore error and try another
@@ -289,18 +289,18 @@ func matchGroupOrNode(n Node, raw []byte) (matched []*TLV, remain []byte, err er
 }
 
 // perform match once for and/or/other type; handle count
-func matchChildNode(n Node, raw []byte) (matched []*TLV, remain []byte, err error) {
+func matchChildNode(n Node, raw []byte) (matched []TLV, remain []byte, err error) {
 	remain = raw
 	count := 0
 	for {
-		var mm []*TLV
+		var mm []TLV
 		switch n.Type {
 		case GROUP_AND:
 			mm, remain, err = matchGroupAndNode(n, remain)
 		case GROUP_OR:
 			mm, remain, err = matchGroupOrNode(n, remain)
 		default:
-			var m *TLV
+			var m TLV
 			m, remain, err = matchNode(n, remain)
 			if err == nil {
 				mm = append(mm, m)

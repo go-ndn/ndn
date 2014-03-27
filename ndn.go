@@ -23,14 +23,14 @@ func (p NameComponents) Less(i, j int) bool {
 }
 func (p NameComponents) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
 
-func uriEncode(tlv *TLV) (s string) {
+func uriEncode(tlv TLV) (s string) {
 	for _, c := range tlv.Children {
 		s += "/" + string(c.Value)
 	}
 	return
 }
 
-func uriDecode(s string) *TLV {
+func uriDecode(s string) TLV {
 	tlv := NewTLV(NAME)
 	parts := strings.Split(strings.TrimLeft(s, "/"), "/")
 	sort.Sort(NameComponents(parts))
@@ -93,8 +93,8 @@ func decodeNonNeg(raw []byte) (v uint64, err error) {
 	return
 }
 
-func NewTLV(t uint64) *TLV {
-	return &TLV{Type: t}
+func NewTLV(t uint64) TLV {
+	return TLV{Type: t}
 }
 
 type Interest struct {
@@ -123,8 +123,8 @@ func NewInterest(name string) *Interest {
 type Selectors struct {
 	MinSuffixComponents       uint64
 	MaxSuffixComponents       uint64
-	PublisherPublicKeyLocator *TLV // only child
-	Exclude                   *TLV // itself
+	PublisherPublicKeyLocator TLV // only child
+	Exclude                   TLV // itself
 	ChildSelector             uint64
 	MustBeFresh               bool
 }
@@ -155,7 +155,7 @@ func (this *Interest) Encode() (raw []byte, err error) {
 	}
 
 	// PublisherPublicKeyLocator
-	if this.Selectors.PublisherPublicKeyLocator != nil {
+	if this.Selectors.PublisherPublicKeyLocator.Type != 0 {
 		emptySelectors = false
 		publisherPublicKeyLocator := NewTLV(KEY_LOCATOR)
 		publisherPublicKeyLocator.Add(this.Selectors.PublisherPublicKeyLocator)
@@ -163,7 +163,7 @@ func (this *Interest) Encode() (raw []byte, err error) {
 	}
 
 	// EXCLUDE
-	if this.Selectors.Exclude != nil {
+	if this.Selectors.Exclude.Type != 0 {
 		emptySelectors = false
 		selectors.Add(this.Selectors.Exclude)
 	}
@@ -301,7 +301,7 @@ const (
 
 type Signature struct {
 	Type  uint64
-	Info  []*TLV
+	Info  []TLV
 	Value []byte
 }
 
