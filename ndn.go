@@ -137,13 +137,18 @@ func (this *Interest) Encode() (raw []byte, err error) {
 
 	// selector
 	selectors := NewTLV(SELECTORS)
+	emptySelectors := true
 	// MinSuffixComponents
-	minSuffixComponents := NewTLV(MIN_SUFFIX_COMPONENTS)
-	minSuffixComponents.Value, err = encodeNonNeg(this.Selectors.MinSuffixComponents)
-	selectors.Add(minSuffixComponents)
+	if this.Selectors.MinSuffixComponents != 0 {
+		emptySelectors = false
+		minSuffixComponents := NewTLV(MIN_SUFFIX_COMPONENTS)
+		minSuffixComponents.Value, err = encodeNonNeg(this.Selectors.MinSuffixComponents)
+		selectors.Add(minSuffixComponents)
+	}
 
 	// MaxSuffixComponents
 	if this.Selectors.MaxSuffixComponents != 0 {
+		emptySelectors = false
 		maxSuffixComponents := NewTLV(MAX_SUFFIX_COMPONENTS)
 		maxSuffixComponents.Value, err = encodeNonNeg(this.Selectors.MaxSuffixComponents)
 		selectors.Add(maxSuffixComponents)
@@ -151,6 +156,7 @@ func (this *Interest) Encode() (raw []byte, err error) {
 
 	// PublisherPublicKeyLocator
 	if this.Selectors.PublisherPublicKeyLocator != nil {
+		emptySelectors = false
 		publisherPublicKeyLocator := NewTLV(KEY_LOCATOR)
 		publisherPublicKeyLocator.Add(this.Selectors.PublisherPublicKeyLocator)
 		selectors.Add(publisherPublicKeyLocator)
@@ -158,23 +164,30 @@ func (this *Interest) Encode() (raw []byte, err error) {
 
 	// EXCLUDE
 	if this.Selectors.Exclude != nil {
+		emptySelectors = false
 		selectors.Add(this.Selectors.Exclude)
 	}
 
 	// ChildSelector
-	childSelector := NewTLV(CHILD_SELECTOR)
-	childSelector.Value, err = encodeNonNeg(this.Selectors.ChildSelector)
-	if err != nil {
-		return
+	if this.Selectors.ChildSelector != 0 {
+		emptySelectors = false
+		childSelector := NewTLV(CHILD_SELECTOR)
+		childSelector.Value, err = encodeNonNeg(this.Selectors.ChildSelector)
+		if err != nil {
+			return
+		}
+		selectors.Add(childSelector)
 	}
-	selectors.Add(childSelector)
 
 	if this.Selectors.MustBeFresh {
+		emptySelectors = false
 		mustBeFresh := NewTLV(MUST_BE_FRESH)
 		selectors.Add(mustBeFresh)
 	}
 
-	interest.Add(selectors)
+	if !emptySelectors {
+		interest.Add(selectors)
+	}
 
 	// nonce
 	nonce := NewTLV(NONCE)
@@ -182,21 +195,24 @@ func (this *Interest) Encode() (raw []byte, err error) {
 	interest.Add(nonce)
 
 	// scope
-	scope := NewTLV(SCOPE)
-	scope.Value, err = encodeNonNeg(this.Scope)
-	if err != nil {
-		return
+	if this.Scope != 0 {
+		scope := NewTLV(SCOPE)
+		scope.Value, err = encodeNonNeg(this.Scope)
+		if err != nil {
+			return
+		}
+		interest.Add(scope)
 	}
-	interest.Add(scope)
 
 	// interest lifetime
-	interestLifeTime := NewTLV(INTEREST_LIFETIME)
-	interestLifeTime.Value, err = encodeNonNeg(this.InterestLifeTime)
-	if err != nil {
-		return
+	if this.InterestLifeTime != 0 {
+		interestLifeTime := NewTLV(INTEREST_LIFETIME)
+		interestLifeTime.Value, err = encodeNonNeg(this.InterestLifeTime)
+		if err != nil {
+			return
+		}
+		interest.Add(interestLifeTime)
 	}
-	interest.Add(interestLifeTime)
-
 	// final encode
 	raw, err = interest.Encode()
 	return
@@ -304,27 +320,33 @@ func (this *Data) Encode() (raw []byte, err error) {
 	metaInfo := NewTLV(META_INFO)
 
 	// ContentType
-	contentType := NewTLV(CONTENT_TYPE)
-	contentType.Value, err = encodeNonNeg(this.MetaInfo.ContentType)
-	if err != nil {
-		return
+	if this.MetaInfo.ContentType != 0 {
+		contentType := NewTLV(CONTENT_TYPE)
+		contentType.Value, err = encodeNonNeg(this.MetaInfo.ContentType)
+		if err != nil {
+			return
+		}
+		metaInfo.Add(contentType)
 	}
-	metaInfo.Add(contentType)
 
 	// FreshnessPeriod
-	freshnessPeriod := NewTLV(FRESHNESS_PERIOD)
-	freshnessPeriod.Value, err = encodeNonNeg(this.MetaInfo.FreshnessPeriod)
-	if err != nil {
-		return
+	if this.MetaInfo.FreshnessPeriod != 0 {
+		freshnessPeriod := NewTLV(FRESHNESS_PERIOD)
+		freshnessPeriod.Value, err = encodeNonNeg(this.MetaInfo.FreshnessPeriod)
+		if err != nil {
+			return
+		}
+		metaInfo.Add(freshnessPeriod)
 	}
-	metaInfo.Add(freshnessPeriod)
 
 	// FinalBlockId
-	finalBlockId := NewTLV(FINAL_BLOCK_ID)
-	comp := NewTLV(NAME_COMPONENT)
-	comp.Value = []byte(this.MetaInfo.FinalBlockId)
-	finalBlockId.Add(comp)
-	metaInfo.Add(finalBlockId)
+	if len(this.MetaInfo.FinalBlockId) != 0 {
+		finalBlockId := NewTLV(FINAL_BLOCK_ID)
+		comp := NewTLV(NAME_COMPONENT)
+		comp.Value = []byte(this.MetaInfo.FinalBlockId)
+		finalBlockId.Add(comp)
+		metaInfo.Add(finalBlockId)
+	}
 
 	data.Add(metaInfo)
 

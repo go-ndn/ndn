@@ -52,7 +52,7 @@ func main() {
 
 	fmt.Println("---")
 	face := ndn.NewFace("borges.metwi.ucla.edu")
-	i3 := ndn.NewInterest("/ndnx/pingping")
+	i3 := ndn.NewInterest("/ndnx/ping")
 	fmt.Printf("%#v\n", i3)
 	d3, err := face.Dial(i3)
 	if err != nil {
