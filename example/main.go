@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/taylorchu/ndn"
+	"github.com/davecgh/go-spew/spew"
 )
 
 func main() {
@@ -25,7 +26,7 @@ func main() {
 	if err != nil {
 		fmt.Println("decode", err)
 	}
-	fmt.Printf("%#v\n", interest_decode)
+	spew.Dump(interest_decode)
 
 	fmt.Println("---")
 	data := ndn.Data{
@@ -49,16 +50,16 @@ func main() {
 	if err != nil {
 		fmt.Println("decode", err, b)
 	}
-	fmt.Printf("%#v\n", data_decode)
+	spew.Dump(data_decode)
 
 	fmt.Println("---")
 	face := ndn.NewFace("borges.metwi.ucla.edu")
 	i3 := ndn.NewInterest("/ndnx/ping")
-	fmt.Printf("%#v\n", i3)
+	spew.Dump(i3)
 	d3, err := face.Dial(i3)
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		fmt.Printf("%#v\n", d3)
+		spew.Dump(d3)
 	}
 }
