@@ -105,6 +105,12 @@ type Interest struct {
 	InterestLifeTime uint64
 }
 
+const (
+	SCOPE_LOCAL_NDN_DAEMON uint64 = 0
+	SCOPE_LOCAL_APP               = 1
+	SCOPE_NEXT_NODE               = 2
+)
+
 func NewNonce() []byte {
 	b := make([]byte, 4)
 	rand.Read(b)
@@ -115,7 +121,6 @@ func NewInterest(name string) *Interest {
 	return &Interest{
 		Name:             name,
 		Nonce:            NewNonce(),
-		Scope:            2,
 		InterestLifeTime: 4000,
 	}
 }
@@ -128,6 +133,11 @@ type Selectors struct {
 	ChildSelector             uint64
 	MustBeFresh               bool
 }
+
+const (
+	CHILD_SELECTOR_FIRST uint64 = 0 // leftmost
+	CHILD_SELECTOR_LAST         = 1 // rightmost
+)
 
 func (this *Interest) Encode() (raw []byte, err error) {
 	interest := NewTLV(INTEREST)

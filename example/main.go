@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/taylorchu/ndn"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/taylorchu/ndn"
 )
 
 func main() {
