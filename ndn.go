@@ -2,13 +2,12 @@ package ndn
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/binary"
 	"errors"
 	"math"
 	"sort"
 	"strings"
-	//"fmt"
-	"crypto/rand"
 )
 
 /*
@@ -16,18 +15,25 @@ import (
 	(other file should not be used)
 */
 
-func uriEncode(tlv *TLV) string {
-	s := []string{}
+type NameComponents []string
+
+func (p NameComponents) Len() int { return len(p) }
+func (p NameComponents) Less(i, j int) bool {
+	return len(p[i]) < len(p[j]) || (len(p[i]) == len(p[j]) && p[i] < p[j])
+}
+func (p NameComponents) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
+
+func uriEncode(tlv *TLV) (s string) {
 	for _, c := range tlv.Children {
-		s = append(s, string(c.Value))
+		s += "/" + string(c.Value)
 	}
-	return strings.Join(s, "/")
+	return
 }
 
 func uriDecode(s string) *TLV {
 	tlv := NewTLV(NAME)
 	parts := strings.Split(strings.TrimLeft(s, "/"), "/")
-	sort.Strings(parts)
+	sort.Sort(NameComponents(parts))
 	for _, part := range parts {
 		c := NewTLV(NAME_COMPONENT)
 		c.Value = []byte(part)
@@ -109,6 +115,7 @@ func NewInterest(name string) *Interest {
 	return &Interest{
 		Name:             name,
 		Nonce:            NewNonce(),
+		Scope:            2,
 		InterestLifeTime: 4000,
 	}
 }

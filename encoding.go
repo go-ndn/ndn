@@ -225,7 +225,7 @@ func matchNode(n Node, raw []byte) (tlv *TLV, remain []byte, err error) {
 		remain = raw
 		return
 	}
-	fmt.Println(nodeType(tlv.Type))
+	//fmt.Println(nodeType(tlv.Type))
 	// turn tlv.value into children
 	if len(n.Children) != 0 {
 		b := tlv.Value

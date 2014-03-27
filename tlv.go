@@ -99,50 +99,6 @@ func (this *TLV) Add(n *TLV) {
 	this.Children = append(this.Children, n)
 }
 
-// func (this *TLV) Get(t uint64) *TLV {
-// 	for _, c := range this.Children {
-// 		if c.Type == t {
-// 			return c
-// 		}
-// 	}
-// 	return nil
-// }
-
-// func (this *TLV) Read(v interface{}) {
-// 	switch v.(type) {
-// 	case *string:
-// 		*v.(*string) = string(this.Value)
-// 	case *bool:
-// 		*v.(*bool) = len(this.Value) == 1 && this.Value[0] == 0x01
-// 	default:
-// 		binary.Read(bytes.NewBuffer(this.Value), binary.BigEndian, v)
-// 	}
-// }
-
-// func (this *TLV) Write(v interface{}) {
-// 	switch v.(type) {
-// 	case nil:
-// 		this.Value = nil
-// 	case string:
-// 		this.Value = []byte(v.(string))
-// 	case bool:
-// 		this.Value = []byte{0x01}
-// 	default:
-// 		buf := new(bytes.Buffer)
-// 		binary.Write(buf, binary.BigEndian, v)
-// 		this.Value = buf.Bytes()
-// 	}
-// }
-
-// func (this *TLV) Remove(t uint64) {
-// 	for i, c := range this.Children {
-// 		if c.Type == t {
-// 			this.Children = append(this.Children[:i], this.Children[i+1:]...)
-// 			break
-// 		}
-// 	}
-// }
-
 func countBytes(v uint64) (c uint64) {
 	c = 1
 	switch {
