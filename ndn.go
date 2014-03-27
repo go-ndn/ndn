@@ -129,8 +129,8 @@ func NewInterest(name string) *Interest {
 type Selectors struct {
 	MinSuffixComponents       uint64
 	MaxSuffixComponents       uint64
-	PublisherPublicKeyLocator TLV // only child
-	Exclude                   TLV // itself
+	PublisherPublicKeyLocator TLV // Name or KeyLocatorDigest
+	Exclude                   TLV // Exclude
 	ChildSelector             uint64
 	MustBeFresh               bool
 }
@@ -312,7 +312,7 @@ const (
 
 type Signature struct {
 	Type  uint64
-	Info  []TLV
+	Info  []TLV // List of SignatureInfo TLVs
 	Value []byte
 }
 
