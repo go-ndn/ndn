@@ -9,6 +9,8 @@ What is it?
 3. NDN packet (ndn.go)
 4. NDN server (on top of tcp)
 
+![Imgur](http://i.imgur.com/68hMHZu.png?1)
+
 Import
 ======
 ```
