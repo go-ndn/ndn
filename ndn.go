@@ -16,13 +16,13 @@ import (
 	(other file should not be used)
 */
 
-type NameComponents []string
+type nameComponents []string
 
-func (p NameComponents) Len() int { return len(p) }
-func (p NameComponents) Less(i, j int) bool {
+func (p nameComponents) Len() int { return len(p) }
+func (p nameComponents) Less(i, j int) bool {
 	return len(p[i]) < len(p[j]) || (len(p[i]) == len(p[j]) && p[i] < p[j])
 }
-func (p NameComponents) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
+func (p nameComponents) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
 
 func uriEncode(tlv TLV) (s string) {
 	for _, c := range tlv.Children {
@@ -34,7 +34,7 @@ func uriEncode(tlv TLV) (s string) {
 func uriDecode(s string) TLV {
 	tlv := NewTLV(NAME)
 	parts := strings.Split(strings.TrimLeft(s, "/"), "/")
-	sort.Sort(NameComponents(parts))
+	sort.Sort(nameComponents(parts))
 	for _, part := range parts {
 		c := NewTLV(NAME_COMPONENT)
 		c.Value = []byte(part)
