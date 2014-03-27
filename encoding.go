@@ -120,33 +120,33 @@ const (
 	ONE_OR_MORE
 )
 
-type Node struct {
+type node struct {
 	Type     uint64
 	Count    uint8 // 0 = single, 1 = zero or more, 2 = one or more, 3: zero or one
-	Children []Node
+	Children []node
 }
 
-func (this Node) String() string {
+func (this node) String() string {
 	return fmt.Sprintf("[%s(%d), Count: %s]", nodeType(this.Type), this.Type, nodeCount(this.Count))
 }
 
 var (
-	InterestFormat = Node{Type: INTEREST, Children: []Node{
+	interestFormat = node{Type: INTEREST, Children: []node{
 		// name
-		{Type: NAME, Children: []Node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
+		{Type: NAME, Children: []node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
 		// selectors
-		{Type: SELECTORS, Count: ZERO_OR_ONE, Children: []Node{
+		{Type: SELECTORS, Count: ZERO_OR_ONE, Children: []node{
 			{Type: MIN_SUFFIX_COMPONENTS, Count: ZERO_OR_ONE},
 			{Type: MAX_SUFFIX_COMPONENTS, Count: ZERO_OR_ONE},
-			{Type: PUBLISHER_PUBLICKEY_LOCATOR, Count: ZERO_OR_ONE, Children: []Node{
-				{Type: GROUP_OR, Children: []Node{
-					{Type: NAME, Children: []Node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
+			{Type: PUBLISHER_PUBLICKEY_LOCATOR, Count: ZERO_OR_ONE, Children: []node{
+				{Type: GROUP_OR, Children: []node{
+					{Type: NAME, Children: []node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
 					{Type: KEY_LOCATOR_DIGEST},
 				}},
 			}},
-			{Type: EXCLUDE, Count: ZERO_OR_ONE, Children: []Node{
+			{Type: EXCLUDE, Count: ZERO_OR_ONE, Children: []node{
 				{Type: ANY, Count: ZERO_OR_ONE},
-				{Type: GROUP_AND, Count: ONE_OR_MORE, Children: []Node{
+				{Type: GROUP_AND, Count: ONE_OR_MORE, Children: []node{
 					{Type: NAME_COMPONENT},
 					{Type: ANY, Count: ZERO_OR_ONE},
 				}},
@@ -162,25 +162,25 @@ var (
 		{Type: INTEREST_LIFETIME, Count: ZERO_OR_ONE},
 	}}
 
-	DataFormat = Node{Type: DATA, Children: []Node{
+	dataFormat = node{Type: DATA, Children: []node{
 		// name
-		{Type: NAME, Children: []Node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
+		{Type: NAME, Children: []node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
 		// meta info
-		{Type: META_INFO, Children: []Node{
+		{Type: META_INFO, Children: []node{
 			{Type: CONTENT_TYPE, Count: ZERO_OR_ONE},
 			{Type: FRESHNESS_PERIOD, Count: ZERO_OR_ONE},
-			{Type: FINAL_BLOCK_ID, Count: ZERO_OR_ONE, Children: []Node{
+			{Type: FINAL_BLOCK_ID, Count: ZERO_OR_ONE, Children: []node{
 				{Type: NAME_COMPONENT},
 			}},
 		}},
 		// content
 		{Type: CONTENT},
 		// signature
-		{Type: SIGNATURE_INFO, Children: []Node{
+		{Type: SIGNATURE_INFO, Children: []node{
 			{Type: SIGNATURE_TYPE},
-			{Type: KEY_LOCATOR, Count: ZERO_OR_ONE, Children: []Node{
-				{Type: GROUP_OR, Children: []Node{
-					{Type: NAME, Children: []Node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
+			{Type: KEY_LOCATOR, Count: ZERO_OR_ONE, Children: []node{
+				{Type: GROUP_OR, Children: []node{
+					{Type: NAME, Children: []node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
 					{Type: KEY_LOCATOR_DIGEST},
 				}},
 			}},
@@ -190,7 +190,7 @@ var (
 )
 
 func DecodeData(raw []byte) (data TLV, err error) {
-	data, remain, err := matchNode(DataFormat, raw)
+	data, remain, err := matchNode(dataFormat, raw)
 	if err != nil {
 		return
 	}
@@ -201,7 +201,7 @@ func DecodeData(raw []byte) (data TLV, err error) {
 }
 
 func DecodeInterest(raw []byte) (interest TLV, err error) {
-	interest, remain, err := matchNode(InterestFormat, raw)
+	interest, remain, err := matchNode(interestFormat, raw)
 	if err != nil {
 		return
 	}
@@ -212,7 +212,7 @@ func DecodeInterest(raw []byte) (interest TLV, err error) {
 }
 
 // prefix match one node
-func matchNode(n Node, raw []byte) (tlv TLV, remain []byte, err error) {
+func matchNode(n node, raw []byte) (tlv TLV, remain []byte, err error) {
 	//fmt.Printf("%v %v\n", n, raw)
 	tlv = TLV{}
 	remain, err = tlv.Decode(raw)
@@ -251,7 +251,7 @@ func matchNode(n Node, raw []byte) (tlv TLV, remain []byte, err error) {
 }
 
 // prefix match and-node once; ignore count
-func matchGroupAndNode(n Node, raw []byte) (matched []TLV, remain []byte, err error) {
+func matchGroupAndNode(n node, raw []byte) (matched []TLV, remain []byte, err error) {
 	remain = raw
 	for _, c := range n.Children {
 		var m []TLV
@@ -266,7 +266,7 @@ func matchGroupAndNode(n Node, raw []byte) (matched []TLV, remain []byte, err er
 }
 
 // prefix match or-node once; ignore count
-func matchGroupOrNode(n Node, raw []byte) (matched []TLV, remain []byte, err error) {
+func matchGroupOrNode(n node, raw []byte) (matched []TLV, remain []byte, err error) {
 	remain = raw
 	for _, c := range n.Children {
 		var m []TLV
@@ -289,7 +289,7 @@ func matchGroupOrNode(n Node, raw []byte) (matched []TLV, remain []byte, err err
 }
 
 // perform match once for and/or/other type; handle count
-func matchChildNode(n Node, raw []byte) (matched []TLV, remain []byte, err error) {
+func matchChildNode(n node, raw []byte) (matched []TLV, remain []byte, err error) {
 	remain = raw
 	count := 0
 	for {

@@ -46,8 +46,8 @@ func TestDecode(t *testing.T) {
 	if v2.Type != 253 {
 		t.Errorf("expected %v, got %v", 253, v2.Type)
 	}
-	if v2.Length() != 0 {
-		t.Errorf("expected %v, got %v", 0, v2.Length())
+	if v2.Len() != 0 {
+		t.Errorf("expected %v, got %v", 0, v2.Len())
 	}
 }
 

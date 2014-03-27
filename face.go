@@ -1,6 +1,7 @@
 package ndn
 
 import (
+	"fmt"
 	"net"
 	"time"
 )
@@ -50,6 +51,8 @@ func (this *Face) Dial(i *Interest) (d *Data, err error) {
 		err = r.Decode(db[:n])
 		if err == nil {
 			break
+		} else {
+			fmt.Println(err)
 		}
 	}
 	d = r

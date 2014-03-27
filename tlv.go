@@ -83,10 +83,10 @@ func (this *TLV) Decode(raw []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (this *TLV) Length() (length uint64) {
+func (this *TLV) Len() (length uint64) {
 	if len(this.Value) == 0 {
 		for _, c := range this.Children {
-			l := c.Length()
+			l := c.Len()
 			length += countBytes(c.Type) + countBytes(l) + l
 		}
 	} else {
@@ -119,7 +119,7 @@ func (this *TLV) Encode() ([]byte, error) {
 		return nil, err
 	}
 
-	err = writeByte(buf, this.Length())
+	err = writeByte(buf, this.Len())
 	if err != nil {
 		return nil, err
 	}

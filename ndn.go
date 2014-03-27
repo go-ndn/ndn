@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"math"
 	"sort"
 	"strings"
@@ -460,7 +459,6 @@ func (this *Data) Decode(raw []byte) error {
 					return err
 				}
 				if !bytes.Equal(sum, c.Value) {
-					fmt.Println(sum, c.Value)
 					return errors.New(WRONG_SIGNATURE)
 				}
 			}
