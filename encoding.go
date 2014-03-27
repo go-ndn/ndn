@@ -138,7 +138,7 @@ var (
 		{Type: SELECTORS, Count: ZERO_OR_ONE, Children: []Node{
 			{Type: MIN_SUFFIX_COMPONENTS, Count: ZERO_OR_ONE},
 			{Type: MAX_SUFFIX_COMPONENTS, Count: ZERO_OR_ONE},
-			{Type: KEY_LOCATOR, Count: ZERO_OR_ONE, Children: []Node{
+			{Type: PUBLISHER_PUBLICKEY_LOCATOR, Count: ZERO_OR_ONE, Children: []Node{
 				{Type: GROUP_OR, Children: []Node{
 					{Type: NAME, Children: []Node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
 					{Type: KEY_LOCATOR_DIGEST},

@@ -3,8 +3,10 @@ package ndn
 import (
 	"bytes"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"math"
 	"sort"
 	"strings"
@@ -167,7 +169,7 @@ func (this *Interest) Encode() (raw []byte, err error) {
 	// PublisherPublicKeyLocator
 	if this.Selectors.PublisherPublicKeyLocator.Type != 0 {
 		emptySelectors = false
-		publisherPublicKeyLocator := NewTLV(KEY_LOCATOR)
+		publisherPublicKeyLocator := NewTLV(PUBLISHER_PUBLICKEY_LOCATOR)
 		publisherPublicKeyLocator.Add(this.Selectors.PublisherPublicKeyLocator)
 		selectors.Add(publisherPublicKeyLocator)
 	}
@@ -324,7 +326,8 @@ func (this *Data) Encode() (raw []byte, err error) {
 	data := NewTLV(DATA)
 
 	// name
-	data.Add(uriDecode(this.Name))
+	name := uriDecode(this.Name)
+	data.Add(name)
 
 	// meta info
 	metaInfo := NewTLV(META_INFO)
@@ -382,7 +385,17 @@ func (this *Data) Encode() (raw []byte, err error) {
 
 	// signature value
 	signatureValue := NewTLV(SIGNATURE_VALUE)
-	signatureValue.Value = this.Signature.Value
+	if len(this.Signature.Value) == 0 {
+		switch this.Signature.Type {
+		case 0: //digestSha256
+			signatureValue.Value, err = NewSHA256(name, metaInfo, content, signatureInfo)
+			if err != nil {
+				return
+			}
+		}
+	} else {
+		signatureValue.Value = this.Signature.Value
+	}
 	data.Add(signatureValue)
 
 	// final encode
@@ -395,11 +408,14 @@ func (this *Data) Decode(raw []byte) error {
 	if err != nil {
 		return err
 	}
+	var name, metaInfo, content, signatureInfo TLV
 	for _, c := range tlv.Children {
 		switch c.Type {
 		case NAME:
+			name = c
 			this.Name = uriEncode(c)
 		case META_INFO:
+			metaInfo = c
 			for _, cc := range c.Children {
 				switch cc.Type {
 				case CONTENT_TYPE:
@@ -421,8 +437,10 @@ func (this *Data) Decode(raw []byte) error {
 				}
 			}
 		case CONTENT:
+			content = c
 			this.Content = c.Value
 		case SIGNATURE_INFO:
+			signatureInfo = c
 			for _, cc := range c.Children {
 				switch cc.Type {
 				case SIGNATURE_TYPE:
@@ -435,8 +453,47 @@ func (this *Data) Decode(raw []byte) error {
 				}
 			}
 		case SIGNATURE_VALUE:
+			switch this.Signature.Type {
+			case 0: // digestSha256
+				sum, err := NewSHA256(name, metaInfo, content, signatureInfo)
+				if err != nil {
+					return err
+				}
+				if !bytes.Equal(sum, c.Value) {
+					fmt.Println(sum, c.Value)
+					return errors.New(WRONG_SIGNATURE)
+				}
+			}
 			this.Signature.Value = c.Value
 		}
 	}
 	return nil
+}
+
+func NewSHA256(name, metaInfo, content, signatureInfo TLV) (sum []byte, err error) {
+	buf := new(bytes.Buffer)
+	var b []byte
+	b, err = name.Encode()
+	if err != nil {
+		return
+	}
+	buf.Write(b)
+	b, err = metaInfo.Encode()
+	if err != nil {
+		return
+	}
+	buf.Write(b)
+	b, err = content.Encode()
+	if err != nil {
+		return
+	}
+	buf.Write(b)
+	b, err = signatureInfo.Encode()
+	if err != nil {
+		return
+	}
+	buf.Write(b)
+	sha := sha256.Sum256(buf.Bytes())
+	sum = sha[:]
+	return
 }
