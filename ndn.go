@@ -129,8 +129,8 @@ func NewInterest(name string) *Interest {
 type Selectors struct {
 	MinSuffixComponents       uint64
 	MaxSuffixComponents       uint64
-	PublisherPublicKeyLocator TLV // Name or KeyLocatorDigest
-	Exclude                   TLV // Exclude
+	PublisherPublicKeyLocator TLV   // Name or KeyLocatorDigest
+	Exclude                   []TLV // List of Any or NameComponent TLV
 	ChildSelector             uint64
 	MustBeFresh               bool
 }
@@ -174,9 +174,13 @@ func (this *Interest) Encode() (raw []byte, err error) {
 	}
 
 	// EXCLUDE
-	if this.Selectors.Exclude.Type != 0 {
+	if len(this.Selectors.Exclude) != 0 {
 		emptySelectors = false
-		selectors.Add(this.Selectors.Exclude)
+		exclude := NewTLV(EXCLUDE)
+		for _, c := range this.Selectors.Exclude {
+			exclude.Add(c)
+		}
+		selectors.Add(exclude)
 	}
 
 	// ChildSelector
@@ -257,7 +261,14 @@ func (this *Interest) Decode(raw []byte) error {
 					}
 					this.Selectors.PublisherPublicKeyLocator = cc.Children[0]
 				case EXCLUDE:
-					this.Selectors.Exclude = cc
+					for _, ccc := range cc.Children {
+						switch ccc.Type {
+						case ANY:
+							fallthrough
+						case NAME_COMPONENT:
+							this.Selectors.Exclude = append(this.Selectors.Exclude, ccc)
+						}
+					}
 				case CHILD_SELECTOR:
 					this.Selectors.ChildSelector, err = decodeNonNeg(cc.Value)
 					if err != nil {
