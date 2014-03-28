@@ -8,12 +8,10 @@ import (
 )
 
 func TestData(t *testing.T) {
-	data := Data{
-		Name: "/google/search",
-	}
+	data := NewData("/google/search")
 	data.MetaInfo.ContentType = 2
 	data.MetaInfo.FreshnessPeriod = 3
-	data.MetaInfo.FinalBlockId = "hello"
+	data.MetaInfo.FinalBlockId = []byte("hello")
 	data.Content = []byte{0x1, 0x2, 0x3}
 
 	data.Signature.Type = 1
@@ -30,8 +28,8 @@ func TestData(t *testing.T) {
 		t.Error(err)
 	}
 	// name order changes
-	data.Name = ""
-	data_decode.Name = ""
+	data.Name = nil
+	data_decode.Name = nil
 	b1, err := json.Marshal(data)
 	if err != nil {
 		t.Error(err)
@@ -46,9 +44,7 @@ func TestData(t *testing.T) {
 }
 
 func TestInterest(t *testing.T) {
-	interest := Interest{
-		Name: "/facebook/users",
-	}
+	interest := NewInterest("/facebook/users")
 
 	interest.Selectors.MinSuffixComponents = 3
 	interest.Selectors.MaxSuffixComponents = 5
@@ -68,8 +64,8 @@ func TestInterest(t *testing.T) {
 		t.Error(err)
 	}
 	// name order changes
-	interest.Name = ""
-	interest_decode.Name = ""
+	interest.Name = nil
+	interest_decode.Name = nil
 	b1, err := json.Marshal(interest)
 	if err != nil {
 		t.Error(err)

@@ -29,12 +29,10 @@ func main() {
 	spew.Dump(interest_decode)
 
 	fmt.Println("---")
-	data := ndn.Data{
-		Name: "/google/search",
-	}
+	data := ndn.NewData("/google/search")
 	data.MetaInfo.ContentType = 2
 	data.MetaInfo.FreshnessPeriod = 3
-	data.MetaInfo.FinalBlockId = "hello"
+	data.MetaInfo.FinalBlockId = []byte("hello")
 	data.Content = []byte{0x1, 0x2, 0x3}
 
 	data.Signature.Type = 0
@@ -60,5 +58,16 @@ func main() {
 		fmt.Println(err)
 	} else {
 		spew.Dump(d3)
+	}
+	fmt.Println("---")
+	go ndn.NewFace("test Face").Listen("/test", func(i *ndn.Interest) *ndn.Data {
+		fmt.Println("Listen")
+		return d3
+	})
+	d4, err := ndn.NewFace("localhost").Dial(i3)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		spew.Dump(d4)
 	}
 }

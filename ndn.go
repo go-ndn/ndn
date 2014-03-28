@@ -16,31 +16,37 @@ import (
 	(other file should not be used)
 */
 
-type nameComponents []string
+type nameComponents [][]byte
 
 func (p nameComponents) Len() int { return len(p) }
 func (p nameComponents) Less(i, j int) bool {
-	return len(p[i]) < len(p[j]) || (len(p[i]) == len(p[j]) && p[i] < p[j])
+	return len(p[i]) < len(p[j]) || (len(p[i]) == len(p[j]) && bytes.Compare(p[i], p[j]) < 0)
 }
 func (p nameComponents) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
 
-func uriEncode(tlv TLV) (s string) {
+func nameEncode(parts [][]byte) TLV {
+	tlv := NewTLV(NAME)
+	sort.Sort(nameComponents(parts))
+	for _, part := range parts {
+		c := NewTLV(NAME_COMPONENT)
+		c.Value = part
+		tlv.Add(c)
+	}
+	return tlv
+}
+
+func nameDecode(tlv TLV) (b [][]byte) {
 	for _, c := range tlv.Children {
-		s += "/" + string(c.Value)
+		b = append(b, c.Value)
 	}
 	return
 }
 
-func uriDecode(s string) TLV {
-	tlv := NewTLV(NAME)
-	parts := strings.Split(strings.TrimLeft(s, "/"), "/")
-	sort.Sort(nameComponents(parts))
-	for _, part := range parts {
-		c := NewTLV(NAME_COMPONENT)
-		c.Value = []byte(part)
-		tlv.Add(c)
+func nameDecodeString(s string) (b [][]byte) {
+	for _, c := range strings.Split(strings.TrimLeft(s, "/"), "/") {
+		b = append(b, []byte(c))
 	}
-	return tlv
+	return
 }
 
 func encodeNonNeg(v uint64) (raw []byte, err error) {
@@ -99,7 +105,7 @@ func NewTLV(t uint64) TLV {
 }
 
 type Interest struct {
-	Name             string
+	Name             [][]byte
 	Selectors        Selectors
 	Nonce            []byte
 	Scope            uint64
@@ -120,7 +126,7 @@ func NewNonce() []byte {
 
 func NewInterest(name string) *Interest {
 	return &Interest{
-		Name:             name,
+		Name:             nameDecodeString(name),
 		Nonce:            NewNonce(),
 		InterestLifeTime: 4000,
 	}
@@ -144,7 +150,7 @@ func (this *Interest) Encode() (raw []byte, err error) {
 	interest := NewTLV(INTEREST)
 
 	// name
-	interest.Add(uriDecode(this.Name))
+	interest.Add(nameEncode(this.Name))
 
 	// selector
 	selectors := NewTLV(SELECTORS)
@@ -241,7 +247,7 @@ func (this *Interest) Decode(raw []byte) error {
 	for _, c := range tlv.Children {
 		switch c.Type {
 		case NAME:
-			this.Name = uriEncode(c)
+			this.Name = nameDecode(c)
 		case SELECTORS:
 			for _, cc := range c.Children {
 				switch cc.Type {
@@ -296,7 +302,7 @@ func (this *Interest) Decode(raw []byte) error {
 }
 
 type Data struct {
-	Name      string
+	Name      [][]byte
 	MetaInfo  MetaInfo
 	Content   []byte
 	Signature Signature
@@ -304,14 +310,14 @@ type Data struct {
 
 func NewData(name string) *Data {
 	return &Data{
-		Name: name,
+		Name: nameDecodeString(name),
 	}
 }
 
 type MetaInfo struct {
 	ContentType     uint64
 	FreshnessPeriod uint64
-	FinalBlockId    string
+	FinalBlockId    []byte
 }
 
 const (
@@ -336,7 +342,7 @@ func (this *Data) Encode() (raw []byte, err error) {
 	data := NewTLV(DATA)
 
 	// name
-	name := uriDecode(this.Name)
+	name := nameEncode(this.Name)
 	data.Add(name)
 
 	// meta info
@@ -366,7 +372,7 @@ func (this *Data) Encode() (raw []byte, err error) {
 	if len(this.MetaInfo.FinalBlockId) != 0 {
 		finalBlockId := NewTLV(FINAL_BLOCK_ID)
 		comp := NewTLV(NAME_COMPONENT)
-		comp.Value = []byte(this.MetaInfo.FinalBlockId)
+		comp.Value = this.MetaInfo.FinalBlockId
 		finalBlockId.Add(comp)
 		metaInfo.Add(finalBlockId)
 	}
@@ -423,7 +429,7 @@ func (this *Data) Decode(raw []byte) error {
 		switch c.Type {
 		case NAME:
 			name = c
-			this.Name = uriEncode(c)
+			this.Name = nameDecode(c)
 		case META_INFO:
 			metaInfo = c
 			for _, cc := range c.Children {
@@ -443,7 +449,7 @@ func (this *Data) Decode(raw []byte) error {
 						cc.Children[0].Type != NAME_COMPONENT {
 						return errors.New(nodeType(FINAL_BLOCK_ID))
 					}
-					this.MetaInfo.FinalBlockId = string(cc.Children[0].Value)
+					this.MetaInfo.FinalBlockId = cc.Children[0].Value
 				}
 			}
 		case CONTENT:
