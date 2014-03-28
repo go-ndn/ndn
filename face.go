@@ -24,7 +24,7 @@ func NewFace(raw string) *Face {
 		u.Scheme = "tcp"
 	}
 	// assume port 6363
-	if !strings.Contains(u.Host, ":") {
+	if !strings.Contains(u.Host, ":") && (u.Scheme == "tcp" || u.Scheme == "udp") {
 		u.Host += ":6363"
 	}
 	return &Face{
