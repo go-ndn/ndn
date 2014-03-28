@@ -35,11 +35,17 @@ func (this *Face) Dial(i *Interest) (d *Data, err error) {
 		return
 	}
 	defer conn.Close()
-	conn.SetDeadline(time.Now().Add(30 * time.Second))
 	// write interest
 	conn.Write(ib)
-	r := &Data{}
+	if i.InterestLifeTime == 0 {
+		// default timeout 10s
+		conn.SetDeadline(time.Now().Add(10 * time.Second))
+	} else {
+		// use interestLifeTime
+		conn.SetDeadline(time.Now().Add(time.Duration(i.InterestLifeTime) * time.Millisecond))
+	}
 
+	r := &Data{}
 	db := make([]byte, 4096)
 	for {
 		var n int
@@ -47,7 +53,6 @@ func (this *Face) Dial(i *Interest) (d *Data, err error) {
 		if err != nil {
 			return
 		}
-
 		err = r.Decode(db[:n])
 		if err == nil {
 			break
