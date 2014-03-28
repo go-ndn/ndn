@@ -3,6 +3,8 @@ package ndn
 import (
 	//"fmt"
 	"net"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -11,13 +13,22 @@ import (
 */
 
 type Face struct {
-	Host string
-	Id   uint64
+	Uri *url.URL
+	Id  uint64
 }
 
-func NewFace(uri string) *Face {
+func NewFace(raw string) *Face {
+	u, _ := url.Parse(raw)
+	// assume tcp
+	if len(u.Scheme) == 0 {
+		u.Scheme = "tcp"
+	}
+	// assume port 6363
+	if !strings.Contains(u.Host, ":") {
+		u.Host += ":6363"
+	}
 	return &Face{
-		Host: uri,
+		Uri: u,
 	}
 }
 
@@ -65,7 +76,7 @@ func (this *Face) Dial(i *Interest) (d *Data, err error) {
 	}
 
 	// dial
-	conn, err := net.Dial("tcp", this.Host+":6363")
+	conn, err := net.Dial(this.Uri.Scheme, this.Uri.Host)
 	if err != nil {
 		return
 	}
@@ -85,7 +96,7 @@ func (this *Face) Dial(i *Interest) (d *Data, err error) {
 }
 
 func (this *Face) Listen(name string, callback func(*Interest) *Data) error {
-	ln, err := net.Listen("tcp", ":6363")
+	ln, err := net.Listen(this.Uri.Scheme, this.Uri.Host)
 	if err != nil {
 		return err
 	}
