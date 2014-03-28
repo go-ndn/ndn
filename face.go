@@ -13,8 +13,8 @@ import (
 */
 
 type Face struct {
-	Uri *url.URL
-	Id  uint64
+	*url.URL
+	Id uint64
 }
 
 func NewFace(raw string) *Face {
@@ -28,7 +28,7 @@ func NewFace(raw string) *Face {
 		u.Host += ":6363"
 	}
 	return &Face{
-		Uri: u,
+		URL: u,
 	}
 }
 
@@ -76,7 +76,7 @@ func (this *Face) Dial(i *Interest) (d *Data, err error) {
 	}
 
 	// dial
-	conn, err := net.Dial(this.Uri.Scheme, this.Uri.Host)
+	conn, err := net.Dial(this.Scheme, this.Host)
 	if err != nil {
 		return
 	}
@@ -96,7 +96,7 @@ func (this *Face) Dial(i *Interest) (d *Data, err error) {
 }
 
 func (this *Face) Listen(name string, callback func(*Interest) *Data) error {
-	ln, err := net.Listen(this.Uri.Scheme, this.Uri.Host)
+	ln, err := net.Listen(this.Scheme, this.Host)
 	if err != nil {
 		return err
 	}
