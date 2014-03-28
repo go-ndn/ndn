@@ -34,7 +34,7 @@ var (
 	controlResponseFormat = node{Type: CONTROL_RESPONSE, Children: []node{
 		{Type: STATUS_CODE},
 		{Type: STATUS_TEXT},
-		// body
+		{Type: NODE, Count: ZERO_OR_MORE},
 	}}
 	controlParametersFormat = node{Type: CONTROL_PARAMETERS, Children: []node{
 		{Type: NAME, Children: []node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
@@ -163,6 +163,7 @@ func (this *Control) Interest() (i *Interest, err error) {
 type ControlResponse struct {
 	StatusCode uint64
 	StatusText string
+	Body       []TLV
 }
 
 func DecodeControlResponse(content []byte) (resp TLV, err error) {
@@ -190,6 +191,8 @@ func (this *ControlResponse) Data(d *Data) error {
 			}
 		case STATUS_TEXT:
 			this.StatusText = string(c.Value)
+		default:
+			this.Body = append(this.Body, c)
 		}
 	}
 	return nil

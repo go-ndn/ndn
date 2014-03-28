@@ -10,8 +10,9 @@ import (
 */
 
 const (
-	GROUP_AND                   uint64 = 1 // only useful for parsing
-	GROUP_OR                           = 2 // only useful for parsing
+	GROUP_AND                   uint64 = 1 // (A B)
+	GROUP_OR                           = 2 //  A|B
+	NODE                               = 3 // match any tlv; defer actual matching
 	INTEREST                           = 5
 	DATA                               = 6
 	NAME                               = 7
@@ -45,6 +46,8 @@ func nodeType(t uint64) string {
 		return "GROUP_AND"
 	case GROUP_OR:
 		return "GROUP_OR"
+	case NODE:
+		return "NODE"
 	case INTEREST:
 		return "INTEREST"
 	case DATA:
@@ -184,6 +187,7 @@ var (
 					{Type: KEY_LOCATOR_DIGEST},
 				}},
 			}},
+			{Type: NODE, Count: ZERO_OR_MORE},
 		}},
 		{Type: SIGNATURE_VALUE},
 	}}
@@ -220,7 +224,7 @@ func matchNode(n node, raw []byte) (tlv TLV, remain []byte, err error) {
 		return
 	}
 	// type does not match; don't touch remain
-	if n.Type != tlv.Type {
+	if n.Type != NODE && n.Type != tlv.Type {
 		err = errors.New(fmt.Sprintf("%s: expected %s, got %s", WRONG_TYPE, nodeType(n.Type), nodeType(tlv.Type)))
 		remain = raw
 		return
