@@ -404,7 +404,7 @@ func (this *Data) Encode() (raw []byte, err error) {
 	if len(this.Signature.Value) == 0 {
 		switch this.Signature.Type {
 		case 0: //digestSha256
-			signatureValue.Value, err = NewSHA256(name, metaInfo, content, signatureInfo)
+			signatureValue.Value, err = NewSHA256([]TLV{name, metaInfo, content, signatureInfo})
 			if err != nil {
 				return
 			}
@@ -424,14 +424,11 @@ func (this *Data) Decode(raw []byte) error {
 	if err != nil {
 		return err
 	}
-	var name, metaInfo, content, signatureInfo TLV
 	for _, c := range tlv.Children {
 		switch c.Type {
 		case NAME:
-			name = c
 			this.Name = nameDecode(c)
 		case META_INFO:
-			metaInfo = c
 			for _, cc := range c.Children {
 				switch cc.Type {
 				case CONTENT_TYPE:
@@ -453,10 +450,8 @@ func (this *Data) Decode(raw []byte) error {
 				}
 			}
 		case CONTENT:
-			content = c
 			this.Content = c.Value
 		case SIGNATURE_INFO:
-			signatureInfo = c
 			for _, cc := range c.Children {
 				switch cc.Type {
 				case SIGNATURE_TYPE:
@@ -471,7 +466,7 @@ func (this *Data) Decode(raw []byte) error {
 		case SIGNATURE_VALUE:
 			switch this.Signature.Type {
 			case 0: // digestSha256
-				sum, err := NewSHA256(name, metaInfo, content, signatureInfo)
+				sum, err := NewSHA256(tlv.Children[:4])
 				if err != nil {
 					return err
 				}
@@ -485,28 +480,16 @@ func (this *Data) Decode(raw []byte) error {
 	return nil
 }
 
-func NewSHA256(name, metaInfo, content, signatureInfo TLV) (sum []byte, err error) {
+func NewSHA256(l []TLV) (sum []byte, err error) {
 	buf := new(bytes.Buffer)
-	b, err := name.Encode()
-	if err != nil {
-		return
+	for _, c := range l {
+		var b []byte
+		b, err = c.Encode()
+		if err != nil {
+			return
+		}
+		buf.Write(b)
 	}
-	buf.Write(b)
-	b, err = metaInfo.Encode()
-	if err != nil {
-		return
-	}
-	buf.Write(b)
-	b, err = content.Encode()
-	if err != nil {
-		return
-	}
-	buf.Write(b)
-	b, err = signatureInfo.Encode()
-	if err != nil {
-		return
-	}
-	buf.Write(b)
 	sha := sha256.Sum256(buf.Bytes())
 	sum = sha[:]
 	return
