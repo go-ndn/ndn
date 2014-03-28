@@ -63,7 +63,7 @@ type Parameters struct {
 	Strategy            [][]byte
 }
 
-func (this *Control) Encode() (raw []byte, err error) {
+func (this *Control) Interest() (i *Interest, err error) {
 	name := [][]byte{[]byte("localhost"), []byte("nfd"), []byte(this.Module), []byte(this.Command)}
 
 	parameters := NewTLV(CONTROL_PARAMETERS)
@@ -156,9 +156,8 @@ func (this *Control) Encode() (raw []byte, err error) {
 	name = append(name, b)
 
 	// final encode
-	interest := NewInterest("")
-	interest.Name = name
-	raw, err = interest.Encode()
+	i = NewInterest("")
+	i.Name = name
 	return
 }
 
@@ -167,30 +166,22 @@ type ControlResponse struct {
 	StatusText string
 }
 
-func DecodeControlResponse(raw []byte) (data TLV, err error) {
-	data, err = DecodeData(raw)
-	if err != nil {
-		return
-	}
-	// children 3 is content
-	resp, remain, err := matchNode(controlParametersFormat, data.Children[2].Value)
+func DecodeControlResponse(content []byte) (resp TLV, err error) {
+	resp, remain, err := matchNode(controlParametersFormat, content)
 	if err != nil {
 		return
 	}
 	if len(remain) != 0 {
 		err = errors.New(BUFFER_NOT_EMPTY)
 	}
-	data.Children[2].Value = nil
-	data.Children[2].Add(resp)
 	return
 }
 
-func (this *ControlResponse) Decode(raw []byte) error {
-	data, err := DecodeControlResponse(raw)
+func (this *ControlResponse) Data(d *Data) error {
+	resp, err := DecodeControlResponse(d.Content)
 	if err != nil {
 		return err
 	}
-	resp := data.Children[2].Children[0]
 	for _, c := range resp.Children {
 		switch c.Type {
 		case STATUS_CODE:

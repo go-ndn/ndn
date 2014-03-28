@@ -59,15 +59,33 @@ func main() {
 	} else {
 		spew.Dump(d3)
 	}
+
 	fmt.Println("---")
-	go ndn.NewFace("test Face").Listen("/test", func(i *ndn.Interest) *ndn.Data {
-		fmt.Println("Listen")
-		return d3
-	})
-	d4, err := ndn.NewFace("localhost").Dial(i3)
+	control := ndn.Control{
+		Module:  "faces",
+		Command: "create",
+		Parameters: ndn.Parameters{
+			Uri: "localhost:84",
+		},
+	}
+	i4, _ := control.Interest()
+	spew.Dump(i4)
+	face2 := ndn.NewFace("localhost")
+	d4, err := face2.Dial(i4)
 	if err != nil {
 		fmt.Println(err)
 	} else {
 		spew.Dump(d4)
 	}
+
+	// go ndn.NewFace("test Face").Listen("/test", func(i *ndn.Interest) *ndn.Data {
+	// 	fmt.Println("Listen")
+	// 	return d3
+	// })
+	// d4, err := ndn.NewFace("localhost").Dial(i3)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// } else {
+	// 	spew.Dump(d4)
+	// }
 }

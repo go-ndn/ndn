@@ -7,7 +7,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"math"
-	"sort"
 	"strings"
 )
 
@@ -16,17 +15,8 @@ import (
 	(other file should not be used)
 */
 
-type nameComponents [][]byte
-
-func (p nameComponents) Len() int { return len(p) }
-func (p nameComponents) Less(i, j int) bool {
-	return len(p[i]) < len(p[j]) || (len(p[i]) == len(p[j]) && bytes.Compare(p[i], p[j]) < 0)
-}
-func (p nameComponents) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
-
 func nameEncode(parts [][]byte) TLV {
 	tlv := NewTLV(NAME)
-	sort.Sort(nameComponents(parts))
 	for _, part := range parts {
 		c := NewTLV(NAME_COMPONENT)
 		c.Value = part
