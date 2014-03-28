@@ -396,8 +396,13 @@ func (this *Data) Encode() (raw []byte, err error) {
 	signatureValue := NewTLV(SIGNATURE_VALUE)
 	if len(this.Signature.Value) == 0 {
 		switch this.Signature.Type {
-		case 0: //digestSha256
+		case SIGNATURE_TYPE_DIGEST_SHA_256:
 			signatureValue.Value, err = NewSHA256([]TLV{name, metaInfo, content, signatureInfo})
+			if err != nil {
+				return
+			}
+		case SIGNATURE_TYPE_SIGNATURE_SHA_256_WITH_RSA:
+			signatureValue.Value, err = SignRSA([]TLV{name, metaInfo, content, signatureInfo})
 			if err != nil {
 				return
 			}
@@ -458,12 +463,16 @@ func (this *Data) Decode(raw []byte) error {
 			}
 		case SIGNATURE_VALUE:
 			switch this.Signature.Type {
-			case 0: // digestSha256
+			case SIGNATURE_TYPE_DIGEST_SHA_256:
 				sum, err := NewSHA256(tlv.Children[:4])
 				if err != nil {
 					return err
 				}
 				if !bytes.Equal(sum, c.Value) {
+					return errors.New(WRONG_SIGNATURE)
+				}
+			case SIGNATURE_TYPE_SIGNATURE_SHA_256_WITH_RSA:
+				if !VerifyRSA(tlv.Children[:4], c.Value) {
 					return errors.New(WRONG_SIGNATURE)
 				}
 			}

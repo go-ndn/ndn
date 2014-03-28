@@ -61,6 +61,10 @@ func main() {
 	// }
 
 	// fmt.Println("---")
+	ndn.GenerateRSAKey()
+	b, _ := ndn.WriteRSAKey()
+	spew.Dump(b)
+	fmt.Println("---")
 	control := ndn.Control{
 		Module:  "faces",
 		Command: "create",
@@ -75,7 +79,9 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		spew.Dump(d4)
+		resp := ndn.ControlResponse{}
+		resp.Data(d4)
+		spew.Dump(resp)
 	}
 
 	// go ndn.NewFace("test Face").Listen("/test", func(i *ndn.Interest) *ndn.Data {
