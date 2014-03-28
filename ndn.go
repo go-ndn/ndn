@@ -481,8 +481,7 @@ func (this *Data) Decode(raw []byte) error {
 
 func NewSHA256(name, metaInfo, content, signatureInfo TLV) (sum []byte, err error) {
 	buf := new(bytes.Buffer)
-	var b []byte
-	b, err = name.Encode()
+	b, err := name.Encode()
 	if err != nil {
 		return
 	}

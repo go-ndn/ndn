@@ -45,21 +45,23 @@ func (this *Face) Dial(i *Interest) (d *Data, err error) {
 		conn.SetDeadline(time.Now().Add(time.Duration(i.InterestLifeTime) * time.Millisecond))
 	}
 
-	r := &Data{}
-	db := make([]byte, 4096)
+	d = &Data{}
+	fixed := make([]byte, 1024)
+	db := []byte{}
 	for {
 		var n int
-		n, err = conn.Read(db)
+		n, err = conn.Read(fixed)
 		if err != nil {
 			return
 		}
-		err = r.Decode(db[:n])
-		if err == nil {
+		db = append(db, fixed[:n]...)
+		if n < len(fixed) {
 			break
-		} else {
-			fmt.Println(err)
 		}
 	}
-	d = r
+	err = d.Decode(db)
+	if err != nil {
+		fmt.Println(err)
+	}
 	return
 }
