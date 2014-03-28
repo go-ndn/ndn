@@ -64,7 +64,11 @@ type Parameters struct {
 }
 
 func (this *Control) Interest() (i *Interest, err error) {
-	name := [][]byte{[]byte("localhost"), []byte("nfd"), []byte(this.Module), []byte(this.Command)}
+	name := [][]byte{[]byte("localhost"), []byte("nfd"), []byte(this.Module)}
+
+	if len(this.Command) != 0 {
+		name = append(name, []byte(this.Command))
+	}
 
 	parameters := NewTLV(CONTROL_PARAMETERS)
 	// name
@@ -157,6 +161,7 @@ func (this *Control) Interest() (i *Interest, err error) {
 	// final encode
 	i = NewInterest("")
 	i.Name = name
+	i.Selectors.MustBeFresh = true
 	return
 }
 
