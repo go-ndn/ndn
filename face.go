@@ -15,9 +15,9 @@ type Face struct {
 	Id   uint64
 }
 
-func NewFace(name string) *Face {
+func NewFace(uri string) *Face {
 	return &Face{
-		Host: name,
+		Host: uri,
 	}
 }
 
