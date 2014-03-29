@@ -8,8 +8,9 @@ The author is taylorchu (Tai-Lin Chu). This package is released under GPL2 licen
 
 To use this packege, you should do `import "github.com/taylorchu/ndn"`.
 Detailed Documentation is on [godoc](https://godoc.org/github.com/taylorchu/ndn).
+Use *_test.go as examples.
 
-The current test coverage is about half (52.5%), so I hope someone can help me reach 100%.
+The current test coverage is about 70%. I hope someone can help me reach 100%.
 
 What is it?
 ===========
@@ -17,18 +18,19 @@ What is it?
 2. Raw NDN TLV encoder/decoder (encoding.go)
 3. NDN packet management in go (ndn.go)
 4. NDN server/client abstraction (WIP)
+5. NFD forward daemon client api (nfd.go)
 
 ![Imgur](http://i.imgur.com/68hMHZu.png?1)
 
 Benchmark
 =========
 ```
-BenchmarkDataSHA256Encode      50000         33806 ns/op
-BenchmarkDataSHA256Decode      50000         41343 ns/op
-BenchmarkDataRSAEncode        50      37952106 ns/op
-BenchmarkDataRSADecode     20000        100177 ns/op
-BenchmarkInterestEncode   200000         13261 ns/op
-BenchmarkInterestDecode   100000         25194 ns/op
+BenchmarkDataSHA256Encode     100000         22272 ns/op
+BenchmarkDataSHA256Decode     100000         27381 ns/op
+BenchmarkDataRSAEncode       100      23419913 ns/op
+BenchmarkDataRSADecode     50000         68238 ns/op
+BenchmarkInterestEncode   200000          9064 ns/op
+BenchmarkInterestDecode   100000         17223 ns/op
 ```
 Note: RSA key is 2048 bits. 
 
