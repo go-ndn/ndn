@@ -177,7 +177,7 @@ type ControlResponse struct {
 }
 
 func DecodeControlResponse(content []byte) (resp TLV, err error) {
-	resp, remain, err := matchNode(controlParametersFormat, content)
+	resp, remain, err := matchNode(controlResponseFormat, content)
 	if err != nil {
 		return
 	}

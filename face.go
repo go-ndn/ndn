@@ -133,7 +133,6 @@ func (this *Face) Listen(name string, callback func(*Interest) *Data) error {
 			}
 		}(conn)
 	}
-	return nil
 }
 
 func (this *Face) Close() {
