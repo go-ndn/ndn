@@ -19,6 +19,10 @@ type Face struct {
 
 func NewFace(raw string) *Face {
 	u, _ := url.Parse(raw)
+	if len(u.Host) == 0 && len(u.Path) != 0 {
+		u.Host = u.Path
+		u.Path = ""
+	}
 	// assume tcp
 	if len(u.Scheme) == 0 {
 		u.Scheme = "tcp"
