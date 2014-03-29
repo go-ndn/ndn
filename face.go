@@ -2,6 +2,7 @@ package ndn
 
 import (
 	//"fmt"
+	"errors"
 	"net"
 	"net/url"
 	"strings"
@@ -73,6 +74,10 @@ func readInterest(conn net.Conn) (i *Interest, err error) {
 }
 
 func (this *Face) Dial(i *Interest) (d *Data, err error) {
+	if i == nil {
+		err = errors.New(NULL_POINTER)
+		return
+	}
 	// interest encode
 	ib, err := i.Encode()
 	if err != nil {

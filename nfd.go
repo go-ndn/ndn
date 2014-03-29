@@ -188,6 +188,9 @@ func DecodeControlResponse(content []byte) (resp TLV, err error) {
 }
 
 func (this *ControlResponse) Data(d *Data) error {
+	if d == nil {
+		return errors.New(NULL_POINTER)
+	}
 	resp, err := DecodeControlResponse(d.Content)
 	if err != nil {
 		return err
