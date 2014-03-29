@@ -129,11 +129,7 @@ func (this *Face) Run() error {
 				// invalid interest
 				return
 			}
-			parts := []string{}
-			for _, c := range i.Name {
-				parts = append(parts, string(c))
-			}
-			h, ok := this.Handlers["/"+strings.Join(parts, "/")]
+			h, ok := this.Handlers[nameToString(i.Name)]
 			if !ok {
 				// handler not found
 				return

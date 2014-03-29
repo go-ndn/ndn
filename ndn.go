@@ -32,12 +32,19 @@ func nameDecode(tlv TLV) (b [][]byte) {
 	return
 }
 
-func newName(s string) (b [][]byte) {
+func nameFromString(s string) (b [][]byte) {
 	if len(s) == 0 {
 		return
 	}
-	for _, c := range strings.Split(strings.TrimLeft(s, "/"), "/") {
+	for _, c := range strings.Split(strings.Trim(s, "/"), "/") {
 		b = append(b, []byte(c))
+	}
+	return
+}
+
+func nameToString(b [][]byte) (s string) {
+	for _, c := range b {
+		s += "/" + string(c)
 	}
 	return
 }
@@ -119,7 +126,7 @@ func newNonce() []byte {
 
 func NewInterest(name string) *Interest {
 	return &Interest{
-		Name:             newName(name),
+		Name:             nameFromString(name),
 		Nonce:            newNonce(),
 		InterestLifeTime: 4000,
 	}
@@ -303,7 +310,7 @@ type Data struct {
 
 func NewData(name string) *Data {
 	return &Data{
-		Name: newName(name),
+		Name: nameFromString(name),
 	}
 }
 
