@@ -56,7 +56,7 @@ func signRSA(l []TLV) (signature []byte, err error) {
 
 func verifyRSA(l []TLV, signature []byte) bool {
 	if rsaPrivateKey == nil {
-		return false
+		return true
 	}
 	digest, err := newSHA256(l)
 	if err != nil {
