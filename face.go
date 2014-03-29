@@ -15,7 +15,8 @@ import (
 
 type Face struct {
 	*url.URL
-	Id uint64
+	Id       uint64
+	Handlers map[string]func(*Interest) *Data
 }
 
 func NewFace(raw string) *Face {
@@ -33,7 +34,8 @@ func NewFace(raw string) *Face {
 		u.Host += ":6363"
 	}
 	return &Face{
-		URL: u,
+		URL:      u,
+		Handlers: make(map[string]func(*Interest) *Data),
 	}
 }
 
@@ -104,7 +106,11 @@ func (this *Face) Dial(i *Interest) (d *Data, err error) {
 	return
 }
 
-func (this *Face) Listen(name string, callback func(*Interest) *Data) error {
+func (this *Face) Listen(name string, h func(*Interest) *Data) {
+	this.Handlers[name] = h
+}
+
+func (this *Face) Run() error {
 	ln, err := net.Listen(this.Scheme, this.Host)
 	if err != nil {
 		return err
@@ -120,21 +126,28 @@ func (this *Face) Listen(name string, callback func(*Interest) *Data) error {
 			conn.SetReadDeadline(time.Now().Add(10 * time.Second))
 			i, err := readInterest(conn)
 			if err != nil {
+				// invalid interest
 				return
 			}
-			d := callback(i)
-
-			if d != nil {
-				b, err := d.Encode()
-				if err != nil {
-					return
-				}
-				conn.Write(b)
+			parts := []string{}
+			for _, c := range i.Name {
+				parts = append(parts, string(c))
 			}
+			h, ok := this.Handlers["/"+strings.Join(parts, "/")]
+			if !ok {
+				// handler not found
+				return
+			}
+			d := h(i)
+			if d == nil {
+				// handler ignore interest
+				return
+			}
+			b, err := d.Encode()
+			if err != nil {
+				return
+			}
+			conn.Write(b)
 		}(conn)
 	}
-}
-
-func (this *Face) Close() {
-
 }
