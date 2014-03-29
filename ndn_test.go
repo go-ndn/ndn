@@ -52,6 +52,8 @@ func TestData(t *testing.T) {
 	data_decode.Name = nil
 	data.Signature.Value = nil
 	data_decode.Signature.Value = nil
+	data.Signature.Info = nil
+	data_decode.Signature.Info = nil
 	b1, err := json.Marshal(data)
 	if err != nil {
 		t.Error(err)

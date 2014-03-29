@@ -135,11 +135,16 @@ func (this *Control) Interest() (i *Interest, err error) {
 	signatureInfo := NewTLV(SIGNATURE_INFO)
 	// signature type
 	signatureType := NewTLV(SIGNATURE_TYPE)
-	signatureType.Value, err = encodeNonNeg(SIGNATURE_TYPE_DIGEST_SHA_256)
+	signatureType.Value, err = encodeNonNeg(SIGNATURE_TYPE_SIGNATURE_SHA_256_WITH_RSA)
 	if err != nil {
 		return
 	}
 	signatureInfo.Add(signatureType)
+	// add empty keylocator for rsa
+	keyLocator := NewTLV(KEY_LOCATOR)
+	keyLocator.Add(NewTLV(NAME))
+	signatureInfo.Add(keyLocator)
+
 	b, err = signatureInfo.Encode()
 	if err != nil {
 		return
@@ -148,7 +153,7 @@ func (this *Control) Interest() (i *Interest, err error) {
 
 	// signature value
 	signatureValue := NewTLV(SIGNATURE_VALUE)
-	signatureValue.Value, err = NewSHA256(nameEncode(name).Children)
+	signatureValue.Value, err = SignRSA(nameEncode(name).Children)
 	if err != nil {
 		return
 	}
