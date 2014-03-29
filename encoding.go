@@ -40,7 +40,7 @@ const (
 	KEY_LOCATOR_DIGEST                 = 29
 )
 
-func nodeType(t uint64) string {
+func typeString(t uint64) string {
 	switch t {
 	case GROUP_AND:
 		return "GROUP_AND"
@@ -102,7 +102,7 @@ func nodeType(t uint64) string {
 	return "UNKNOWN"
 }
 
-func nodeCount(c uint8) string {
+func countString(c uint8) string {
 	switch c {
 	case ONE:
 		return "ONE"
@@ -130,7 +130,7 @@ type node struct {
 }
 
 func (this node) String() string {
-	return fmt.Sprintf("[%s(%d), Count: %s]", nodeType(this.Type), this.Type, nodeCount(this.Count))
+	return fmt.Sprintf("[%s(%d), Count: %s]", typeString(this.Type), this.Type, countString(this.Count))
 }
 
 var (
@@ -225,11 +225,11 @@ func matchNode(n node, raw []byte) (tlv TLV, remain []byte, err error) {
 	}
 	// type does not match; don't touch remain
 	if n.Type != NODE && n.Type != tlv.Type {
-		err = errors.New(fmt.Sprintf("%s: expected %s, got %s", WRONG_TYPE, nodeType(n.Type), nodeType(tlv.Type)))
+		err = errors.New(fmt.Sprintf("%s: expected %s, got %s", WRONG_TYPE, typeString(n.Type), typeString(tlv.Type)))
 		remain = raw
 		return
 	}
-	//fmt.Println(nodeType(tlv.Type))
+	//fmt.Println(typeString(tlv.Type))
 	// turn tlv.value into children
 	if len(n.Children) != 0 {
 		b := tlv.Value
@@ -286,7 +286,7 @@ func matchGroupOrNode(n node, raw []byte) (matched []TLV, remain []byte, err err
 	}
 	// OR should at least have one match;
 	if len(matched) == 0 {
-		err = errors.New(fmt.Sprintf("%s: %s", WRONG_TYPE, nodeType(n.Type)))
+		err = errors.New(fmt.Sprintf("%s: %s", WRONG_TYPE, n))
 		return
 	}
 	return
@@ -325,12 +325,12 @@ func matchChildNode(n node, raw []byte) (matched []TLV, remain []byte, err error
 	switch n.Count {
 	case ONE:
 		if count != 1 {
-			err = errors.New(fmt.Sprintf("%s: %s %s", WRONG_COUNT, nodeType(n.Type), nodeCount(n.Count)))
+			err = errors.New(fmt.Sprintf("%s: %s", WRONG_COUNT, n))
 			return
 		}
 	case ONE_OR_MORE:
 		if count == 0 {
-			err = errors.New(fmt.Sprintf("%s: %s %s", WRONG_COUNT, nodeType(n.Type), nodeCount(n.Count)))
+			err = errors.New(fmt.Sprintf("%s: %s", WRONG_COUNT, n))
 			return
 		}
 	}

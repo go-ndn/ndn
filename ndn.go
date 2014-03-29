@@ -263,7 +263,7 @@ func (this *Interest) Decode(raw []byte) error {
 					}
 				case PUBLISHER_PUBLICKEY_LOCATOR:
 					if len(cc.Children) != 1 {
-						return errors.New(nodeType(PUBLISHER_PUBLICKEY_LOCATOR))
+						return errors.New(typeString(PUBLISHER_PUBLICKEY_LOCATOR))
 					}
 					this.Selectors.PublisherPublicKeyLocator = cc.Children[0]
 				case EXCLUDE:
@@ -455,7 +455,7 @@ func (this *Data) Decode(raw []byte) error {
 				case FINAL_BLOCK_ID:
 					if len(cc.Children) != 1 ||
 						cc.Children[0].Type != NAME_COMPONENT {
-						return errors.New(nodeType(FINAL_BLOCK_ID))
+						return errors.New(typeString(FINAL_BLOCK_ID))
 					}
 					this.MetaInfo.FinalBlockId = cc.Children[0].Value
 				}
