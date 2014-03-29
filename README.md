@@ -7,7 +7,7 @@ This package is intended to work with nfd, the new NDN forwarding daemon.
 The author is taylorchu (Tai-Lin Chu). This package is released under GPL2 license.
 
 To use this packege, you should do `import "github.com/taylorchu/ndn"`.
-Detailed Documentation is on [here](https://godoc.org/github.com/taylorchu/ndn).
+Detailed Documentation is on [godoc](https://godoc.org/github.com/taylorchu/ndn).
 
 The current test coverage is about half (52.5%), so I hope someone can help me reach 100%.
 

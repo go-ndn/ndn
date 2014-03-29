@@ -129,7 +129,7 @@ func (this *Control) Interest() (i *Interest, err error) {
 	}
 	name = append(name, b)
 	// random value
-	name = append(name, NewNonce())
+	name = append(name, newNonce())
 
 	// signature info
 	signatureInfo := NewTLV(SIGNATURE_INFO)
@@ -153,7 +153,7 @@ func (this *Control) Interest() (i *Interest, err error) {
 
 	// signature value
 	signatureValue := NewTLV(SIGNATURE_VALUE)
-	signatureValue.Value, err = SignRSA(nameEncode(name).Children)
+	signatureValue.Value, err = signRSA(nameEncode(name).Children)
 	if err != nil {
 		return
 	}

@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	RSAPrivateKey *rsa.PrivateKey
+	rsaPrivateKey *rsa.PrivateKey
 )
 
 func ReadRSAKey(pemData []byte) (err error) {
@@ -20,47 +20,47 @@ func ReadRSAKey(pemData []byte) (err error) {
 		return
 	}
 	// Decode the RSA private key
-	RSAPrivateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+	rsaPrivateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
 	return
 }
 
 func WriteRSAKey() (pemData []byte, err error) {
-	if RSAPrivateKey == nil {
+	if rsaPrivateKey == nil {
 		err = errors.New(NOT_RSA_PRIVATE_KEY)
 		return
 	}
 	pemData = pem.EncodeToMemory(&pem.Block{
 		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(RSAPrivateKey),
+		Bytes: x509.MarshalPKCS1PrivateKey(rsaPrivateKey),
 	})
 	return
 }
 
 func GenerateRSAKey() (err error) {
-	RSAPrivateKey, err = rsa.GenerateKey(rand.Reader, 1024)
+	rsaPrivateKey, err = rsa.GenerateKey(rand.Reader, 1024)
 	return
 }
 
-func SignRSA(l []TLV) (signature []byte, err error) {
-	if RSAPrivateKey == nil {
+func signRSA(l []TLV) (signature []byte, err error) {
+	if rsaPrivateKey == nil {
 		err = errors.New(NOT_RSA_PRIVATE_KEY)
 		return
 	}
-	digest, err := NewSHA256(l)
+	digest, err := newSHA256(l)
 	if err != nil {
 		return
 	}
-	signature, err = rsa.SignPKCS1v15(rand.Reader, RSAPrivateKey, crypto.SHA256, digest)
+	signature, err = rsa.SignPKCS1v15(rand.Reader, rsaPrivateKey, crypto.SHA256, digest)
 	return
 }
 
-func VerifyRSA(l []TLV, signature []byte) bool {
-	if RSAPrivateKey == nil {
+func verifyRSA(l []TLV, signature []byte) bool {
+	if rsaPrivateKey == nil {
 		return false
 	}
-	digest, err := NewSHA256(l)
+	digest, err := newSHA256(l)
 	if err != nil {
 		return false
 	}
-	return nil == rsa.VerifyPKCS1v15(&RSAPrivateKey.PublicKey, crypto.SHA256, digest, signature)
+	return nil == rsa.VerifyPKCS1v15(&rsaPrivateKey.PublicKey, crypto.SHA256, digest, signature)
 }

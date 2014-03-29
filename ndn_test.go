@@ -57,7 +57,7 @@ func BenchmarkDataSHA256Decode(b *testing.B) {
 }
 
 func BenchmarkDataRSAEncode(b *testing.B) {
-	RSAPrivateKey = key
+	rsaPrivateKey = key
 	data := NewData("/google/search")
 	data.Signature.Type = 1
 	for n := 0; n < b.N; n++ {
@@ -70,7 +70,7 @@ func BenchmarkDataRSAEncode(b *testing.B) {
 }
 
 func BenchmarkDataRSADecode(b *testing.B) {
-	RSAPrivateKey = key
+	rsaPrivateKey = key
 	data := NewData("")
 	for n := 0; n < b.N; n++ {
 		err := data.Decode(byteRSA)
@@ -104,7 +104,7 @@ func BenchmarkInterestDecode(b *testing.B) {
 }
 
 func TestData(t *testing.T) {
-	RSAPrivateKey = key
+	rsaPrivateKey = key
 	data := NewData("/google/search")
 	data.MetaInfo.ContentType = 2
 	data.MetaInfo.FreshnessPeriod = 3

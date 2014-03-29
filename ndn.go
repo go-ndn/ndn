@@ -32,7 +32,7 @@ func nameDecode(tlv TLV) (b [][]byte) {
 	return
 }
 
-func NewName(s string) (b [][]byte) {
+func newName(s string) (b [][]byte) {
 	if len(s) == 0 {
 		return
 	}
@@ -111,7 +111,7 @@ const (
 	SCOPE_NEXT_NODE               = 2
 )
 
-func NewNonce() []byte {
+func newNonce() []byte {
 	b := make([]byte, 4)
 	rand.Read(b)
 	return b
@@ -119,8 +119,8 @@ func NewNonce() []byte {
 
 func NewInterest(name string) *Interest {
 	return &Interest{
-		Name:             NewName(name),
-		Nonce:            NewNonce(),
+		Name:             newName(name),
+		Nonce:            newNonce(),
 		InterestLifeTime: 4000,
 	}
 }
@@ -303,7 +303,7 @@ type Data struct {
 
 func NewData(name string) *Data {
 	return &Data{
-		Name: NewName(name),
+		Name: newName(name),
 	}
 }
 
@@ -403,12 +403,12 @@ func (this *Data) Encode() (raw []byte, err error) {
 	if len(this.Signature.Value) == 0 {
 		switch this.Signature.Type {
 		case SIGNATURE_TYPE_DIGEST_SHA_256:
-			signatureValue.Value, err = NewSHA256([]TLV{name, metaInfo, content, signatureInfo})
+			signatureValue.Value, err = newSHA256([]TLV{name, metaInfo, content, signatureInfo})
 			if err != nil {
 				return
 			}
 		case SIGNATURE_TYPE_SIGNATURE_SHA_256_WITH_RSA:
-			signatureValue.Value, err = SignRSA([]TLV{name, metaInfo, content, signatureInfo})
+			signatureValue.Value, err = signRSA([]TLV{name, metaInfo, content, signatureInfo})
 			if err != nil {
 				return
 			}
@@ -470,7 +470,7 @@ func (this *Data) Decode(raw []byte) error {
 		case SIGNATURE_VALUE:
 			switch this.Signature.Type {
 			case SIGNATURE_TYPE_DIGEST_SHA_256:
-				sum, err := NewSHA256(tlv.Children[:4])
+				sum, err := newSHA256(tlv.Children[:4])
 				if err != nil {
 					return err
 				}
@@ -478,7 +478,7 @@ func (this *Data) Decode(raw []byte) error {
 					return errors.New(INVALID_SHA_256)
 				}
 			case SIGNATURE_TYPE_SIGNATURE_SHA_256_WITH_RSA:
-				if !VerifyRSA(tlv.Children[:4], c.Value) {
+				if !verifyRSA(tlv.Children[:4], c.Value) {
 					return errors.New(INVALID_RSA)
 				}
 			}
@@ -488,7 +488,7 @@ func (this *Data) Decode(raw []byte) error {
 	return nil
 }
 
-func NewSHA256(l []TLV) (sum []byte, err error) {
+func newSHA256(l []TLV) (sum []byte, err error) {
 	buf := new(bytes.Buffer)
 	for _, c := range l {
 		var b []byte
