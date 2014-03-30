@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"strings"
 	"testing"
-	"time"
+	//"time"
 )
 
 func TestNewFace(t *testing.T) {
@@ -37,37 +37,6 @@ func TestDial(t *testing.T) {
 	} else {
 		if len(d.Name) != 2 || !bytes.Equal(d.Name[0], []byte("ndnx")) || !bytes.Equal(d.Name[1], []byte("ping")) {
 			t.Errorf("expected %v, got %v", i.Name, d.Name)
-		}
-	}
-}
-
-func TestListen(t *testing.T) {
-	GenerateRSAKey()
-	face := NewFace("127.0.0.1")
-	face.Listen("/ping", func(i *Interest) *Data {
-		return NewData("/pong")
-	})
-	face.Listen("/happy/day", func(i *Interest) *Data {
-		return NewData("/cheer")
-	})
-	go face.Run()
-	<-time.After(time.Nanosecond)
-	i := NewInterest("/ping")
-	d, err := NewFace("127.0.0.1").Dial(i)
-	if err != nil {
-		t.Error(err)
-	} else {
-		if len(d.Name) != 1 || !bytes.Equal(d.Name[0], []byte("pong")) {
-			t.Errorf("expected %v, got %v", i.Name, d.Name)
-		}
-	}
-	i2 := NewInterest("/happy/day")
-	d2, err := NewFace("127.0.0.1").Dial(i2)
-	if err != nil {
-		t.Error(err)
-	} else {
-		if len(d2.Name) != 1 || !bytes.Equal(d2.Name[0], []byte("cheer")) {
-			t.Errorf("expected %v, got %v", i2.Name, d2.Name)
 		}
 	}
 }

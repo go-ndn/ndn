@@ -2,6 +2,7 @@ package ndn
 
 import (
 	//"fmt"
+	"bufio"
 	"bytes"
 	"errors"
 	"net"
@@ -40,41 +41,21 @@ func NewFace(raw string) *Face {
 	}
 }
 
-func readChunk(conn net.Conn) (b []byte, err error) {
-	buf := new(bytes.Buffer)
-	fixed := make([]byte, 1024)
-	for {
-		var n int
-		n, err = conn.Read(fixed)
-		if err != nil {
-			return
-		}
-		buf.Write(fixed[:n])
-		if n < len(fixed) {
-			break
-		}
-	}
-	b = buf.Bytes()
-	return
-}
-
-func readData(conn net.Conn) (d *Data, err error) {
-	d = &Data{}
-	b, err := readChunk(conn)
+// read precisely one tlv
+func readChunk(r *bufio.Reader) (b []byte, err error) {
+	// type and length are at most 1+8+1+8 bytes
+	peek, _ := r.Peek(18)
+	buf := bytes.NewBuffer(peek)
+	_, err = readByte(buf)
 	if err != nil {
 		return
 	}
-	err = d.Decode(b)
-	return
-}
-
-func readInterest(conn net.Conn) (i *Interest, err error) {
-	i = &Interest{}
-	b, err := readChunk(conn)
+	l, err := readByte(buf)
 	if err != nil {
 		return
 	}
-	err = i.Decode(b)
+	b = make([]byte, int(l)+len(peek)-buf.Len())
+	_, err = r.Read(b)
 	return
 }
 
@@ -104,8 +85,13 @@ func (this *Face) Dial(i *Interest) (d *Data, err error) {
 		// use interestLifeTime
 		conn.SetReadDeadline(time.Now().Add(time.Duration(i.InterestLifeTime) * time.Millisecond))
 	}
-
-	d, err = readData(conn)
+	// read one chunk only
+	b, err := readChunk(bufio.NewReader(conn))
+	if err != nil {
+		return
+	}
+	d = &Data{}
+	err = d.Decode(b)
 	return
 }
 
@@ -114,29 +100,34 @@ func (this *Face) Listen(name string, h func(*Interest) *Data) {
 }
 
 func (this *Face) Run() error {
-	ln, err := net.Listen(this.Scheme, this.Host)
+	// dial
+	conn, err := net.Dial(this.Scheme, this.Host)
 	if err != nil {
 		return err
 	}
+	defer conn.Close()
+
+	// TODO: nfd prefix annoucement
+
+	r := bufio.NewReader(conn)
 	for {
-		conn, err := ln.Accept()
+		// keep reading chunks and decode as interest
+		b, err := readChunk(r)
 		if err != nil {
 			continue
 		}
-		go func(conn net.Conn) {
-			defer conn.Close()
-			// wait client for 10s if there is no response
-			conn.SetReadDeadline(time.Now().Add(10 * time.Second))
-			i, err := readInterest(conn)
-			if err != nil {
-				// invalid interest
-				return
-			}
-			h, ok := this.Handlers[nameToString(i.Name)]
-			if !ok {
-				// handler not found
-				return
-			}
+		i := &Interest{}
+		err = i.Decode(b)
+		if err != nil {
+			// invalid interest
+			continue
+		}
+		h, ok := this.Handlers[nameToString(i.Name)]
+		if !ok {
+			// handler not found
+			continue
+		}
+		go func(h func(*Interest) *Data, i *Interest) {
 			d := h(i)
 			if d == nil {
 				// handler ignore interest
@@ -147,6 +138,6 @@ func (this *Face) Run() error {
 				return
 			}
 			conn.Write(b)
-		}(conn)
+		}(h, i)
 	}
 }
