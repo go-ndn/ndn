@@ -68,19 +68,20 @@ func writeByte(buf *bytes.Buffer, v uint64) (err error) {
 	return
 }
 
-func (this *TLV) Decode(raw []byte) ([]byte, error) {
+func (this *TLV) Decode(raw []byte) (b []byte, err error) {
 	buf := bytes.NewBuffer(raw)
-	t, err := readByte(buf)
+	this.Type, err = readByte(buf)
 	if err != nil {
-		return nil, err
+		return
 	}
-	this.Type = t
-	l, err := readByte(buf)
+	var l uint64
+	l, err = readByte(buf)
 	if err != nil {
-		return nil, err
+		return
 	}
 	this.Value = buf.Next(int(l))
-	return buf.Bytes(), nil
+	b = buf.Bytes()
+	return
 }
 
 func (this *TLV) Len() (length uint64) {
@@ -112,30 +113,33 @@ func countBytes(v uint64) (c uint64) {
 	return
 }
 
-func (this *TLV) Encode() ([]byte, error) {
+func (this *TLV) Encode() (b []byte, err error) {
 	buf := new(bytes.Buffer)
-	err := writeByte(buf, this.Type)
+	err = writeByte(buf, this.Type)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	err = writeByte(buf, this.Len())
 	if err != nil {
-		return nil, err
+		return
 	}
 	if len(this.Value) != 0 && len(this.Children) != 0 {
-		return nil, errors.New(VALUE_CHILDREN_COEXIST)
+		err = errors.New(VALUE_CHILDREN_COEXIST)
+		return
 	}
 	if len(this.Value) == 0 {
 		for _, c := range this.Children {
-			b, err := c.Encode()
+			var e []byte
+			e, err = c.Encode()
 			if err != nil {
-				return nil, err
+				return
 			}
-			buf.Write(b)
+			buf.Write(e)
 		}
 	} else {
 		buf.Write(this.Value)
 	}
-	return buf.Bytes(), nil
+	b = buf.Bytes()
+	return
 }

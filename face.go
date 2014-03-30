@@ -2,6 +2,7 @@ package ndn
 
 import (
 	//"fmt"
+	"bytes"
 	"errors"
 	"net"
 	"net/url"
@@ -40,6 +41,7 @@ func NewFace(raw string) *Face {
 }
 
 func readChunk(conn net.Conn) (b []byte, err error) {
+	buf := new(bytes.Buffer)
 	fixed := make([]byte, 1024)
 	for {
 		var n int
@@ -47,11 +49,12 @@ func readChunk(conn net.Conn) (b []byte, err error) {
 		if err != nil {
 			return
 		}
-		b = append(b, fixed[:n]...)
+		buf.Write(fixed[:n])
 		if n < len(fixed) {
 			break
 		}
 	}
+	b = buf.Bytes()
 	return
 }
 
