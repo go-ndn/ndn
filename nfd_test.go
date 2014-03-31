@@ -2,6 +2,9 @@ package ndn
 
 import (
 	//"bytes"
+	"github.com/davecgh/go-spew/spew"
+	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -13,10 +16,29 @@ func TestControl(t *testing.T) {
 			Uri: "localhost:4000",
 		},
 	}
-	_, err := control.Interest()
+	i, err := control.Interest()
 	if err != nil {
 		t.Error(err)
 	}
+	f, err := os.Open("/home/march/default.pri")
+	if err != nil {
+		t.Error(err)
+	}
+	defer f.Close()
+	b, err := ioutil.ReadAll(f)
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = ReadRSAKey(b)
+	if err != nil {
+		t.Error(err)
+	}
+	d, err := NewFace("localhost").Dial(i)
+	if err != nil {
+		t.Error(err)
+	}
+	spew.Dump(d)
 }
 
 func TestControlResponse(t *testing.T) {
@@ -45,5 +67,4 @@ func TestControlResponse(t *testing.T) {
 	if resp2.StatusText != "system online" {
 		t.Errorf("expected %v, got %v", "system online", resp2.StatusText)
 	}
-
 }

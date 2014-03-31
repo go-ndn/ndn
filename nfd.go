@@ -140,9 +140,15 @@ func (this *Control) Interest() (i *Interest, err error) {
 		return
 	}
 	signatureInfo.Add(signatureType)
-	// add empty keylocator for rsa
+	// add empty keyLocator for rsa
 	keyLocator := NewTLV(KEY_LOCATOR)
-	keyLocator.Add(NewTLV(NAME))
+	keyLocator.Add(nameEncode([][]byte{
+		[]byte("testing"),
+		[]byte("KEY"),
+		[]byte("ksk"),
+		[]byte("ID-CERT"),
+		[]byte{0x1},
+	}))
 	signatureInfo.Add(keyLocator)
 
 	b, err = signatureInfo.Encode()
@@ -188,9 +194,6 @@ func DecodeControlResponse(content []byte) (resp TLV, err error) {
 }
 
 func (this *ControlResponse) Data(d *Data) error {
-	if d == nil {
-		return errors.New(NULL_POINTER)
-	}
 	resp, err := DecodeControlResponse(d.Content)
 	if err != nil {
 		return err

@@ -4,7 +4,6 @@ import (
 	//"fmt"
 	"bufio"
 	"bytes"
-	"errors"
 	"net"
 	"net/url"
 	"strings"
@@ -60,10 +59,6 @@ func readChunk(r *bufio.Reader) (b []byte, err error) {
 }
 
 func (this *Face) Dial(i *Interest) (d *Data, err error) {
-	if i == nil {
-		err = errors.New(NULL_POINTER)
-		return
-	}
 	// interest encode
 	ib, err := i.Encode()
 	if err != nil {

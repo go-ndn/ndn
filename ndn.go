@@ -397,10 +397,16 @@ func (this *Data) Encode() (raw []byte, err error) {
 	for _, c := range this.Signature.Info {
 		signatureInfo.Add(c)
 	}
-	// add empty keylocator for rsa
+	// add empty keyLocator for rsa
 	if this.Signature.Type == SIGNATURE_TYPE_SIGNATURE_SHA_256_WITH_RSA && len(this.Signature.Info) == 0 {
 		keyLocator := NewTLV(KEY_LOCATOR)
-		keyLocator.Add(NewTLV(NAME))
+		keyLocator.Add(nameEncode([][]byte{
+			[]byte("testing"),
+			[]byte("KEY"),
+			[]byte("ksk"),
+			[]byte("ID-CERT"),
+			[]byte{0x1},
+		}))
 		signatureInfo.Add(keyLocator)
 	}
 	data.Add(signatureInfo)
@@ -485,9 +491,10 @@ func (this *Data) Decode(raw []byte) error {
 					return errors.New(INVALID_SHA_256)
 				}
 			case SIGNATURE_TYPE_SIGNATURE_SHA_256_WITH_RSA:
-				if !verifyRSA(tlv.Children[:4], c.Value) {
-					return errors.New(INVALID_RSA)
-				}
+				// TODO: enable rsa
+				// if !verifyRSA(tlv.Children[:4], c.Value) {
+				// 	return errors.New(INVALID_RSA)
+				// }
 			}
 			this.Signature.Value = c.Value
 		}
