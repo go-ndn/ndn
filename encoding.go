@@ -154,6 +154,12 @@ func (this node) String() string {
 }
 
 var (
+	keyLocatorContentFormat = []node{
+		{Type: GROUP_OR, Children: []node{
+			{Type: NAME, Children: []node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
+			{Type: KEY_LOCATOR_DIGEST},
+		}},
+	}
 	interestFormat = node{Type: INTEREST, Children: []node{
 		// name
 		{Type: NAME, Children: []node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
@@ -161,12 +167,7 @@ var (
 		{Type: SELECTORS, Count: ZERO_OR_ONE, Children: []node{
 			{Type: MIN_SUFFIX_COMPONENTS, Count: ZERO_OR_ONE},
 			{Type: MAX_SUFFIX_COMPONENTS, Count: ZERO_OR_ONE},
-			{Type: PUBLISHER_PUBLICKEY_LOCATOR, Count: ZERO_OR_ONE, Children: []node{
-				{Type: GROUP_OR, Children: []node{
-					{Type: NAME, Children: []node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
-					{Type: KEY_LOCATOR_DIGEST},
-				}},
-			}},
+			{Type: PUBLISHER_PUBLICKEY_LOCATOR, Count: ZERO_OR_ONE, Children: keyLocatorContentFormat},
 			{Type: EXCLUDE, Count: ZERO_OR_ONE, Children: []node{
 				{Type: ANY, Count: ZERO_OR_ONE},
 				{Type: GROUP_AND, Count: ONE_OR_MORE, Children: []node{
@@ -201,12 +202,7 @@ var (
 		// signature
 		{Type: SIGNATURE_INFO, Children: []node{
 			{Type: SIGNATURE_TYPE},
-			{Type: KEY_LOCATOR, Count: ZERO_OR_ONE, Children: []node{
-				{Type: GROUP_OR, Children: []node{
-					{Type: NAME, Children: []node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
-					{Type: KEY_LOCATOR_DIGEST},
-				}},
-			}},
+			{Type: KEY_LOCATOR, Count: ZERO_OR_ONE, Children: keyLocatorContentFormat},
 			{Type: NODE, Count: ZERO_OR_MORE},
 		}},
 		{Type: SIGNATURE_VALUE},
