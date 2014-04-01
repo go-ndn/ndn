@@ -106,7 +106,7 @@ func (this *Face) Dial(i *Interest) (d *Data, err error) {
 	return
 }
 
-func (this *Face) Listen(name string, h func(*Interest) *Data) {
+func (this *Face) On(name string, h func(*Interest) *Data) {
 	this.Handlers[name] = h
 }
 
@@ -177,7 +177,7 @@ func (this *Face) announcePrefix(rw *bufio.ReadWriter) error {
 	return nil
 }
 
-func (this *Face) Run() (err error) {
+func (this *Face) Listen() (err error) {
 	// dial
 	conn, err := net.Dial(this.Scheme, this.Host)
 	if err != nil {

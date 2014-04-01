@@ -65,11 +65,11 @@ func TestListen(t *testing.T) {
 		return
 	}
 	face := NewFace("127.0.0.1")
-	face.Listen("/test", func(i *Interest) *Data {
+	face.On("/test", func(i *Interest) *Data {
 		//fmt.Println("got Interest")
 		return NewData("/test")
 	})
-	go face.Run()
+	go face.Listen()
 	<-time.After(3 * time.Second)
 	d, err := face.Dial(NewInterest("/test"))
 	if err != nil {
