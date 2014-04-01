@@ -35,7 +35,7 @@ var (
 		{Type: LOCAL_CONTROL_FEATURE, Count: ZERO_OR_ONE},
 		{Type: COST, Count: ZERO_OR_ONE},
 		{Type: STRATEGY, Count: ZERO_OR_ONE, Children: []node{
-			{Type: NAME, Children: []node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
+			nameFormat,
 		}},
 	}
 )

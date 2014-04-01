@@ -154,15 +154,16 @@ func (this node) String() string {
 }
 
 var (
+	nameFormat              = node{Type: NAME, Children: []node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}}
 	keyLocatorContentFormat = []node{
 		{Type: GROUP_OR, Children: []node{
-			{Type: NAME, Children: []node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
+			nameFormat,
 			{Type: KEY_LOCATOR_DIGEST},
 		}},
 	}
 	interestFormat = node{Type: INTEREST, Children: []node{
 		// name
-		{Type: NAME, Children: []node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
+		nameFormat,
 		// selectors
 		{Type: SELECTORS, Count: ZERO_OR_ONE, Children: []node{
 			{Type: MIN_SUFFIX_COMPONENTS, Count: ZERO_OR_ONE},
@@ -188,7 +189,7 @@ var (
 
 	dataFormat = node{Type: DATA, Children: []node{
 		// name
-		{Type: NAME, Children: []node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
+		nameFormat,
 		// meta info
 		{Type: META_INFO, Children: []node{
 			{Type: CONTENT_TYPE, Count: ZERO_OR_ONE},
