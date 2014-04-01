@@ -48,6 +48,7 @@ func typeString(t uint64) string {
 		return "GROUP_OR"
 	case NODE:
 		return "NODE"
+	// ndn
 	case INTEREST:
 		return "INTEREST"
 	case DATA:
@@ -98,6 +99,25 @@ func typeString(t uint64) string {
 		return "KEY_LOCATOR"
 	case KEY_LOCATOR_DIGEST:
 		return "KEY_LOCATOR_DIGEST"
+	// nfd
+	case CONTROL_PARAMETERS:
+		return "CONTROL_PARAMETERS"
+	case FACE_ID:
+		return "FACE_ID"
+	case URI:
+		return "URI"
+	case LOCAL_CONTROL_FEATURE:
+		return "LOCAL_CONTROL_FEATURE"
+	case COST:
+		return "COST"
+	case STRATEGY:
+		return "STRATEGY"
+	case CONTROL_RESPONSE:
+		return "CONTROL_RESPONSE"
+	case STATUS_CODE:
+		return "STATUS_CODE"
+	case STATUS_TEXT:
+		return "STATUS_TEXT"
 	}
 	return "UNKNOWN"
 }
@@ -161,7 +181,7 @@ var (
 		{Type: NONCE},
 		// scope
 		{Type: SCOPE, Count: ZERO_OR_ONE},
-		// scope
+		// interest lifetime
 		{Type: INTEREST_LIFETIME, Count: ZERO_OR_ONE},
 	}}
 
@@ -199,7 +219,7 @@ func DecodeData(raw []byte) (data TLV, err error) {
 		return
 	}
 	if len(remain) != 0 {
-		err = errors.New(BUFFER_NOT_EMPTY)
+		err = errors.New("buffer not empty")
 	}
 	return
 }
@@ -210,7 +230,7 @@ func DecodeInterest(raw []byte) (interest TLV, err error) {
 		return
 	}
 	if len(remain) != 0 {
-		err = errors.New(BUFFER_NOT_EMPTY)
+		err = errors.New("buffer not empty")
 	}
 	return
 }
@@ -225,7 +245,7 @@ func matchNode(n node, raw []byte) (tlv TLV, remain []byte, err error) {
 	}
 	// type does not match; don't touch remain
 	if n.Type != NODE && n.Type != tlv.Type {
-		err = errors.New(fmt.Sprintf("%s: expected %s, got %s", WRONG_TYPE, typeString(n.Type), typeString(tlv.Type)))
+		err = errors.New(fmt.Sprintf("wrong type: expected %s, got %s", typeString(n.Type), typeString(tlv.Type)))
 		remain = raw
 		return
 	}
@@ -247,7 +267,7 @@ func matchNode(n node, raw []byte) (tlv TLV, remain []byte, err error) {
 			}
 		}
 		if len(b) != 0 {
-			err = errors.New(BUFFER_NOT_EMPTY)
+			err = errors.New("buffer not empty")
 			return
 		}
 	}
@@ -286,7 +306,7 @@ func matchGroupOrNode(n node, raw []byte) (matched []TLV, remain []byte, err err
 	}
 	// OR should at least have one match;
 	if len(matched) == 0 {
-		err = errors.New(fmt.Sprintf("%s: %s", WRONG_TYPE, n))
+		err = errors.New("group or has no match")
 		return
 	}
 	return
@@ -325,12 +345,12 @@ func matchChildNode(n node, raw []byte) (matched []TLV, remain []byte, err error
 	switch n.Count {
 	case ONE:
 		if count != 1 {
-			err = errors.New(fmt.Sprintf("%s: %s", WRONG_COUNT, n))
+			err = errors.New(fmt.Sprintf("wrong count: %s", n))
 			return
 		}
 	case ONE_OR_MORE:
 		if count == 0 {
-			err = errors.New(fmt.Sprintf("%s: %s", WRONG_COUNT, n))
+			err = errors.New(fmt.Sprintf("wrong count: %s", n))
 			return
 		}
 	}

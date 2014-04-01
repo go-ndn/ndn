@@ -3,9 +3,7 @@ package ndn
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"math"
-	//"fmt"
 )
 
 /*
@@ -74,8 +72,7 @@ func (this *TLV) Decode(raw []byte) (b []byte, err error) {
 	if err != nil {
 		return
 	}
-	var l uint64
-	l, err = readByte(buf)
+	l, err := readByte(buf)
 	if err != nil {
 		return
 	}
@@ -119,13 +116,8 @@ func (this *TLV) Encode() (b []byte, err error) {
 	if err != nil {
 		return
 	}
-
 	err = writeByte(buf, this.Len())
 	if err != nil {
-		return
-	}
-	if len(this.Value) != 0 && len(this.Children) != 0 {
-		err = errors.New(VALUE_CHILDREN_COEXIST)
 		return
 	}
 	if len(this.Value) == 0 {

@@ -2,7 +2,7 @@ package ndn
 
 import (
 	"bytes"
-	"fmt"
+	//"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -69,14 +69,18 @@ func TestListen(t *testing.T) {
 	}
 	face := NewFace("127.0.0.1")
 	face.Listen("/test", func(i *Interest) *Data {
-		fmt.Println("got Interest")
+		//fmt.Println("got Interest")
 		return NewData("/test")
 	})
 	go face.Run()
 	<-time.After(3 * time.Second)
-	_, err = face.Dial(NewInterest("/test"))
+	d, err := face.Dial(NewInterest("/test"))
 	if err != nil {
 		t.Error(err)
+		return
+	}
+	if nameToString(d.Name) != "/test" {
+		t.Errorf("expected %v, got %v", "/test", nameToString(d.Name))
 		return
 	}
 }

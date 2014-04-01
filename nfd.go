@@ -6,17 +6,8 @@ import (
 )
 
 /*
-   Interact with NFD
-   should be fine if you remove this file
+   interact with NFD
 */
-
-const (
-	STATUS_CODE_OK             uint64 = 200
-	STATUS_CODE_ARGS_INCORRECT        = 400
-	STATUS_CODE_NOT_AUTHORIZED        = 403
-	STATUS_CODE_NOT_FOUND             = 404
-	STATUS_CODE_NOT_SUPPORTED         = 501
-)
 
 const (
 	CONTROL_PARAMETERS    uint64 = 104
@@ -34,12 +25,11 @@ var (
 	controlResponseFormat = node{Type: CONTROL_RESPONSE, Children: []node{
 		{Type: STATUS_CODE},
 		{Type: STATUS_TEXT},
-		{Type: CONTROL_PARAMETERS, Count: ZERO_OR_ONE, Children: []node{
-			{Type: NODE, Count: ONE_OR_MORE},
-		}},
+		{Type: CONTROL_PARAMETERS, Count: ZERO_OR_ONE, Children: controlParametersContentFormat},
 	}}
-	controlParametersFormat = node{Type: CONTROL_PARAMETERS, Children: []node{
-		{Type: NAME, Children: []node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
+	controlParametersFormat        = node{Type: CONTROL_PARAMETERS, Children: controlParametersContentFormat}
+	controlParametersContentFormat = []node{
+		{Type: NAME, Count: ZERO_OR_ONE, Children: []node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
 		{Type: FACE_ID, Count: ZERO_OR_ONE},
 		{Type: URI, Count: ZERO_OR_ONE},
 		{Type: LOCAL_CONTROL_FEATURE, Count: ZERO_OR_ONE},
@@ -47,7 +37,7 @@ var (
 		{Type: STRATEGY, Count: ZERO_OR_ONE, Children: []node{
 			{Type: NAME, Children: []node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
 		}},
-	}}
+	}
 )
 
 type Control struct {
@@ -66,7 +56,7 @@ type Parameters struct {
 }
 
 func (this *Control) Interest() (i *Interest, err error) {
-	name := [][]byte{[]byte("localhost"), []byte("nfd"), []byte(this.Module)}
+	name := nameFromString("/localhost/nfd/" + this.Module)
 
 	if len(this.Command) != 0 {
 		name = append(name, []byte(this.Command))
@@ -144,12 +134,7 @@ func (this *Control) Interest() (i *Interest, err error) {
 	signatureInfo.Add(signatureType)
 	// add empty keyLocator for rsa
 	keyLocator := NewTLV(KEY_LOCATOR)
-	keyLocator.Add(nameEncode([][]byte{
-		[]byte("testing"),
-		[]byte("KEY"),
-		[]byte("pubkey"),
-		[]byte("ID-CERT"),
-	}))
+	keyLocator.Add(nameEncode(nameFromString("/testing/KEY/pubkey/ID-CERT")))
 	signatureInfo.Add(keyLocator)
 
 	b, err = signatureInfo.Encode()
@@ -180,8 +165,16 @@ func (this *Control) Interest() (i *Interest, err error) {
 type ControlResponse struct {
 	StatusCode uint64
 	StatusText string
-	Body       []TLV
+	Body       Parameters
 }
+
+const (
+	STATUS_CODE_OK             uint64 = 200
+	STATUS_CODE_ARGS_INCORRECT        = 400
+	STATUS_CODE_NOT_AUTHORIZED        = 403
+	STATUS_CODE_NOT_FOUND             = 404
+	STATUS_CODE_NOT_SUPPORTED         = 501
+)
 
 func DecodeControlResponse(content []byte) (resp TLV, err error) {
 	resp, remain, err := matchNode(controlResponseFormat, content)
@@ -189,7 +182,7 @@ func DecodeControlResponse(content []byte) (resp TLV, err error) {
 		return
 	}
 	if len(remain) != 0 {
-		err = errors.New(BUFFER_NOT_EMPTY)
+		err = errors.New("buffer not empty")
 	}
 	return
 }
@@ -208,8 +201,32 @@ func (this *ControlResponse) Data(d *Data) error {
 			}
 		case STATUS_TEXT:
 			this.StatusText = string(c.Value)
-		default:
-			this.Body = append(this.Body, c)
+		case CONTROL_PARAMETERS:
+			for _, cc := range c.Children {
+				switch cc.Type {
+				case NAME:
+					this.Body.Name = nameDecode(cc)
+				case FACE_ID:
+					this.Body.FaceId, err = decodeNonNeg(cc.Value)
+					if err != nil {
+						return err
+					}
+				case URI:
+					this.Body.Uri = string(cc.Value)
+				case LOCAL_CONTROL_FEATURE:
+					this.Body.LocalControlFeature, err = decodeNonNeg(cc.Value)
+					if err != nil {
+						return err
+					}
+				case COST:
+					this.Body.Cost, err = decodeNonNeg(cc.Value)
+					if err != nil {
+						return err
+					}
+				case STRATEGY:
+					this.Body.Strategy = nameDecode(cc.Children[0])
+				}
+			}
 		}
 	}
 	return nil

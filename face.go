@@ -19,6 +19,7 @@ import (
 type Face struct {
 	*url.URL
 	Handlers map[string]func(*Interest) *Data
+	Id       uint64
 }
 
 func NewFace(raw string) *Face {
@@ -46,10 +47,12 @@ func readChunk(rw *bufio.ReadWriter) (b []byte, err error) {
 	// type and length are at most 1+8+1+8 bytes
 	peek, _ := rw.Peek(18)
 	buf := bytes.NewBuffer(peek)
+	// type
 	_, err = readByte(buf)
 	if err != nil {
 		return
 	}
+	// length
 	l, err := readByte(buf)
 	if err != nil {
 		return
@@ -59,9 +62,17 @@ func readChunk(rw *bufio.ReadWriter) (b []byte, err error) {
 	return
 }
 
+func flushWrite(rw *bufio.ReadWriter, b []byte) error {
+	_, err := rw.Write(b)
+	if err != nil {
+		return err
+	}
+	return rw.Flush()
+}
+
 func (this *Face) Dial(i *Interest) (d *Data, err error) {
 	// interest encode
-	ib, err := i.Encode()
+	b, err := i.Encode()
 	if err != nil {
 		return
 	}
@@ -74,11 +85,7 @@ func (this *Face) Dial(i *Interest) (d *Data, err error) {
 	defer conn.Close()
 	rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
 	// write interest
-	_, err = rw.Write(ib)
-	if err != nil {
-		return
-	}
-	err = rw.Flush()
+	err = flushWrite(rw, b)
 	if err != nil {
 		return
 	}
@@ -90,7 +97,7 @@ func (this *Face) Dial(i *Interest) (d *Data, err error) {
 		conn.SetReadDeadline(time.Now().Add(time.Duration(i.InterestLifeTime) * time.Millisecond))
 	}
 	// read one chunk only
-	b, err := readChunk(rw)
+	b, err = readChunk(rw)
 	if err != nil {
 		return
 	}
@@ -112,11 +119,7 @@ func dialControl(rw *bufio.ReadWriter, c *Control) (cr *ControlResponse, err err
 	if err != nil {
 		return
 	}
-	_, err = rw.Write(b)
-	if err != nil {
-		return
-	}
-	err = rw.Flush()
+	err = flushWrite(rw, b)
 	if err != nil {
 		return
 	}
@@ -133,11 +136,45 @@ func dialControl(rw *bufio.ReadWriter, c *Control) (cr *ControlResponse, err err
 	}
 	cr = &ControlResponse{}
 	err = cr.Data(d)
-	if err != nil {
-		// invalid control response
-		return
-	}
 	return
+}
+
+func (this *Face) create(rw *bufio.ReadWriter, addr string) error {
+	cr, err := dialControl(rw, &Control{
+		Module:  "faces",
+		Command: "create",
+		Parameters: Parameters{
+			Uri: addr,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	if cr.StatusCode != STATUS_CODE_OK {
+		return errors.New(fmt.Sprintf("(%d) %s", cr.StatusCode, cr.StatusText))
+	}
+	this.Id = cr.Body.FaceId
+	return nil
+}
+
+func (this *Face) announcePrefix(rw *bufio.ReadWriter) error {
+	for prefix := range this.Handlers {
+		cr, err := dialControl(rw, &Control{
+			Module:  "fib",
+			Command: "add-nexthop",
+			Parameters: Parameters{
+				Name:   nameFromString(prefix),
+				FaceId: this.Id,
+			},
+		})
+		if err != nil {
+			return err
+		}
+		if cr.StatusCode != STATUS_CODE_OK {
+			return errors.New(fmt.Sprintf("%s: (%d) %s", prefix, cr.StatusCode, cr.StatusText))
+		}
+	}
+	return nil
 }
 
 func (this *Face) Run() error {
@@ -150,56 +187,11 @@ func (this *Face) Run() error {
 	rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
 
 	// nfd create face
-	addr := "tcp://" + conn.LocalAddr().String()
-	cr, err := dialControl(rw, &Control{
-		Module:  "faces",
-		Command: "create",
-		Parameters: Parameters{
-			Uri: addr,
-		},
-	})
-	if err != nil {
-		return err
-	}
-	if cr.StatusCode != 200 {
-		return errors.New(fmt.Sprintf("(%d) %s", cr.StatusCode, cr.StatusText))
-	}
-	//spew.Dump(cr)
-	// find faceId
-	found := false
-	var faceId uint64
-	if len(cr.Body) == 1 {
-		for _, c := range cr.Body[0].Children {
-			if c.Type == FACE_ID {
-				faceId, err = decodeNonNeg(c.Value)
-				if err != nil {
-					return err
-				}
-				found = true
-			}
-		}
-	}
-	if !found {
-		return errors.New(FACE_ID_NOT_FOUND)
+	if this.Id == 0 {
+		this.create(rw, "tcp://"+conn.LocalAddr().String())
 	}
 	// announce prefix
-	for prefix := range this.Handlers {
-		cr, err := dialControl(rw, &Control{
-			Module:  "fib",
-			Command: "add-nexthop",
-			Parameters: Parameters{
-				Name:   nameFromString(prefix),
-				FaceId: faceId,
-			},
-		})
-		if err != nil {
-			return err
-		}
-		if cr.StatusCode != 200 {
-			return errors.New(fmt.Sprintf("%s: (%d) %s", prefix, cr.StatusCode, cr.StatusText))
-		}
-	}
-	fmt.Printf("Listen %s\n", addr)
+	this.announcePrefix(rw)
 	for {
 		// keep reading chunks and decode as interest
 		b, err := readChunk(rw)
@@ -227,8 +219,7 @@ func (this *Face) Run() error {
 			if err != nil {
 				return
 			}
-			rw.Write(b)
-			rw.Flush()
+			flushWrite(rw, b)
 		}(h, i)
 	}
 }

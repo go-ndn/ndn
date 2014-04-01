@@ -262,9 +262,6 @@ func (this *Interest) Decode(raw []byte) error {
 						return err
 					}
 				case PUBLISHER_PUBLICKEY_LOCATOR:
-					if len(cc.Children) != 1 {
-						return errors.New(typeString(PUBLISHER_PUBLICKEY_LOCATOR))
-					}
 					this.Selectors.PublisherPublicKeyLocator = cc.Children[0]
 				case EXCLUDE:
 					for _, ccc := range cc.Children {
@@ -400,12 +397,7 @@ func (this *Data) Encode() (raw []byte, err error) {
 	// add empty keyLocator for rsa
 	if this.Signature.Type == SIGNATURE_TYPE_SIGNATURE_SHA_256_WITH_RSA && len(this.Signature.Info) == 0 {
 		keyLocator := NewTLV(KEY_LOCATOR)
-		keyLocator.Add(nameEncode([][]byte{
-			[]byte("testing"),
-			[]byte("KEY"),
-			[]byte("pubkey"),
-			[]byte("ID-CERT"),
-		}))
+		keyLocator.Add(nameEncode(nameFromString("/testing/KEY/pubkey/ID-CERT")))
 		signatureInfo.Add(keyLocator)
 	}
 	data.Add(signatureInfo)
@@ -458,10 +450,6 @@ func (this *Data) Decode(raw []byte) error {
 						return err
 					}
 				case FINAL_BLOCK_ID:
-					if len(cc.Children) != 1 ||
-						cc.Children[0].Type != NAME_COMPONENT {
-						return errors.New(typeString(FINAL_BLOCK_ID))
-					}
 					this.MetaInfo.FinalBlockId = cc.Children[0].Value
 				}
 			}
@@ -487,12 +475,12 @@ func (this *Data) Decode(raw []byte) error {
 					return err
 				}
 				if !bytes.Equal(sum, c.Value) {
-					return errors.New(INVALID_SHA_256)
+					return errors.New("cannot verify sha256")
 				}
 			case SIGNATURE_TYPE_SIGNATURE_SHA_256_WITH_RSA:
 				// TODO: enable rsa
 				// if !verifyRSA(tlv.Children[:4], c.Value) {
-				// 	return errors.New(INVALID_RSA)
+				// 	return errors.New("cannot verify rsa")
 				// }
 			}
 			this.Signature.Value = c.Value

@@ -11,7 +11,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"errors"
-	//"github.com/davecgh/go-spew/spew"
+	"github.com/davecgh/go-spew/spew"
 	"math/big"
 	"time"
 )
@@ -20,7 +20,7 @@ var (
 	rsaPrivateKey *rsa.PrivateKey
 )
 
-type Certificate struct {
+type certificate struct {
 	Validity          validity
 	Subject           []pkix.AttributeTypeAndValue
 	SubjectPubKeyInfo subjectPubKeyInfo
@@ -41,7 +41,7 @@ type rsaPublicKey struct {
 	E int
 }
 
-func ReadCertificate(raw []byte) (cert *Certificate, err error) {
+func ReadCertificate(raw []byte) (err error) {
 	// newline does not matter
 	b, err := base64.StdEncoding.DecodeString(string(raw))
 	if err != nil {
@@ -53,24 +53,19 @@ func ReadCertificate(raw []byte) (cert *Certificate, err error) {
 	if err != nil {
 		return
 	}
-	cert = &Certificate{}
+	cert := &certificate{}
 	_, err = asn1.Unmarshal(d.Content, cert)
+	spew.Dump(cert)
 	return
 }
 
 func WriteCertificate() (raw []byte, err error) {
 	if rsaPrivateKey == nil {
-		err = errors.New(NOT_RSA_PRIVATE_KEY)
+		err = errors.New("rsa private key not found")
 		return
 	}
 	d := Data{
-		Name: [][]byte{
-			[]byte("testing"),
-			[]byte("KEY"),
-			[]byte("pubkey"),
-			[]byte("ID-CERT"),
-			//[]byte{0x1},
-		},
+		Name: nameFromString("/testing/KEY/pubkey/ID-CERT"),
 		MetaInfo: MetaInfo{
 			ContentType: CONTENT_TYPE_KEY,
 		},
@@ -78,12 +73,7 @@ func WriteCertificate() (raw []byte, err error) {
 			Type: SIGNATURE_TYPE_SIGNATURE_SHA_256_WITH_RSA,
 			Info: []TLV{
 				{Type: KEY_LOCATOR, Children: []TLV{
-					nameEncode([][]byte{
-						[]byte("testing"),
-						[]byte("KEY"),
-						[]byte("pubkey"),
-						[]byte("ID-CERT"),
-					}),
+					nameEncode(nameFromString("/testing/KEY/pubkey/ID-CERT")),
 				}},
 			},
 		},
@@ -95,7 +85,7 @@ func WriteCertificate() (raw []byte, err error) {
 	if err != nil {
 		return
 	}
-	d.Content, err = asn1.Marshal(Certificate{
+	d.Content, err = asn1.Marshal(certificate{
 		Validity: validity{
 			NotBefore: time.Now(),
 			NotAfter:  time.Date(2049, 12, 31, 23, 59, 59, 0, time.UTC), // end of asn.1
@@ -134,7 +124,7 @@ func WriteCertificate() (raw []byte, err error) {
 func ReadRSAKey(pemData []byte) (err error) {
 	block, _ := pem.Decode(pemData)
 	if block == nil || block.Type != "RSA PRIVATE KEY" {
-		err = errors.New(NOT_RSA_PRIVATE_KEY)
+		err = errors.New("rsa private key not found")
 		return
 	}
 	// Decode the RSA private key
@@ -144,7 +134,7 @@ func ReadRSAKey(pemData []byte) (err error) {
 
 func WriteRSAKey() (pemData []byte, err error) {
 	if rsaPrivateKey == nil {
-		err = errors.New(NOT_RSA_PRIVATE_KEY)
+		err = errors.New("rsa private key not found")
 		return
 	}
 	pemData = pem.EncodeToMemory(&pem.Block{
@@ -161,7 +151,7 @@ func GenerateRSAKey() (err error) {
 
 func signRSA(l []TLV) (signature []byte, err error) {
 	if rsaPrivateKey == nil {
-		err = errors.New(NOT_RSA_PRIVATE_KEY)
+		err = errors.New("rsa private key not found")
 		return
 	}
 	digest, err := newSHA256(l)
