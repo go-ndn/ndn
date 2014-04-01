@@ -188,7 +188,7 @@ func (this *Face) Run() error {
 
 	// nfd create face
 	if this.Id == 0 {
-		this.create(rw, "tcp://"+conn.LocalAddr().String())
+		this.create(rw, this.Scheme+"://"+conn.LocalAddr().String())
 	}
 	// announce prefix
 	this.announcePrefix(rw)
