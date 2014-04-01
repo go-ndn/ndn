@@ -2,7 +2,7 @@ package ndn
 
 import (
 	//"bytes"
-	"github.com/davecgh/go-spew/spew"
+	//"github.com/davecgh/go-spew/spew"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -12,39 +12,47 @@ func TestControl(t *testing.T) {
 	f, err := os.Open("key/testing.pri")
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	defer f.Close()
 	b, err := ioutil.ReadAll(f)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 
 	err = ReadRSAKey(b)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 
 	control := Control{
 		Module:  "faces",
 		Command: "create",
 		Parameters: Parameters{
-			Uri: "localhost:4000",
+			Uri: "tcp://localhost:4000",
 		},
 	}
 	i, err := control.Interest()
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	d, err := NewFace("localhost").Dial(i)
 	if err != nil {
-		t.Error(err)
+		if err.Error() != "dial tcp 127.0.0.1:6363: connection refused" {
+			t.Error(err)
+		}
+		return
 	}
 	cr := ControlResponse{}
 	err = cr.Data(d)
 	if err != nil {
 		t.Error(err)
+		return
 	}
-	spew.Dump(cr)
+	//spew.Dump(cr)
 }
 
 func TestControlResponse(t *testing.T) {
@@ -65,12 +73,15 @@ func TestControlResponse(t *testing.T) {
 	err := resp2.Data(d)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	if resp2.StatusCode != 200 {
 		t.Errorf("expected %v, got %v", 200, resp2.StatusCode)
+		return
 	}
 
 	if resp2.StatusText != "system online" {
 		t.Errorf("expected %v, got %v", "system online", resp2.StatusText)
+		return
 	}
 }

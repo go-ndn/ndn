@@ -116,12 +116,14 @@ func TestData(t *testing.T) {
 	b, err := data.Encode()
 	if err != nil {
 		t.Error(err)
+		return
 	}
 
 	data_decode := Data{}
 	err = data_decode.Decode(b)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	// name order changes
 	data.Name = nil
@@ -133,13 +135,16 @@ func TestData(t *testing.T) {
 	b1, err := json.Marshal(data)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	b2, err := json.Marshal(data_decode)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	if !bytes.Equal(b1, b2) {
 		t.Errorf("expected %v, got %v", b1, b2)
+		return
 	}
 }
 
@@ -156,12 +161,14 @@ func TestInterest(t *testing.T) {
 	b, err := interest.Encode()
 	if err != nil {
 		t.Error(err)
+		return
 	}
 
 	interest_decode := Interest{}
 	err = interest_decode.Decode(b)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	// name order changes
 	interest.Name = nil
@@ -169,12 +176,15 @@ func TestInterest(t *testing.T) {
 	b1, err := json.Marshal(interest)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	b2, err := json.Marshal(interest_decode)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	if !bytes.Equal(b1, b2) {
 		t.Errorf("expected %v, got %v", b1, b2)
+		return
 	}
 }

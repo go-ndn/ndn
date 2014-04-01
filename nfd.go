@@ -34,7 +34,9 @@ var (
 	controlResponseFormat = node{Type: CONTROL_RESPONSE, Children: []node{
 		{Type: STATUS_CODE},
 		{Type: STATUS_TEXT},
-		{Type: NODE, Count: ZERO_OR_MORE},
+		{Type: CONTROL_PARAMETERS, Count: ZERO_OR_ONE, Children: []node{
+			{Type: NODE, Count: ONE_OR_MORE},
+		}},
 	}}
 	controlParametersFormat = node{Type: CONTROL_PARAMETERS, Children: []node{
 		{Type: NAME, Children: []node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},

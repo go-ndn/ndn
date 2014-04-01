@@ -13,22 +13,27 @@ func TestRSA(t *testing.T) {
 	_, err := WriteRSAKey()
 	if err == nil {
 		t.Error("RSA key should be empty")
+		return
 	}
 	GenerateRSAKey()
 	b, err := WriteRSAKey()
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	err = ReadRSAKey(b)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	b2, err := WriteRSAKey()
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	if !bytes.Equal(b, b2) {
 		t.Error("RSA key should be the same")
+		return
 	}
 }
 
@@ -36,15 +41,18 @@ func TestCert(t *testing.T) {
 	f, err := os.Open("key/testing.ndncert")
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	defer f.Close()
 	b, err := ioutil.ReadAll(f)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	_, err = ReadCertificate(b)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 
 	// spew.Dump(cert)

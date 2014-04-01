@@ -1,9 +1,11 @@
 package ndn
 
 import (
-	//"fmt"
 	"bufio"
 	"bytes"
+	"errors"
+	"fmt"
+	//"github.com/davecgh/go-spew/spew"
 	"net"
 	"net/url"
 	"strings"
@@ -16,7 +18,6 @@ import (
 
 type Face struct {
 	*url.URL
-	Id       uint64
 	Handlers map[string]func(*Interest) *Data
 }
 
@@ -41,9 +42,9 @@ func NewFace(raw string) *Face {
 }
 
 // read precisely one tlv
-func readChunk(r *bufio.Reader) (b []byte, err error) {
+func readChunk(rw *bufio.ReadWriter) (b []byte, err error) {
 	// type and length are at most 1+8+1+8 bytes
-	peek, _ := r.Peek(18)
+	peek, _ := rw.Peek(18)
 	buf := bytes.NewBuffer(peek)
 	_, err = readByte(buf)
 	if err != nil {
@@ -54,7 +55,7 @@ func readChunk(r *bufio.Reader) (b []byte, err error) {
 		return
 	}
 	b = make([]byte, int(l)+len(peek)-buf.Len())
-	_, err = r.Read(b)
+	_, err = rw.Read(b)
 	return
 }
 
@@ -71,8 +72,16 @@ func (this *Face) Dial(i *Interest) (d *Data, err error) {
 		return
 	}
 	defer conn.Close()
+	rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
 	// write interest
-	conn.Write(ib)
+	_, err = rw.Write(ib)
+	if err != nil {
+		return
+	}
+	err = rw.Flush()
+	if err != nil {
+		return
+	}
 	if i.InterestLifeTime == 0 {
 		// default timeout 10s
 		conn.SetReadDeadline(time.Now().Add(10 * time.Second))
@@ -81,7 +90,7 @@ func (this *Face) Dial(i *Interest) (d *Data, err error) {
 		conn.SetReadDeadline(time.Now().Add(time.Duration(i.InterestLifeTime) * time.Millisecond))
 	}
 	// read one chunk only
-	b, err := readChunk(bufio.NewReader(conn))
+	b, err := readChunk(rw)
 	if err != nil {
 		return
 	}
@@ -94,6 +103,43 @@ func (this *Face) Listen(name string, h func(*Interest) *Data) {
 	this.Handlers[name] = h
 }
 
+func dialControl(rw *bufio.ReadWriter, c *Control) (cr *ControlResponse, err error) {
+	i, err := c.Interest()
+	if err != nil {
+		return
+	}
+	b, err := i.Encode()
+	if err != nil {
+		return
+	}
+	_, err = rw.Write(b)
+	if err != nil {
+		return
+	}
+	err = rw.Flush()
+	if err != nil {
+		return
+	}
+	// get control response
+	b, err = readChunk(rw)
+	if err != nil {
+		return
+	}
+	d := &Data{}
+	err = d.Decode(b)
+	if err != nil {
+		// invalid data
+		return
+	}
+	cr = &ControlResponse{}
+	err = cr.Data(d)
+	if err != nil {
+		// invalid control response
+		return
+	}
+	return
+}
+
 func (this *Face) Run() error {
 	// dial
 	conn, err := net.Dial(this.Scheme, this.Host)
@@ -101,13 +147,62 @@ func (this *Face) Run() error {
 		return err
 	}
 	defer conn.Close()
+	rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
 
-	// TODO: nfd prefix annoucement
-
-	r := bufio.NewReader(conn)
+	// nfd create face
+	addr := "tcp://" + conn.LocalAddr().String()
+	cr, err := dialControl(rw, &Control{
+		Module:  "faces",
+		Command: "create",
+		Parameters: Parameters{
+			Uri: addr,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	if cr.StatusCode != 200 {
+		return errors.New(fmt.Sprintf("(%d) %s", cr.StatusCode, cr.StatusText))
+	}
+	//spew.Dump(cr)
+	// find faceId
+	found := false
+	var faceId uint64
+	if len(cr.Body) == 1 {
+		for _, c := range cr.Body[0].Children {
+			if c.Type == FACE_ID {
+				faceId, err = decodeNonNeg(c.Value)
+				if err != nil {
+					return err
+				}
+				found = true
+			}
+		}
+	}
+	if !found {
+		return errors.New(FACE_ID_NOT_FOUND)
+	}
+	// announce prefix
+	for prefix := range this.Handlers {
+		cr, err := dialControl(rw, &Control{
+			Module:  "fib",
+			Command: "add-nexthop",
+			Parameters: Parameters{
+				Name:   nameFromString(prefix),
+				FaceId: faceId,
+			},
+		})
+		if err != nil {
+			return err
+		}
+		if cr.StatusCode != 200 {
+			return errors.New(fmt.Sprintf("%s: (%d) %s", prefix, cr.StatusCode, cr.StatusText))
+		}
+	}
+	fmt.Printf("Listen %s\n", addr)
 	for {
 		// keep reading chunks and decode as interest
-		b, err := readChunk(r)
+		b, err := readChunk(rw)
 		if err != nil {
 			continue
 		}
@@ -132,7 +227,8 @@ func (this *Face) Run() error {
 			if err != nil {
 				return
 			}
-			conn.Write(b)
+			rw.Write(b)
+			rw.Flush()
 		}(h, i)
 	}
 }
