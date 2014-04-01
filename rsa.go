@@ -1,7 +1,6 @@
 package ndn
 
 import (
-	//"bytes"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"

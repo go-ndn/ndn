@@ -177,21 +177,29 @@ func (this *Face) announcePrefix(rw *bufio.ReadWriter) error {
 	return nil
 }
 
-func (this *Face) Run() error {
+func (this *Face) Run() (err error) {
 	// dial
 	conn, err := net.Dial(this.Scheme, this.Host)
 	if err != nil {
-		return err
+		return
 	}
 	defer conn.Close()
 	rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
 
+	addr := this.Scheme + "://" + conn.LocalAddr().String()
 	// nfd create face
 	if this.Id == 0 {
-		this.create(rw, this.Scheme+"://"+conn.LocalAddr().String())
+		err = this.create(rw, addr)
+		if err != nil {
+			return
+		}
 	}
 	// announce prefix
-	this.announcePrefix(rw)
+	err = this.announcePrefix(rw)
+	if err != nil {
+		return
+	}
+	fmt.Println("Listen " + addr)
 	for {
 		// keep reading chunks and decode as interest
 		b, err := readChunk(rw)
