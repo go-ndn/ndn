@@ -2,10 +2,10 @@ package ndn
 
 import (
 	"bytes"
+	//"github.com/davecgh/go-spew/spew"
 	"io/ioutil"
 	"os"
 	"testing"
-	//"github.com/davecgh/go-spew/spew"
 )
 
 func TestRSA(t *testing.T) {
@@ -33,7 +33,7 @@ func TestRSA(t *testing.T) {
 }
 
 func TestCert(t *testing.T) {
-	f, err := os.Open("/home/march/default.ndncert")
+	f, err := os.Open("key/testing.ndncert")
 	if err != nil {
 		t.Error(err)
 	}
@@ -47,9 +47,9 @@ func TestCert(t *testing.T) {
 		t.Error(err)
 	}
 
-	//spew.Dump(cert)
+	// spew.Dump(cert)
 	// GenerateRSAKey()
-	// f2, err := os.Create("/home/march/default.ndncert")
+	// f2, err := os.Create("key/testing.ndncert")
 	// if err != nil {
 	// 	t.Error(err)
 	// }
@@ -60,7 +60,7 @@ func TestCert(t *testing.T) {
 	// }
 	// f2.Write(b)
 
-	// f3, err := os.Create("/home/march/default.pri")
+	// f3, err := os.Create("key/testing.pri")
 	// if err != nil {
 	// 	t.Error(err)
 	// }

@@ -403,9 +403,8 @@ func (this *Data) Encode() (raw []byte, err error) {
 		keyLocator.Add(nameEncode([][]byte{
 			[]byte("testing"),
 			[]byte("KEY"),
-			[]byte("ksk"),
+			[]byte("pubkey"),
 			[]byte("ID-CERT"),
-			[]byte{0x1},
 		}))
 		signatureInfo.Add(keyLocator)
 	}

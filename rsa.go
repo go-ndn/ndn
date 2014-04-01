@@ -1,7 +1,7 @@
 package ndn
 
 import (
-	"bytes"
+	//"bytes"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
@@ -12,6 +12,7 @@ import (
 	"encoding/pem"
 	"errors"
 	//"github.com/davecgh/go-spew/spew"
+	"math/big"
 	"time"
 )
 
@@ -20,19 +21,24 @@ var (
 )
 
 type Certificate struct {
-	Validity          Validity
+	Validity          validity
 	Subject           []pkix.AttributeTypeAndValue
-	SubjectPubKeyInfo SubjectPubKeyInfo
+	SubjectPubKeyInfo subjectPubKeyInfo
 }
 
-type Validity struct {
-	NotAfter  time.Time
+type validity struct {
 	NotBefore time.Time
+	NotAfter  time.Time
 }
 
-type SubjectPubKeyInfo struct {
+type subjectPubKeyInfo struct {
 	AlgorithmIdentifier pkix.AlgorithmIdentifier
 	Bytes               asn1.BitString
+}
+
+type rsaPublicKey struct {
+	N *big.Int
+	E int
 }
 
 func ReadCertificate(raw []byte) (cert *Certificate, err error) {
@@ -61,9 +67,9 @@ func WriteCertificate() (raw []byte, err error) {
 		Name: [][]byte{
 			[]byte("testing"),
 			[]byte("KEY"),
-			[]byte("ksk"),
+			[]byte("pubkey"),
 			[]byte("ID-CERT"),
-			[]byte{0x1},
+			//[]byte{0x1},
 		},
 		MetaInfo: MetaInfo{
 			ContentType: CONTENT_TYPE_KEY,
@@ -75,31 +81,42 @@ func WriteCertificate() (raw []byte, err error) {
 					nameEncode([][]byte{
 						[]byte("testing"),
 						[]byte("KEY"),
-						[]byte("ksk"),
+						[]byte("pubkey"),
 						[]byte("ID-CERT"),
 					}),
 				}},
 			},
 		},
 	}
+	publicKeyBytes, err := asn1.Marshal(rsaPublicKey{
+		N: rsaPrivateKey.PublicKey.N,
+		E: rsaPrivateKey.PublicKey.E,
+	})
+	if err != nil {
+		return
+	}
 	d.Content, err = asn1.Marshal(Certificate{
-		Validity: Validity{
+		Validity: validity{
 			NotBefore: time.Now(),
 			NotAfter:  time.Date(2049, 12, 31, 23, 59, 59, 0, time.UTC), // end of asn.1
 		},
 		Subject: []pkix.AttributeTypeAndValue{{
 			Type:  asn1.ObjectIdentifier{2, 5, 4, 41},
-			Value: "testing/KEY/ksk/ID-CERT",
+			Value: "/testing/pubkey",
 		}},
-		SubjectPubKeyInfo: SubjectPubKeyInfo{
+		SubjectPubKeyInfo: subjectPubKeyInfo{
 			AlgorithmIdentifier: pkix.AlgorithmIdentifier{
 				Algorithm: asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 1}, //rsa
+				// This is a NULL parameters value which is technically
+				// superfluous, but most other code includes it and, by
+				// doing this, we match their public key hashes.
 				Parameters: asn1.RawValue{
 					Tag: 5,
 				},
 			},
 			Bytes: asn1.BitString{
-				Bytes: x509.MarshalPKCS1PrivateKey(rsaPrivateKey),
+				Bytes:     publicKeyBytes,
+				BitLength: 8 * len(publicKeyBytes),
 			},
 		},
 	})
@@ -110,16 +127,7 @@ func WriteCertificate() (raw []byte, err error) {
 	if err != nil {
 		return
 	}
-	buf := bytes.NewBufferString(base64.StdEncoding.EncodeToString(b))
-	out := new(bytes.Buffer)
-	for {
-		if buf.Len() == 0 {
-			break
-		}
-		out.Write(buf.Next(64))
-		out.WriteByte(0xA)
-	}
-	raw = out.Bytes()
+	raw = []byte(base64.StdEncoding.EncodeToString(b))
 	return
 }
 
@@ -147,7 +155,7 @@ func WriteRSAKey() (pemData []byte, err error) {
 }
 
 func GenerateRSAKey() (err error) {
-	rsaPrivateKey, err = rsa.GenerateKey(rand.Reader, 1024)
+	rsaPrivateKey, err = rsa.GenerateKey(rand.Reader, 2048)
 	return
 }
 

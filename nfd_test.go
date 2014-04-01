@@ -9,18 +9,7 @@ import (
 )
 
 func TestControl(t *testing.T) {
-	control := Control{
-		Module:  "faces",
-		Command: "create",
-		Parameters: Parameters{
-			Uri: "localhost:4000",
-		},
-	}
-	i, err := control.Interest()
-	if err != nil {
-		t.Error(err)
-	}
-	f, err := os.Open("/home/march/default.pri")
+	f, err := os.Open("key/testing.pri")
 	if err != nil {
 		t.Error(err)
 	}
@@ -34,11 +23,28 @@ func TestControl(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
+	control := Control{
+		Module:  "faces",
+		Command: "create",
+		Parameters: Parameters{
+			Uri: "localhost:4000",
+		},
+	}
+	i, err := control.Interest()
+	if err != nil {
+		t.Error(err)
+	}
 	d, err := NewFace("localhost").Dial(i)
 	if err != nil {
 		t.Error(err)
 	}
-	spew.Dump(d)
+	cr := ControlResponse{}
+	err = cr.Data(d)
+	if err != nil {
+		t.Error(err)
+	}
+	spew.Dump(cr)
 }
 
 func TestControlResponse(t *testing.T) {
