@@ -111,7 +111,7 @@ func (this *Face) On(name string, h func(*Interest) *Data) {
 }
 
 func dialControl(rw *bufio.ReadWriter, c *Control) (cr *ControlResponse, err error) {
-	i, err := c.Interest()
+	i, err := c.Encode()
 	if err != nil {
 		return
 	}
@@ -135,7 +135,7 @@ func dialControl(rw *bufio.ReadWriter, c *Control) (cr *ControlResponse, err err
 		return
 	}
 	cr = &ControlResponse{}
-	err = cr.Data(d)
+	err = cr.Decode(d)
 	return
 }
 

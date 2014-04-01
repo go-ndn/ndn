@@ -60,7 +60,7 @@ func (this *Control) Print() {
 	spew.Dump(*this)
 }
 
-func (this *Control) Interest() (i *Interest, err error) {
+func (this *Control) Encode() (i *Interest, err error) {
 	name := nameFromString("/localhost/nfd/" + this.Module)
 
 	if len(this.Command) != 0 {
@@ -196,7 +196,7 @@ func (this *ControlResponse) Print() {
 	spew.Dump(*this)
 }
 
-func (this *ControlResponse) Data(d *Data) error {
+func (this *ControlResponse) Decode(d *Data) error {
 	resp, err := DecodeControlResponse(d.Content)
 	if err != nil {
 		return err
