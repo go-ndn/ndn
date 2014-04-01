@@ -199,7 +199,7 @@ func (this *Face) Run() (err error) {
 	if err != nil {
 		return
 	}
-	fmt.Println("Listen " + addr)
+	fmt.Printf("Listen(%d) %s\n", this.Id, addr)
 	for {
 		// keep reading chunks and decode as interest
 		b, err := readChunk(rw)
