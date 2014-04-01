@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
+	"github.com/davecgh/go-spew/spew"
 	"math"
 	"strings"
 )
@@ -145,6 +146,10 @@ const (
 	CHILD_SELECTOR_FIRST uint64 = 0 // leftmost
 	CHILD_SELECTOR_LAST         = 1 // rightmost
 )
+
+func (this *Interest) Print() {
+	spew.Dump(*this)
+}
 
 func (this *Interest) Encode() (raw []byte, err error) {
 	interest := NewTLV(INTEREST)
@@ -334,6 +339,10 @@ const (
 	SIGNATURE_TYPE_DIGEST_SHA_256             uint64 = 0
 	SIGNATURE_TYPE_SIGNATURE_SHA_256_WITH_RSA        = 1
 )
+
+func (this *Data) Print() {
+	spew.Dump(*this)
+}
 
 func (this *Data) Encode() (raw []byte, err error) {
 	data := NewTLV(DATA)

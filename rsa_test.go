@@ -49,7 +49,7 @@ func TestCert(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	err = ReadCertificate(b)
+	err = PrintCertificate(b)
 	if err != nil {
 		t.Error(err)
 		return

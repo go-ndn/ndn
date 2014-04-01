@@ -40,7 +40,7 @@ type rsaPublicKey struct {
 	E int
 }
 
-func ReadCertificate(raw []byte) (err error) {
+func PrintCertificate(raw []byte) (err error) {
 	// newline does not matter
 	b, err := base64.StdEncoding.DecodeString(string(raw))
 	if err != nil {

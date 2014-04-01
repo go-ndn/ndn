@@ -2,6 +2,7 @@ package ndn
 
 import (
 	"errors"
+	"github.com/davecgh/go-spew/spew"
 	"time"
 )
 
@@ -53,6 +54,10 @@ type Parameters struct {
 	LocalControlFeature uint64
 	Cost                uint64
 	Strategy            [][]byte
+}
+
+func (this *Control) Print() {
+	spew.Dump(*this)
 }
 
 func (this *Control) Interest() (i *Interest, err error) {
@@ -185,6 +190,10 @@ func DecodeControlResponse(content []byte) (resp TLV, err error) {
 		err = errors.New("buffer not empty")
 	}
 	return
+}
+
+func (this *ControlResponse) Print() {
+	spew.Dump(*this)
 }
 
 func (this *ControlResponse) Data(d *Data) error {
