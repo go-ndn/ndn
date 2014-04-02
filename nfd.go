@@ -39,13 +39,15 @@ var (
 		}},
 	}
 	controlFormat = node{Type: NAME, Children: []node{
-		{Type: NAME_COMPONENT},                                               // localhost
-		{Type: NAME_COMPONENT},                                               // nfd
-		{Type: NAME_COMPONENT},                                               // module
-		{Type: NAME_COMPONENT},                                               // command
-		{Type: CONTROL_PARAMETERS, Children: controlParametersContentFormat}, // param
-		{Type: NAME_COMPONENT},                                               // timestamp
-		{Type: NAME_COMPONENT},                                               // random value
+		{Type: NAME_COMPONENT}, // localhost
+		{Type: NAME_COMPONENT}, // nfd
+		{Type: NAME_COMPONENT}, // module
+		{Type: NAME_COMPONENT}, // command
+		{Type: NAME_COMPONENT, Children: []node{
+			{Type: CONTROL_PARAMETERS, Children: controlParametersContentFormat}, // param
+		}},
+		{Type: NAME_COMPONENT}, // timestamp
+		{Type: NAME_COMPONENT}, // random value
 		{Type: NAME_COMPONENT, Children: []node{
 			{Type: SIGNATURE_INFO, Children: []node{
 				{Type: SIGNATURE_TYPE},
@@ -242,7 +244,7 @@ func (this *Control) Decode(i *Interest) (err error) {
 	// command
 	this.Command = string(ctrl.Children[3].Value)
 	// parameters
-	err = this.Parameters.Decode(ctrl.Children[4])
+	err = this.Parameters.Decode(ctrl.Children[4].Children[0])
 	if err != nil {
 		return
 	}
