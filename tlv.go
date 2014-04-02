@@ -110,7 +110,7 @@ func countBytes(v uint64) (c uint64) {
 	return
 }
 
-func (this *TLV) Encode() (b []byte, err error) {
+func (this *TLV) Encode() (raw []byte, err error) {
 	buf := new(bytes.Buffer)
 	err = writeByte(buf, this.Type)
 	if err != nil {
@@ -122,16 +122,16 @@ func (this *TLV) Encode() (b []byte, err error) {
 	}
 	if len(this.Value) == 0 {
 		for _, c := range this.Children {
-			var e []byte
-			e, err = c.Encode()
+			var b []byte
+			b, err = c.Encode()
 			if err != nil {
 				return
 			}
-			buf.Write(e)
+			buf.Write(b)
 		}
 	} else {
 		buf.Write(this.Value)
 	}
-	b = buf.Bytes()
+	raw = buf.Bytes()
 	return
 }

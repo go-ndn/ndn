@@ -499,16 +499,15 @@ func (this *Data) Decode(raw []byte) error {
 }
 
 func newSHA256(l []TLV) (sum []byte, err error) {
-	buf := new(bytes.Buffer)
+	h := sha256.New()
 	for _, c := range l {
 		var b []byte
 		b, err = c.Encode()
 		if err != nil {
 			return
 		}
-		buf.Write(b)
+		h.Write(b)
 	}
-	sha := sha256.Sum256(buf.Bytes())
-	sum = sha[:]
+	sum = h.Sum(nil)
 	return
 }
