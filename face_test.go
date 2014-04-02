@@ -70,10 +70,9 @@ func TestListen(t *testing.T) {
 		return NewData("/test")
 	})
 	go face.Listen()
-	<-time.After(3 * time.Second)
+	<-time.After(time.Second)
 	d, err := face.Dial(NewInterest("/test"))
 	if err != nil {
-		t.Error(err)
 		return
 	}
 	if nameToString(d.Name) != "/test" {
