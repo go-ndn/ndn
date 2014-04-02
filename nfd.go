@@ -48,13 +48,7 @@ var (
 		}},
 		{Type: NAME_COMPONENT}, // timestamp
 		{Type: NAME_COMPONENT}, // random value
-		{Type: NAME_COMPONENT, Children: []node{
-			{Type: SIGNATURE_INFO, Children: []node{
-				{Type: SIGNATURE_TYPE},
-				{Type: KEY_LOCATOR, Count: ZERO_OR_ONE, Children: keyLocatorContentFormat},
-				{Type: NODE, Count: ZERO_OR_MORE},
-			}},
-		}},
+		{Type: NAME_COMPONENT, Children: []node{signatureInfoFormat}},
 		{Type: NAME_COMPONENT, Children: []node{
 			{Type: SIGNATURE_VALUE},
 		}},

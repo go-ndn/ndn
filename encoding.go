@@ -186,7 +186,11 @@ var (
 		// interest lifetime
 		{Type: INTEREST_LIFETIME, Count: ZERO_OR_ONE},
 	}}
-
+	signatureInfoFormat = node{Type: SIGNATURE_INFO, Children: []node{
+		{Type: SIGNATURE_TYPE},
+		{Type: KEY_LOCATOR, Count: ZERO_OR_ONE, Children: keyLocatorContentFormat},
+		{Type: NODE, Count: ZERO_OR_MORE},
+	}}
 	dataFormat = node{Type: DATA, Children: []node{
 		// name
 		nameFormat,
@@ -201,11 +205,7 @@ var (
 		// content
 		{Type: CONTENT},
 		// signature
-		{Type: SIGNATURE_INFO, Children: []node{
-			{Type: SIGNATURE_TYPE},
-			{Type: KEY_LOCATOR, Count: ZERO_OR_ONE, Children: keyLocatorContentFormat},
-			{Type: NODE, Count: ZERO_OR_MORE},
-		}},
+		signatureInfoFormat,
 		{Type: SIGNATURE_VALUE},
 	}}
 )
