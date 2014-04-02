@@ -235,7 +235,7 @@ func (this *Control) Decode(i *Interest) (err error) {
 	}
 	ctrl, err := DecodeControl(b)
 	if err != nil {
-		return err
+		return
 	}
 	// module
 	this.Module = string(ctrl.Children[2].Value)
