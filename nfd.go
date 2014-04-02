@@ -306,7 +306,7 @@ func (this *ControlResponse) Encode() (d *Data, err error) {
 	}
 
 	d = &Data{}
-	d.Content, err = d.Encode()
+	d.Content, err = controlResponse.Encode()
 	return
 }
 
