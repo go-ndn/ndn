@@ -28,7 +28,6 @@ var (
 		{Type: STATUS_TEXT},
 		{Type: CONTROL_PARAMETERS, Count: ZERO_OR_ONE, Children: controlParametersContentFormat},
 	}}
-	controlParametersFormat        = node{Type: CONTROL_PARAMETERS, Children: controlParametersContentFormat}
 	controlParametersContentFormat = []node{
 		{Type: NAME, Count: ZERO_OR_ONE, Children: []node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
 		{Type: FACE_ID, Count: ZERO_OR_ONE},
@@ -39,6 +38,25 @@ var (
 			nameFormat,
 		}},
 	}
+	controlFormat = node{Type: NAME, Children: []node{
+		{Type: NAME_COMPONENT},                                               // localhost
+		{Type: NAME_COMPONENT},                                               // nfd
+		{Type: NAME_COMPONENT},                                               // module
+		{Type: NAME_COMPONENT},                                               // command
+		{Type: CONTROL_PARAMETERS, Children: controlParametersContentFormat}, // param
+		{Type: NAME_COMPONENT},                                               // timestamp
+		{Type: NAME_COMPONENT},                                               // random value
+		{Type: NAME_COMPONENT, Children: []node{
+			{Type: SIGNATURE_INFO, Children: []node{
+				{Type: SIGNATURE_TYPE},
+				{Type: KEY_LOCATOR, Count: ZERO_OR_ONE, Children: keyLocatorContentFormat},
+				{Type: NODE, Count: ZERO_OR_MORE},
+			}},
+		}},
+		{Type: NAME_COMPONENT, Children: []node{
+			{Type: SIGNATURE_VALUE},
+		}},
+	}}
 )
 
 type Control struct {
@@ -56,62 +74,93 @@ type Parameters struct {
 	Strategy            [][]byte
 }
 
-func (this *Control) Print() {
-	spew.Dump(*this)
-}
-
-func (this *Control) Encode() (i *Interest, err error) {
-	name := nameFromString("/localhost/nfd/" + this.Module)
-
-	if len(this.Command) != 0 {
-		name = append(name, []byte(this.Command))
-	}
-
-	parameters := NewTLV(CONTROL_PARAMETERS)
+func (this *Parameters) Encode() (parameters TLV, err error) {
+	parameters = NewTLV(CONTROL_PARAMETERS)
 	// name
-	if len(this.Parameters.Name) != 0 {
-		parameters.Add(nameEncode(this.Parameters.Name))
+	if len(this.Name) != 0 {
+		parameters.Add(nameEncode(this.Name))
 	}
 	// face id
-	if this.Parameters.FaceId != 0 {
+	if this.FaceId != 0 {
 		faceId := NewTLV(FACE_ID)
-		faceId.Value, err = encodeNonNeg(this.Parameters.FaceId)
+		faceId.Value, err = encodeNonNeg(this.FaceId)
 		if err != nil {
 			return
 		}
 		parameters.Add(faceId)
 	}
 	// uri
-	if len(this.Parameters.Uri) != 0 {
+	if len(this.Uri) != 0 {
 		uri := NewTLV(URI)
-		uri.Value = []byte(this.Parameters.Uri)
+		uri.Value = []byte(this.Uri)
 		parameters.Add(uri)
 	}
 	// local control feature
-	if this.Parameters.LocalControlFeature != 0 {
+	if this.LocalControlFeature != 0 {
 		localControlFeature := NewTLV(LOCAL_CONTROL_FEATURE)
-		localControlFeature.Value, err = encodeNonNeg(this.Parameters.LocalControlFeature)
+		localControlFeature.Value, err = encodeNonNeg(this.LocalControlFeature)
 		if err != nil {
 			return
 		}
 		parameters.Add(localControlFeature)
 	}
 	// cost
-	if this.Parameters.Cost != 0 {
+	if this.Cost != 0 {
 		cost := NewTLV(COST)
-		cost.Value, err = encodeNonNeg(this.Parameters.Cost)
+		cost.Value, err = encodeNonNeg(this.Cost)
 		if err != nil {
 			return
 		}
 		parameters.Add(cost)
 	}
 	// strategy
-	if len(this.Parameters.Strategy) != 0 {
+	if len(this.Strategy) != 0 {
 		strategy := NewTLV(STRATEGY)
-		strategy.Add(nameEncode(this.Parameters.Strategy))
+		strategy.Add(nameEncode(this.Strategy))
 		parameters.Add(strategy)
 	}
+	return
+}
 
+func (this *Parameters) Decode(c TLV) (err error) {
+	for _, cc := range c.Children {
+		switch cc.Type {
+		case NAME:
+			this.Name = nameDecode(cc)
+		case FACE_ID:
+			this.FaceId, err = decodeNonNeg(cc.Value)
+			if err != nil {
+				return
+			}
+		case URI:
+			this.Uri = string(cc.Value)
+		case LOCAL_CONTROL_FEATURE:
+			this.LocalControlFeature, err = decodeNonNeg(cc.Value)
+			if err != nil {
+				return
+			}
+		case COST:
+			this.Cost, err = decodeNonNeg(cc.Value)
+			if err != nil {
+				return
+			}
+		case STRATEGY:
+			this.Strategy = nameDecode(cc.Children[0])
+		}
+	}
+	return
+}
+
+func (this *Control) Print() {
+	spew.Dump(*this)
+}
+
+func (this *Control) Encode() (i *Interest, err error) {
+	name := nameFromString("/localhost/nfd/" + this.Module + "/" + this.Command)
+	parameters, err := this.Parameters.Encode()
+	if err != nil {
+		return
+	}
 	b, err := parameters.Encode()
 	if err != nil {
 		return
@@ -167,6 +216,46 @@ func (this *Control) Encode() (i *Interest, err error) {
 	return
 }
 
+func DecodeControl(name []byte) (ctrl TLV, err error) {
+	ctrl, remain, err := matchNode(controlFormat, name)
+	if err != nil {
+		return
+	}
+	if len(remain) != 0 {
+		err = errors.New("buffer not empty")
+	}
+	return
+}
+
+func (this *Control) Decode(i *Interest) (err error) {
+	name := nameEncode(i.Name)
+	b, err := name.Encode()
+	if err != nil {
+		return
+	}
+	ctrl, err := DecodeControl(b)
+	if err != nil {
+		return err
+	}
+	// module
+	this.Module = string(ctrl.Children[2].Value)
+	// command
+	this.Command = string(ctrl.Children[3].Value)
+	// parameters
+	err = this.Parameters.Decode(ctrl.Children[4])
+	if err != nil {
+		return
+	}
+
+	// TODO: enable rsa
+	// signatureValue := ctrl.Children[8].Children[0].Value
+	// if !verifyRSA(ctrl.Children[:8], signatureValue) {
+	// 	err = errors.New("cannot verify rsa")
+	// 	return
+	// }
+	return
+}
+
 type ControlResponse struct {
 	StatusCode uint64
 	StatusText string
@@ -196,6 +285,31 @@ func (this *ControlResponse) Print() {
 	spew.Dump(*this)
 }
 
+func (this *ControlResponse) Encode() (d *Data, err error) {
+	controlResponse := NewTLV(CONTROL_RESPONSE)
+	// status code
+	statusCode := NewTLV(STATUS_CODE)
+	statusCode.Value, err = encodeNonNeg(this.StatusCode)
+	controlResponse.Add(statusCode)
+	// status text
+	statusText := NewTLV(STATUS_TEXT)
+	statusText.Value = []byte(this.StatusText)
+	controlResponse.Add(statusText)
+
+	// parameters
+	parameters, err := this.Body.Encode()
+	if err != nil {
+		return
+	}
+	if len(parameters.Children) != 0 {
+		controlResponse.Add(parameters)
+	}
+
+	d = &Data{}
+	d.Content, err = d.Encode()
+	return
+}
+
 func (this *ControlResponse) Decode(d *Data) error {
 	resp, err := DecodeControlResponse(d.Content)
 	if err != nil {
@@ -211,30 +325,9 @@ func (this *ControlResponse) Decode(d *Data) error {
 		case STATUS_TEXT:
 			this.StatusText = string(c.Value)
 		case CONTROL_PARAMETERS:
-			for _, cc := range c.Children {
-				switch cc.Type {
-				case NAME:
-					this.Body.Name = nameDecode(cc)
-				case FACE_ID:
-					this.Body.FaceId, err = decodeNonNeg(cc.Value)
-					if err != nil {
-						return err
-					}
-				case URI:
-					this.Body.Uri = string(cc.Value)
-				case LOCAL_CONTROL_FEATURE:
-					this.Body.LocalControlFeature, err = decodeNonNeg(cc.Value)
-					if err != nil {
-						return err
-					}
-				case COST:
-					this.Body.Cost, err = decodeNonNeg(cc.Value)
-					if err != nil {
-						return err
-					}
-				case STRATEGY:
-					this.Body.Strategy = nameDecode(cc.Children[0])
-				}
+			err = this.Body.Decode(c)
+			if err != nil {
+				return err
 			}
 		}
 	}

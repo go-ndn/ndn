@@ -34,7 +34,7 @@ func TestControl(t *testing.T) {
 			Uri: "tcp://localhost:4000",
 		},
 	}
-	i, err := control.Interest()
+	i, err := control.Encode()
 	if err != nil {
 		t.Error(err)
 		return
@@ -44,7 +44,7 @@ func TestControl(t *testing.T) {
 		return
 	}
 	cr := ControlResponse{}
-	err = cr.Data(d)
+	err = cr.Decode(d)
 	if err != nil {
 		t.Error(err)
 		return
@@ -67,7 +67,7 @@ func TestControlResponse(t *testing.T) {
 	d.Content, _ = resp.Encode()
 
 	resp2 := ControlResponse{}
-	err := resp2.Data(d)
+	err := resp2.Decode(d)
 	if err != nil {
 		t.Error(err)
 		return
