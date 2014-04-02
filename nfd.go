@@ -124,30 +124,30 @@ func (this *Parameters) Encode() (parameters TLV, err error) {
 	return
 }
 
-func (this *Parameters) Decode(c TLV) (err error) {
-	for _, cc := range c.Children {
-		switch cc.Type {
+func (this *Parameters) Decode(parameters TLV) (err error) {
+	for _, c := range parameters.Children {
+		switch c.Type {
 		case NAME:
-			this.Name = nameDecode(cc)
+			this.Name = nameDecode(c)
 		case FACE_ID:
-			this.FaceId, err = decodeNonNeg(cc.Value)
+			this.FaceId, err = decodeNonNeg(c.Value)
 			if err != nil {
 				return
 			}
 		case URI:
-			this.Uri = string(cc.Value)
+			this.Uri = string(c.Value)
 		case LOCAL_CONTROL_FEATURE:
-			this.LocalControlFeature, err = decodeNonNeg(cc.Value)
+			this.LocalControlFeature, err = decodeNonNeg(c.Value)
 			if err != nil {
 				return
 			}
 		case COST:
-			this.Cost, err = decodeNonNeg(cc.Value)
+			this.Cost, err = decodeNonNeg(c.Value)
 			if err != nil {
 				return
 			}
 		case STRATEGY:
-			this.Strategy = nameDecode(cc.Children[0])
+			this.Strategy = nameDecode(c.Children[0])
 		}
 	}
 	return
