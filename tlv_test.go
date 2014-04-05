@@ -106,7 +106,7 @@ func TestDecodeSimpleInterest(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	ip, err := DecodeInterest(b)
+	ip, err := match(interestFormat, b)
 	if err != nil {
 		t.Error(err)
 		return

@@ -245,7 +245,7 @@ func (this *Interest) Encode() (raw []byte, err error) {
 }
 
 func (this *Interest) Decode(raw []byte) error {
-	tlv, err := DecodeInterest(raw)
+	tlv, err := match(interestFormat, raw)
 	if err != nil {
 		return err
 	}
@@ -437,7 +437,7 @@ func (this *Data) Encode() (raw []byte, err error) {
 }
 
 func (this *Data) Decode(raw []byte) error {
-	tlv, err := DecodeData(raw)
+	tlv, err := match(dataFormat, raw)
 	if err != nil {
 		return err
 	}

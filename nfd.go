@@ -1,7 +1,6 @@
 package ndn
 
 import (
-	"errors"
 	"github.com/davecgh/go-spew/spew"
 	"time"
 )
@@ -212,24 +211,13 @@ func (this *Control) Encode() (i *Interest, err error) {
 	return
 }
 
-func DecodeControl(name []byte) (ctrl TLV, err error) {
-	ctrl, remain, err := matchNode(controlFormat, name)
-	if err != nil {
-		return
-	}
-	if len(remain) != 0 {
-		err = errors.New("buffer not empty")
-	}
-	return
-}
-
 func (this *Control) Decode(i *Interest) (err error) {
 	name := nameEncode(i.Name)
 	b, err := name.Encode()
 	if err != nil {
 		return
 	}
-	ctrl, err := DecodeControl(b)
+	ctrl, err := match(controlFormat, b)
 	if err != nil {
 		return
 	}
@@ -266,17 +254,6 @@ const (
 	STATUS_CODE_NOT_SUPPORTED         = 501
 )
 
-func DecodeControlResponse(content []byte) (resp TLV, err error) {
-	resp, remain, err := matchNode(controlResponseFormat, content)
-	if err != nil {
-		return
-	}
-	if len(remain) != 0 {
-		err = errors.New("buffer not empty")
-	}
-	return
-}
-
 func (this *ControlResponse) Print() {
 	spew.Dump(*this)
 }
@@ -307,7 +284,7 @@ func (this *ControlResponse) Encode() (d *Data, err error) {
 }
 
 func (this *ControlResponse) Decode(d *Data) error {
-	resp, err := DecodeControlResponse(d.Content)
+	resp, err := match(controlResponseFormat, d.Content)
 	if err != nil {
 		return err
 	}

@@ -210,19 +210,9 @@ var (
 	}}
 )
 
-func DecodeData(raw []byte) (data TLV, err error) {
-	data, remain, err := matchNode(dataFormat, raw)
-	if err != nil {
-		return
-	}
-	if len(remain) != 0 {
-		err = errors.New("buffer not empty")
-	}
-	return
-}
-
-func DecodeInterest(raw []byte) (interest TLV, err error) {
-	interest, remain, err := matchNode(interestFormat, raw)
+// no remain
+func match(n node, raw []byte) (tlv TLV, err error) {
+	tlv, remain, err := matchNode(n, raw)
 	if err != nil {
 		return
 	}
