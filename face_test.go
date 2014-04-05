@@ -16,7 +16,7 @@ func TestNewFace(t *testing.T) {
 		return
 	}
 
-	_, err = NewFace("udp://example.com")
+	_, err = NewFace("udp://example.com:6363")
 	if err != nil {
 		t.Error(err)
 		return

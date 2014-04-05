@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -32,6 +33,10 @@ func NewFace(raw string) (f *Face, err error) {
 	}
 	if len(u.Scheme) == 0 || len(u.Host) == 0 {
 		err = errors.New("scheme and host should not be empty")
+		return
+	}
+	if !strings.Contains(u.Host, ":") && (strings.HasPrefix(u.Scheme, "tcp") || strings.HasPrefix(u.Scheme, "udp")) {
+		err = errors.New("tcp and udp should have port number")
 		return
 	}
 	f = &Face{
