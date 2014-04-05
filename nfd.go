@@ -69,7 +69,7 @@ type Parameters struct {
 	Strategy            [][]byte
 }
 
-func (this *Parameters) Encode() (parameters TLV, err error) {
+func (this *Parameters) encode() (parameters TLV, err error) {
 	parameters = NewTLV(CONTROL_PARAMETERS)
 	// name
 	if len(this.Name) != 0 {
@@ -117,7 +117,7 @@ func (this *Parameters) Encode() (parameters TLV, err error) {
 	return
 }
 
-func (this *Parameters) Decode(parameters TLV) (err error) {
+func (this *Parameters) decode(parameters TLV) (err error) {
 	for _, c := range parameters.Children {
 		switch c.Type {
 		case NAME:
@@ -152,7 +152,7 @@ func (this *Control) Print() {
 
 func (this *Control) Encode() (i *Interest, err error) {
 	name := nameFromString("/localhost/nfd/" + this.Module + "/" + this.Command)
-	parameters, err := this.Parameters.Encode()
+	parameters, err := this.Parameters.encode()
 	if err != nil {
 		return
 	}
@@ -226,7 +226,7 @@ func (this *Control) Decode(i *Interest) (err error) {
 	// command
 	this.Command = string(ctrl.Children[3].Value)
 	// parameters
-	err = this.Parameters.Decode(ctrl.Children[4].Children[0])
+	err = this.Parameters.decode(ctrl.Children[4].Children[0])
 	if err != nil {
 		return
 	}
@@ -270,7 +270,7 @@ func (this *ControlResponse) Encode() (d *Data, err error) {
 	controlResponse.Add(statusText)
 
 	// parameters
-	parameters, err := this.Body.Encode()
+	parameters, err := this.Body.encode()
 	if err != nil {
 		return
 	}
@@ -298,7 +298,7 @@ func (this *ControlResponse) Decode(d *Data) error {
 		case STATUS_TEXT:
 			this.StatusText = string(c.Value)
 		case CONTROL_PARAMETERS:
-			err = this.Body.Decode(c)
+			err = this.Body.decode(c)
 			if err != nil {
 				return err
 			}
