@@ -5,10 +5,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	//"github.com/davecgh/go-spew/spew"
 	"net"
 	"net/url"
-	"strings"
 	"time"
 )
 
@@ -16,40 +14,45 @@ import (
    Define ndn face
 */
 
+// when interest comes, the handler should use data param to respond
+// when data comes, interest will be nil
+// because every interest and data matters, any bad packet(error returned) will end connection (non-recoverable)
+type handler func(*Interest, *Data) error
+
 type Face struct {
 	*url.URL
-	Handlers map[string]func(*Interest) *Data
 	Id       uint64
+	Handlers map[string]handler
 }
 
-func NewFace(raw string) *Face {
-	u, _ := url.Parse(raw)
-	if len(u.Host) == 0 && len(u.Path) != 0 {
-		u.Host = u.Path
-		u.Path = ""
+func NewFace(raw string) (f *Face, err error) {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return
 	}
-	// assume tcp
-	if len(u.Scheme) == 0 {
-		u.Scheme = "tcp"
+	if len(u.Scheme) == 0 || len(u.Host) == 0 {
+		err = errors.New("scheme and host should not be empty")
+		return
 	}
-	// assume port 6363
-	if !strings.Contains(u.Host, ":") && (u.Scheme == "tcp" || u.Scheme == "udp") {
-		u.Host += ":6363"
-	}
-	return &Face{
+	f = &Face{
 		URL:      u,
-		Handlers: make(map[string]func(*Interest) *Data),
+		Handlers: make(map[string]handler),
 	}
+	return
 }
 
 // read precisely one tlv
-func readChunk(rw *bufio.ReadWriter) (b []byte, err error) {
+func readChunk(rw *bufio.ReadWriter) (t uint64, b []byte, err error) {
 	// type and length are at most 1+8+1+8 bytes
 	peek, _ := rw.Peek(18)
 	buf := bytes.NewBuffer(peek)
 	// type
-	_, err = readByte(buf)
+	t, err = readByte(buf)
 	if err != nil {
+		return
+	}
+	if t != INTEREST && t != DATA {
+		err = errors.New("neither interest nor data chunk")
 		return
 	}
 	// length
@@ -97,17 +100,13 @@ func (this *Face) Dial(i *Interest) (d *Data, err error) {
 		conn.SetReadDeadline(time.Now().Add(time.Duration(i.InterestLifeTime) * time.Millisecond))
 	}
 	// read one chunk only
-	b, err = readChunk(rw)
+	_, b, err = readChunk(rw)
 	if err != nil {
 		return
 	}
 	d = &Data{}
 	err = d.Decode(b)
 	return
-}
-
-func (this *Face) On(name string, h func(*Interest) *Data) {
-	this.Handlers[name] = h
 }
 
 func dialControl(rw *bufio.ReadWriter, c *Control) (cr *ControlResponse, err error) {
@@ -124,7 +123,7 @@ func dialControl(rw *bufio.ReadWriter, c *Control) (cr *ControlResponse, err err
 		return
 	}
 	// get control response
-	b, err = readChunk(rw)
+	_, b, err = readChunk(rw)
 	if err != nil {
 		return
 	}
@@ -177,6 +176,11 @@ func (this *Face) announcePrefix(rw *bufio.ReadWriter) error {
 	return nil
 }
 
+func (this *Face) On(name string, h handler) {
+	this.Handlers[name] = h
+}
+
+// for server
 func (this *Face) Listen() (err error) {
 	// dial
 	conn, err := net.Dial(this.Scheme, this.Host)
@@ -202,32 +206,91 @@ func (this *Face) Listen() (err error) {
 	fmt.Printf("Listen(%d) %s\n", this.Id, addr)
 	for {
 		// keep reading chunks and decode as interest
-		b, err := readChunk(rw)
+		_, b, err := readChunk(rw)
 		if err != nil {
 			continue
 		}
-		i := &Interest{}
-		err = i.Decode(b)
-		if err != nil {
-			// invalid interest
-			continue
-		}
-		h, ok := this.Handlers[nameToString(i.Name)]
-		if !ok {
-			// handler not found
-			continue
-		}
-		go func(h func(*Interest) *Data, i *Interest) {
-			d := h(i)
-			if d == nil {
+		go func(b []byte) {
+			i := &Interest{}
+			err := i.Decode(b)
+			if err != nil {
+				// invalid interest
+				return
+			}
+			h, ok := this.Handlers[nameToString(i.Name)]
+			if !ok {
+				return
+			}
+			d := &Data{}
+			err = h(i, d)
+			if err != nil {
 				// handler ignore interest
 				return
 			}
-			b, err := d.Encode()
+			b, err = d.Encode()
 			if err != nil {
 				return
 			}
 			flushWrite(rw, b)
-		}(h, i)
+		}(b)
+	}
+}
+
+// for forwarder
+func (this *Face) ListenAny(h handler) (err error) {
+	ln, err := net.Listen(this.Scheme, this.Host)
+	if err != nil {
+		return
+	}
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			// handle error
+			continue
+		}
+		// accepting new connection
+		go func(conn net.Conn) {
+			defer conn.Close()
+			fmt.Printf("Forward %s\n", this.Scheme+"://"+conn.RemoteAddr().String())
+			rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
+			for {
+				t, b, err := readChunk(rw)
+				if err != nil {
+					return
+				}
+				switch t {
+				case INTEREST:
+					i := &Interest{}
+					err = i.Decode(b)
+					if err != nil {
+						// invalid interest
+						return
+					}
+					d := &Data{}
+					err := h(i, d)
+					if err != nil {
+						return
+					}
+					b, err := d.Encode()
+					if err != nil {
+						return
+					}
+					flushWrite(rw, b)
+				case DATA:
+					d := &Data{}
+					err = d.Decode(b)
+					if err != nil {
+						// invalid data
+						return
+					}
+					err := h(nil, d)
+					if err != nil {
+						return
+					}
+				default:
+					return
+				}
+			}
+		}(conn)
 	}
 }

@@ -5,36 +5,30 @@ import (
 	//"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
 	"testing"
 	"time"
 )
 
 func TestNewFace(t *testing.T) {
-	face := NewFace("borges.metwi.ucla.edu")
-	if face.Scheme != "tcp" {
-		t.Errorf("expected %v, got %v", "tcp", face.Scheme)
-		return
-	}
-	if face.Host != "borges.metwi.ucla.edu:6363" {
-		t.Errorf("expected %v, got %v", "borges.metwi.ucla.edu:6363", face.Host)
+	face, err := NewFace("borges.metwi.ucla.edu")
+	if err == nil {
+		t.Errorf("should not be valid face name %#v", face.URL)
 		return
 	}
 
-	face2 := NewFace("udp://example.com")
-	if face2.Scheme != "udp" {
-		t.Errorf("expected %v, got %v", "udp", face2.Scheme)
-		return
-	}
-	face3 := NewFace("udp://example.com:4000")
-	if !strings.HasSuffix(face3.Host, ":4000") {
-		t.Errorf("expected %v, got %v", ":4000", face3)
+	_, err = NewFace("udp://example.com")
+	if err != nil {
+		t.Error(err)
 		return
 	}
 }
 
 func TestDial(t *testing.T) {
-	face := NewFace("borges.metwi.ucla.edu")
+	face, err := NewFace("tcp://borges.metwi.ucla.edu:6363")
+	if err != nil {
+		t.Error(err)
+		return
+	}
 	i := NewInterest("/ndnx/ping")
 	d, err := face.Dial(i)
 	if err != nil {
@@ -64,10 +58,15 @@ func TestListen(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	face := NewFace("127.0.0.1")
-	face.On("/test", func(i *Interest) *Data {
+	face, err := NewFace("tcp://127.0.0.1:6363")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	face.On("/test", func(i *Interest, d *Data) error {
 		//fmt.Println("got Interest")
-		return NewData("/test")
+		d.Name = [][]byte{[]byte("test")}
+		return nil
 	})
 	go face.Listen()
 	<-time.After(time.Second)

@@ -45,7 +45,12 @@ func TestControl(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	d, err := NewFace("localhost").Dial(i)
+	face, err := NewFace("tcp://localhost:6363")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	d, err := face.Dial(i)
 	if err != nil {
 		return
 	}
