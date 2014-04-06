@@ -12,7 +12,7 @@ import (
 func TestNewFace(t *testing.T) {
 	face, err := NewFace("borges.metwi.ucla.edu")
 	if err == nil {
-		t.Errorf("should not be valid face name %#v", face.URL)
+		t.Errorf("should not be valid face name %#v", face)
 		return
 	}
 
