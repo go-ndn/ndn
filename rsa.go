@@ -16,7 +16,8 @@ import (
 )
 
 var (
-	rsaPrivateKey *rsa.PrivateKey
+	SignKey   *rsa.PrivateKey
+	VerifyKey *rsa.PrivateKey
 )
 
 type certificate struct {
@@ -54,15 +55,14 @@ func PrintCertificate(raw []byte) (err error) {
 	}
 	cert := &certificate{}
 	_, err = asn1.Unmarshal(d.Content, cert)
+	if err != nil {
+		return
+	}
 	spew.Dump(cert)
 	return
 }
 
-func WriteCertificate() (raw []byte, err error) {
-	if rsaPrivateKey == nil {
-		err = errors.New("rsa private key not found")
-		return
-	}
+func WriteCertificate(key *rsa.PrivateKey) (raw []byte, err error) {
 	d := Data{
 		Name: nameFromString("/testing/KEY/pubkey/ID-CERT"),
 		MetaInfo: MetaInfo{
@@ -78,8 +78,8 @@ func WriteCertificate() (raw []byte, err error) {
 		},
 	}
 	publicKeyBytes, err := asn1.Marshal(rsaPublicKey{
-		N: rsaPrivateKey.PublicKey.N,
-		E: rsaPrivateKey.PublicKey.E,
+		N: key.PublicKey.N,
+		E: key.PublicKey.E,
 	})
 	if err != nil {
 		return
@@ -120,54 +120,49 @@ func WriteCertificate() (raw []byte, err error) {
 	return
 }
 
-func ReadRSAKey(pemData []byte) (err error) {
+func ReadRSAKey(pemData []byte) (key *rsa.PrivateKey, err error) {
 	block, _ := pem.Decode(pemData)
 	if block == nil || block.Type != "RSA PRIVATE KEY" {
 		err = errors.New("rsa private key not found")
 		return
 	}
 	// Decode the RSA private key
-	rsaPrivateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+	key, err = x509.ParsePKCS1PrivateKey(block.Bytes)
 	return
 }
 
-func WriteRSAKey() (pemData []byte, err error) {
-	if rsaPrivateKey == nil {
-		err = errors.New("rsa private key not found")
-		return
-	}
-	pemData = pem.EncodeToMemory(&pem.Block{
+func WriteRSAKey(key *rsa.PrivateKey) []byte {
+	return pem.EncodeToMemory(&pem.Block{
 		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(rsaPrivateKey),
+		Bytes: x509.MarshalPKCS1PrivateKey(key),
 	})
-	return
 }
 
-func GenerateRSAKey() (err error) {
-	rsaPrivateKey, err = rsa.GenerateKey(rand.Reader, 2048)
+func GenerateRSAKey() (key *rsa.PrivateKey, err error) {
+	key, err = rsa.GenerateKey(rand.Reader, 2048)
 	return
 }
 
 func signRSA(l []TLV) (signature []byte, err error) {
-	if rsaPrivateKey == nil {
-		err = errors.New("rsa private key not found")
+	if SignKey == nil {
+		err = errors.New("signKey not found")
 		return
 	}
 	digest, err := newSHA256(l)
 	if err != nil {
 		return
 	}
-	signature, err = rsa.SignPKCS1v15(rand.Reader, rsaPrivateKey, crypto.SHA256, digest)
+	signature, err = rsa.SignPKCS1v15(rand.Reader, SignKey, crypto.SHA256, digest)
 	return
 }
 
 func verifyRSA(l []TLV, signature []byte) bool {
-	if rsaPrivateKey == nil {
+	if VerifyKey == nil {
 		return false
 	}
 	digest, err := newSHA256(l)
 	if err != nil {
 		return false
 	}
-	return nil == rsa.VerifyPKCS1v15(&rsaPrivateKey.PublicKey, crypto.SHA256, digest, signature)
+	return nil == rsa.VerifyPKCS1v15(&VerifyKey.PublicKey, crypto.SHA256, digest, signature)
 }

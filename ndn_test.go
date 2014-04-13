@@ -35,6 +35,7 @@ func fromBase10(base10 string) *big.Int {
 }
 
 func BenchmarkDataSHA256Encode(b *testing.B) {
+	SignKey = key
 	data := NewData("/google/search")
 	for n := 0; n < b.N; n++ {
 		_, err := data.Encode()
@@ -46,6 +47,7 @@ func BenchmarkDataSHA256Encode(b *testing.B) {
 }
 
 func BenchmarkDataSHA256Decode(b *testing.B) {
+	VerifyKey = key
 	data := NewData("")
 	for n := 0; n < b.N; n++ {
 		err := data.Decode(byteSHA256)
@@ -57,7 +59,7 @@ func BenchmarkDataSHA256Decode(b *testing.B) {
 }
 
 func BenchmarkDataRSAEncode(b *testing.B) {
-	rsaPrivateKey = key
+	SignKey = key
 	data := NewData("/google/search")
 	data.Signature.Type = 1
 	for n := 0; n < b.N; n++ {
@@ -70,7 +72,7 @@ func BenchmarkDataRSAEncode(b *testing.B) {
 }
 
 func BenchmarkDataRSADecode(b *testing.B) {
-	rsaPrivateKey = key
+	VerifyKey = key
 	data := NewData("")
 	for n := 0; n < b.N; n++ {
 		err := data.Decode(byteRSA)
@@ -82,6 +84,7 @@ func BenchmarkDataRSADecode(b *testing.B) {
 }
 
 func BenchmarkInterestEncode(b *testing.B) {
+	SignKey = key
 	interest := NewInterest("/google/search")
 	for n := 0; n < b.N; n++ {
 		_, err := interest.Encode()
@@ -93,6 +96,7 @@ func BenchmarkInterestEncode(b *testing.B) {
 }
 
 func BenchmarkInterestDecode(b *testing.B) {
+	VerifyKey = key
 	interest := NewInterest("")
 	for n := 0; n < b.N; n++ {
 		err := interest.Decode(byteInterest)
@@ -104,7 +108,8 @@ func BenchmarkInterestDecode(b *testing.B) {
 }
 
 func TestData(t *testing.T) {
-	rsaPrivateKey = key
+	VerifyKey = key
+	SignKey = key
 	data := NewData("/google/search")
 	data.MetaInfo.ContentType = 2
 	data.MetaInfo.FreshnessPeriod = 3
