@@ -138,9 +138,8 @@ func WriteRSAKey(key *rsa.PrivateKey) []byte {
 	})
 }
 
-func GenerateRSAKey() (key *rsa.PrivateKey, err error) {
-	key, err = rsa.GenerateKey(rand.Reader, 2048)
-	return
+func GenerateRSAKey() (*rsa.PrivateKey, error) {
+	return rsa.GenerateKey(rand.Reader, 2048)
 }
 
 func signRSA(l []TLV) (signature []byte, err error) {
