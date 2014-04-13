@@ -189,7 +189,10 @@ func (this *Control) Print() {
 }
 
 func (this *Control) Encode() (i *Interest, err error) {
-	name := nameFromString("/localhost/nfd/" + this.Module + "/" + this.Command)
+	name := nameFromString("/localhost/nfd/" + this.Module)
+	if len(this.Command) > 0 {
+		name = append(name, []byte(this.Command))
+	}
 	parameters, err := this.Parameters.encode()
 	if err != nil {
 		return
@@ -356,13 +359,15 @@ func (this *ControlResponse) Encode() (d *Data, err error) {
 		controlResponse.Add(fibEntry)
 	}
 	// forwarder status
-	for _, c := range forwarderStatusFormat.Children {
-		tlv := NewTLV(c.Type)
-		tlv.Value, err = encodeNonNeg(this.ForwarderStatus[c.Type])
-		if err != nil {
-			return
+	if len(this.ForwarderStatus) > 0 {
+		for _, c := range forwarderStatusFormat.Children {
+			tlv := NewTLV(c.Type)
+			tlv.Value, err = encodeNonNeg(this.ForwarderStatus[c.Type])
+			if err != nil {
+				return
+			}
+			controlResponse.Add(tlv)
 		}
-		controlResponse.Add(tlv)
 	}
 
 	d = &Data{}
@@ -384,10 +389,8 @@ func (this *ControlResponse) Decode(d *Data) error {
 	if err != nil {
 		return err
 	}
+	this.ForwarderStatus = make(map[uint64]uint64)
 	fibStatus := isFibStatus(resp.Children[2:])
-	if !fibStatus {
-		this.ForwarderStatus = make(map[uint64]uint64)
-	}
 	for _, c := range resp.Children {
 		switch c.Type {
 		case STATUS_CODE:
