@@ -34,6 +34,9 @@ const (
 	N_IN_DATA           = 145
 	N_OUT_INTEREST      = 146
 	N_OUT_DATA          = 147
+	FACE_ENTRY          = 128
+	LOCAL_URI           = 129
+	FACE_FLAG           = 194
 )
 
 var (
@@ -43,6 +46,7 @@ var (
 		{Type: CONTROL_PARAMETERS, Count: ZERO_OR_ONE, Children: controlParametersContentFormat},
 		forwarderStatusFormat,
 		fibStatusFormat,
+		faceStatusFormat,
 	}}
 	controlParametersContentFormat = []node{
 		{Type: NAME, Count: ZERO_OR_ONE, Children: []node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
@@ -89,6 +93,15 @@ var (
 			{Type: FACE_ID},
 			{Type: COST},
 		}},
+	}}
+	faceStatusFormat = node{Type: FACE_ENTRY, Count: ZERO_OR_MORE, Children: []node{
+		{Type: FACE_ID},
+		{Type: LOCAL_URI},
+		{Type: FACE_FLAG},
+		{Type: N_IN_INTEREST},
+		{Type: N_IN_DATA},
+		{Type: N_OUT_INTEREST},
+		{Type: N_OUT_DATA},
 	}}
 )
 
@@ -288,6 +301,7 @@ type ControlResponse struct {
 	Parameters      Parameters
 	ForwarderStatus map[uint64]uint64
 	FibStatus       []FibEntry
+	FaceStatus      []FaceEntry
 }
 
 type NextHopRecord struct {
@@ -299,6 +313,8 @@ type FibEntry struct {
 	Name     [][]byte
 	NextHops []NextHopRecord
 }
+
+type FaceEntry map[uint64]interface{}
 
 const (
 	STATUS_CODE_OK             uint64 = 200
@@ -369,19 +385,50 @@ func (this *ControlResponse) Encode() (d *Data, err error) {
 			controlResponse.Add(tlv)
 		}
 	}
+	// face status
+	for _, c := range this.FaceStatus {
+		face := NewTLV(FACE_ENTRY)
+		for _, cc := range faceStatusFormat.Children {
+			tlv := NewTLV(cc.Type)
+			switch cc.Type {
+			case LOCAL_URI:
+				tlv.Value = []byte(c[cc.Type].(string))
+			default:
+				tlv.Value, err = encodeNonNeg(c[cc.Type].(uint64))
+				if err != nil {
+					return
+				}
+			}
+			face.Add(tlv)
+		}
+		controlResponse.Add(face)
+	}
 
 	d = &Data{}
 	d.Content, err = controlResponse.Encode()
 	return
 }
 
-func isFibStatus(l []TLV) bool {
+const (
+	FIB_STATUS uint8 = iota
+	FACE_STATUS
+	FORWARDER_STATUS
+)
+
+func bodyType(l []TLV) uint8 {
+	if len(l) == 0 {
+		return FORWARDER_STATUS
+	}
 	for _, c := range l {
 		if c.Type != FIB_ENTRY {
-			return false
+			return FORWARDER_STATUS
 		}
 	}
-	return true
+	if l[0].Children[0].Type == FACE_ID {
+		return FACE_STATUS
+	} else {
+		return FIB_STATUS
+	}
 }
 
 func (this *ControlResponse) Decode(d *Data) error {
@@ -390,7 +437,7 @@ func (this *ControlResponse) Decode(d *Data) error {
 		return err
 	}
 	this.ForwarderStatus = make(map[uint64]uint64)
-	fibStatus := isFibStatus(resp.Children[2:])
+	body := bodyType(resp.Children[2:])
 	for _, c := range resp.Children {
 		switch c.Type {
 		case STATUS_CODE:
@@ -406,7 +453,27 @@ func (this *ControlResponse) Decode(d *Data) error {
 				return err
 			}
 		default:
-			if fibStatus {
+			switch body {
+			case FACE_STATUS:
+				for _, cc := range c.Children {
+					face := FaceEntry{}
+					switch cc.Type {
+					case LOCAL_URI:
+						face[cc.Type] = string(cc.Value)
+					default:
+						face[cc.Type], err = decodeNonNeg(cc.Value)
+						if err != nil {
+							return err
+						}
+					}
+					this.FaceStatus = append(this.FaceStatus, face)
+				}
+			case FORWARDER_STATUS:
+				this.ForwarderStatus[c.Type], err = decodeNonNeg(c.Value)
+				if err != nil {
+					return err
+				}
+			case FIB_STATUS:
 				fib := FibEntry{
 					Name: nameDecode(c.Children[0]),
 				}
@@ -424,11 +491,6 @@ func (this *ControlResponse) Decode(d *Data) error {
 					fib.NextHops = append(fib.NextHops, nextHop)
 				}
 				this.FibStatus = append(this.FibStatus, fib)
-			} else {
-				this.ForwarderStatus[c.Type], err = decodeNonNeg(c.Value)
-				if err != nil {
-					return err
-				}
 			}
 		}
 	}
