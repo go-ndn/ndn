@@ -19,6 +19,21 @@ const (
 	CONTROL_RESPONSE             = 101
 	STATUS_CODE                  = 102
 	STATUS_TEXT                  = 103
+	// status dataset
+	FIB_ENTRY           = 128
+	NEXT_HOP_RECORD     = 129
+	NFD_VERSION         = 128
+	START_TIMESTAMP     = 129
+	CURRENT_TIMESTAMP   = 130
+	N_NAME_TREE_ENTRIES = 131
+	N_FIB_ENTRY         = 132
+	N_PIT_ENTRY         = 133
+	N_MEASUREMENT_ENTRY = 134
+	N_CS_ENTRY          = 135
+	N_IN_INTEREST       = 144
+	N_IN_DATA           = 145
+	N_OUT_INTEREST      = 146
+	N_OUT_DATA          = 147
 )
 
 var (
@@ -26,6 +41,8 @@ var (
 		{Type: STATUS_CODE},
 		{Type: STATUS_TEXT},
 		{Type: CONTROL_PARAMETERS, Count: ZERO_OR_ONE, Children: controlParametersContentFormat},
+		forwarderStatusFormat,
+		fibStatusFormat,
 	}}
 	controlParametersContentFormat = []node{
 		{Type: NAME, Count: ZERO_OR_ONE, Children: []node{{Type: NAME_COMPONENT, Count: ZERO_OR_MORE}}},
@@ -50,6 +67,27 @@ var (
 		{Type: NAME_COMPONENT, Children: []node{signatureInfoFormat}},
 		{Type: NAME_COMPONENT, Children: []node{
 			{Type: SIGNATURE_VALUE},
+		}},
+	}}
+	forwarderStatusFormat = node{Type: GROUP_AND, Count: ZERO_OR_ONE, Children: []node{
+		{Type: NFD_VERSION},
+		{Type: START_TIMESTAMP},
+		{Type: CURRENT_TIMESTAMP},
+		{Type: N_NAME_TREE_ENTRIES},
+		{Type: N_FIB_ENTRY},
+		{Type: N_PIT_ENTRY},
+		{Type: N_MEASUREMENT_ENTRY},
+		{Type: N_CS_ENTRY},
+		{Type: N_IN_INTEREST},
+		{Type: N_IN_DATA},
+		{Type: N_OUT_INTEREST},
+		{Type: N_OUT_DATA},
+	}}
+	fibStatusFormat = node{Type: FIB_ENTRY, Count: ZERO_OR_MORE, Children: []node{
+		nameFormat,
+		{Type: NEXT_HOP_RECORD, Count: ONE_OR_MORE, Children: []node{
+			{Type: FACE_ID},
+			{Type: COST},
 		}},
 	}}
 )
@@ -208,6 +246,7 @@ func (this *Control) Encode() (i *Interest, err error) {
 	i = NewInterest("")
 	i.Name = name
 	i.Selectors.MustBeFresh = true
+	i.Selectors.ChildSelector = CHILD_SELECTOR_LAST
 	return
 }
 
@@ -241,9 +280,21 @@ func (this *Control) Decode(i *Interest) (err error) {
 }
 
 type ControlResponse struct {
-	StatusCode uint64
-	StatusText string
-	Body       Parameters
+	StatusCode      uint64
+	StatusText      string
+	Parameters      Parameters
+	ForwarderStatus map[uint64]uint64
+	FibStatus       []FibEntry
+}
+
+type NextHopRecord struct {
+	FaceId uint64
+	Cost   uint64
+}
+
+type FibEntry struct {
+	Name          [][]byte
+	NextHopRecord []NextHopRecord
 }
 
 const (
@@ -263,6 +314,9 @@ func (this *ControlResponse) Encode() (d *Data, err error) {
 	// status code
 	statusCode := NewTLV(STATUS_CODE)
 	statusCode.Value, err = encodeNonNeg(this.StatusCode)
+	if err != nil {
+		return
+	}
 	controlResponse.Add(statusCode)
 	// status text
 	statusText := NewTLV(STATUS_TEXT)
@@ -270,12 +324,45 @@ func (this *ControlResponse) Encode() (d *Data, err error) {
 	controlResponse.Add(statusText)
 
 	// parameters
-	parameters, err := this.Body.encode()
+	parameters, err := this.Parameters.encode()
 	if err != nil {
 		return
 	}
 	if len(parameters.Children) != 0 {
 		controlResponse.Add(parameters)
+	}
+	// fib status
+	for _, c := range this.FibStatus {
+		fibEntry := NewTLV(FIB_ENTRY)
+		fibEntry.Add(nameEncode(c.Name))
+		for _, cc := range c.NextHopRecord {
+			nextHop := NewTLV(NEXT_HOP_RECORD)
+			// face id
+			faceId := NewTLV(FACE_ID)
+			faceId.Value, err = encodeNonNeg(cc.FaceId)
+			if err != nil {
+				return
+			}
+			nextHop.Add(faceId)
+			// cost
+			cost := NewTLV(COST)
+			cost.Value, err = encodeNonNeg(cc.Cost)
+			if err != nil {
+				return
+			}
+			nextHop.Add(cost)
+			fibEntry.Add(nextHop)
+		}
+		controlResponse.Add(fibEntry)
+	}
+	// forwarder status
+	for _, c := range forwarderStatusFormat.Children {
+		tlv := NewTLV(c.Type)
+		tlv.Value, err = encodeNonNeg(this.ForwarderStatus[c.Type])
+		if err != nil {
+			return
+		}
+		controlResponse.Add(tlv)
 	}
 
 	d = &Data{}
@@ -283,10 +370,23 @@ func (this *ControlResponse) Encode() (d *Data, err error) {
 	return
 }
 
+func isFibStatus(l []TLV) bool {
+	for _, c := range l {
+		if c.Type != FIB_ENTRY {
+			return false
+		}
+	}
+	return true
+}
+
 func (this *ControlResponse) Decode(d *Data) error {
 	resp, err := match(controlResponseFormat, d.Content)
 	if err != nil {
 		return err
+	}
+	fibStatus := isFibStatus(resp.Children[2:])
+	if !fibStatus {
+		this.ForwarderStatus = make(map[uint64]uint64)
 	}
 	for _, c := range resp.Children {
 		switch c.Type {
@@ -298,9 +398,34 @@ func (this *ControlResponse) Decode(d *Data) error {
 		case STATUS_TEXT:
 			this.StatusText = string(c.Value)
 		case CONTROL_PARAMETERS:
-			err = this.Body.decode(c)
+			err = this.Parameters.decode(c)
 			if err != nil {
 				return err
+			}
+		default:
+			if fibStatus {
+				fib := FibEntry{
+					Name: nameDecode(c.Children[0]),
+				}
+				// next hop
+				for _, cc := range c.Children[1:] {
+					nextHop := NextHopRecord{}
+					nextHop.FaceId, err = decodeNonNeg(cc.Children[0].Value)
+					if err != nil {
+						return err
+					}
+					nextHop.Cost, err = decodeNonNeg(cc.Children[1].Value)
+					if err != nil {
+						return err
+					}
+					fib.NextHopRecord = append(fib.NextHopRecord, nextHop)
+				}
+				this.FibStatus = append(this.FibStatus, fib)
+			} else {
+				this.ForwarderStatus[c.Type], err = decodeNonNeg(c.Value)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}

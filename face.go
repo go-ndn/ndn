@@ -177,7 +177,7 @@ func (this *Face) create(rw *bufio.ReadWriter, addr string) (err error) {
 		err = errors.New(fmt.Sprintf("(%d) %s", cr.StatusCode, cr.StatusText))
 		return
 	}
-	this.Id = cr.Body.FaceId
+	this.Id = cr.Parameters.FaceId
 	return
 }
 

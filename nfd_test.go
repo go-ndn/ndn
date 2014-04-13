@@ -69,7 +69,7 @@ func TestControlResponse(t *testing.T) {
 	resp := ControlResponse{
 		StatusCode: 200,
 		StatusText: "system online",
-		Body: Parameters{
+		Parameters: Parameters{
 			Name: nameFromString("/system/ok"),
 			Cost: 400,
 		},
@@ -94,12 +94,12 @@ func TestControlResponse(t *testing.T) {
 		t.Errorf("expected %v, got %v", "system online", resp2.StatusText)
 		return
 	}
-	if resp2.Body.Cost != 400 {
-		t.Errorf("expected %v, got %v", 400, resp2.Body.Cost)
+	if resp2.Parameters.Cost != 400 {
+		t.Errorf("expected %v, got %v", 400, resp2.Parameters.Cost)
 		return
 	}
-	if nameToString(resp2.Body.Name) != "/system/ok" {
-		t.Errorf("expected %v, got %v", "/system/ok", resp2.Body.Name)
+	if nameToString(resp2.Parameters.Name) != "/system/ok" {
+		t.Errorf("expected %v, got %v", "/system/ok", resp2.Parameters.Name)
 		return
 	}
 }
