@@ -96,6 +96,7 @@ var (
 	}}
 	faceStatusFormat = node{Type: FACE_ENTRY, Count: ZERO_OR_MORE, Children: []node{
 		{Type: FACE_ID},
+		{Type: URI}, // remote uri
 		{Type: LOCAL_URI},
 		{Type: FACE_FLAG},
 		{Type: N_IN_INTEREST},
@@ -391,6 +392,8 @@ func (this *ControlResponse) Encode() (d *Data, err error) {
 		for _, cc := range faceStatusFormat.Children {
 			tlv := NewTLV(cc.Type)
 			switch cc.Type {
+			case URI:
+				fallthrough
 			case LOCAL_URI:
 				tlv.Value = []byte(c[cc.Type].(string))
 			default:
@@ -458,6 +461,8 @@ func (this *ControlResponse) Decode(d *Data) error {
 				for _, cc := range c.Children {
 					face := FaceEntry{}
 					switch cc.Type {
+					case URI:
+						fallthrough
 					case LOCAL_URI:
 						face[cc.Type] = string(cc.Value)
 					default:
