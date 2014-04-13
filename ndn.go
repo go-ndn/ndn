@@ -106,11 +106,11 @@ func NewTLV(t uint64) TLV {
 }
 
 type Interest struct {
-	Name             [][]byte
-	Selectors        Selectors
-	Nonce            []byte
-	Scope            uint64
-	InterestLifeTime uint64
+	Name      [][]byte
+	Selectors Selectors
+	Nonce     []byte
+	Scope     uint64
+	LifeTime  uint64
 }
 
 const (
@@ -127,9 +127,9 @@ func newNonce() []byte {
 
 func NewInterest(name string) *Interest {
 	return &Interest{
-		Name:             nameFromString(name),
-		Nonce:            newNonce(),
-		InterestLifeTime: 4000,
+		Name:     nameFromString(name),
+		Nonce:    newNonce(),
+		LifeTime: 4000,
 	}
 }
 
@@ -231,13 +231,13 @@ func (this *Interest) Encode() (raw []byte, err error) {
 	}
 
 	// interest lifetime
-	if this.InterestLifeTime != 0 {
-		interestLifeTime := NewTLV(INTEREST_LIFETIME)
-		interestLifeTime.Value, err = encodeNonNeg(this.InterestLifeTime)
+	if this.LifeTime != 0 {
+		lifeTime := NewTLV(INTEREST_LIFETIME)
+		lifeTime.Value, err = encodeNonNeg(this.LifeTime)
 		if err != nil {
 			return
 		}
-		interest.Add(interestLifeTime)
+		interest.Add(lifeTime)
 	}
 	// final encode
 	raw, err = interest.Encode()
@@ -294,7 +294,7 @@ func (this *Interest) Decode(raw []byte) error {
 				return err
 			}
 		case INTEREST_LIFETIME:
-			this.InterestLifeTime, err = decodeNonNeg(c.Value)
+			this.LifeTime, err = decodeNonNeg(c.Value)
 			if err != nil {
 				return err
 			}

@@ -131,12 +131,12 @@ func (this *Face) Dial(i *Interest) (d *Data, err error) {
 	if err != nil {
 		return
 	}
-	if i.InterestLifeTime == 0 {
+	if i.LifeTime == 0 {
 		// default timeout 10s
 		conn.SetReadDeadline(time.Now().Add(10 * time.Second))
 	} else {
 		// use interestLifeTime
-		conn.SetReadDeadline(time.Now().Add(time.Duration(i.InterestLifeTime) * time.Millisecond))
+		conn.SetReadDeadline(time.Now().Add(time.Duration(i.LifeTime) * time.Millisecond))
 	}
 	// read one chunk only
 	d, err = readData(rw)

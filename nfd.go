@@ -296,8 +296,8 @@ type NextHopRecord struct {
 }
 
 type FibEntry struct {
-	Name          [][]byte
-	NextHopRecord []NextHopRecord
+	Name     [][]byte
+	NextHops []NextHopRecord
 }
 
 const (
@@ -338,7 +338,7 @@ func (this *ControlResponse) Encode() (d *Data, err error) {
 	for _, c := range this.FibStatus {
 		fibEntry := NewTLV(FIB_ENTRY)
 		fibEntry.Add(nameEncode(c.Name))
-		for _, cc := range c.NextHopRecord {
+		for _, cc := range c.NextHops {
 			nextHop := NewTLV(NEXT_HOP_RECORD)
 			// face id
 			faceId := NewTLV(FACE_ID)
@@ -421,7 +421,7 @@ func (this *ControlResponse) Decode(d *Data) error {
 					if err != nil {
 						return err
 					}
-					fib.NextHopRecord = append(fib.NextHopRecord, nextHop)
+					fib.NextHops = append(fib.NextHops, nextHop)
 				}
 				this.FibStatus = append(this.FibStatus, fib)
 			} else {

@@ -161,7 +161,7 @@ func TestInterest(t *testing.T) {
 	interest.Selectors.ChildSelector = 4
 	interest.Selectors.MustBeFresh = true
 	interest.Scope = 8
-	interest.InterestLifeTime = 9
+	interest.LifeTime = 9
 	interest.Nonce = []byte{0x1, 0x2, 0x3}
 	b, err := interest.Encode()
 	if err != nil {
