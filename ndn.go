@@ -326,7 +326,6 @@ const (
 	CONTENT_TYPE_BLOB uint64 = 0
 	CONTENT_TYPE_LINK        = 1
 	CONTENT_TYPE_KEY         = 2
-	CONTENT_TYPE_NACK        = 3 // TBD
 )
 
 type Signature struct {

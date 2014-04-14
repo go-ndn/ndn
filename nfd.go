@@ -413,25 +413,24 @@ func (this *ControlResponse) Encode() (d *Data, err error) {
 }
 
 const (
-	FIB_STATUS uint8 = iota
-	FACE_STATUS
-	FORWARDER_STATUS
+	RESPONSE_FIB_STATUS uint8 = iota
+	RESPONSE_FACE_STATUS
+	RESPONSE_FORWARDER_STATUS
 )
 
 func bodyType(l []TLV) uint8 {
-	if len(l) == 0 {
-		return FORWARDER_STATUS
+	// forwarder status is a list of plain value
+	if len(l) == 0 || len(l[0].Children) == 0 {
+		return RESPONSE_FORWARDER_STATUS
 	}
-	for _, c := range l {
-		if c.Type != FIB_ENTRY {
-			return FORWARDER_STATUS
-		}
+	// otherwise look at the first child of tlv
+	switch l[0].Children[0].Type {
+	case NAME:
+		return RESPONSE_FIB_STATUS
+	case FACE_ID:
+		return RESPONSE_FACE_STATUS
 	}
-	if l[0].Children[0].Type == FACE_ID {
-		return FACE_STATUS
-	} else {
-		return FIB_STATUS
-	}
+	return RESPONSE_FORWARDER_STATUS
 }
 
 func (this *ControlResponse) Decode(d *Data) error {
@@ -457,7 +456,7 @@ func (this *ControlResponse) Decode(d *Data) error {
 			}
 		default:
 			switch body {
-			case FACE_STATUS:
+			case RESPONSE_FACE_STATUS:
 				for _, cc := range c.Children {
 					face := FaceEntry{}
 					switch cc.Type {
@@ -473,12 +472,12 @@ func (this *ControlResponse) Decode(d *Data) error {
 					}
 					this.FaceStatus = append(this.FaceStatus, face)
 				}
-			case FORWARDER_STATUS:
+			case RESPONSE_FORWARDER_STATUS:
 				this.ForwarderStatus[c.Type], err = decodeNonNeg(c.Value)
 				if err != nil {
 					return err
 				}
-			case FIB_STATUS:
+			case RESPONSE_FIB_STATUS:
 				fib := FibEntry{
 					Name: nameDecode(c.Children[0]),
 				}
