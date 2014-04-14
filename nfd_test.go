@@ -21,13 +21,16 @@ func TestControl(t *testing.T) {
 		return
 	}
 
-	key, err := ReadRSAKey(b)
+	VerifyKey.Decode(b)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	SignKey = key
-	VerifyKey = key
+	SignKey.Decode(b)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	control := Control{
 		Module:  "faces",

@@ -9,18 +9,19 @@ import (
 )
 
 func TestRSA(t *testing.T) {
-	key, err := GenerateRSAKey()
+	key, err := NewKey("")
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	b := WriteRSAKey(key)
-	key2, err := ReadRSAKey(b)
+	b := key.Encode()
+	key2 := Key{}
+	err = key2.Decode(b)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	b2 := WriteRSAKey(key2)
+	b2 := key2.Encode()
 	if !bytes.Equal(b, b2) {
 		t.Error("RSA key should be the same")
 		return

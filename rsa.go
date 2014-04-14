@@ -1,6 +1,7 @@
 package ndn
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
@@ -16,9 +17,111 @@ import (
 )
 
 var (
-	SignKey   *rsa.PrivateKey
-	VerifyKey *rsa.PrivateKey
+	SignKey   Key
+	VerifyKey Key
 )
+
+type Key struct {
+	Name [][]byte
+	*rsa.PrivateKey
+}
+
+func (this *Key) LocatorName() [][]byte {
+	if len(this.Name) == 0 {
+		return nil
+	}
+	return append(this.Name[:len(this.Name)-1], []byte("KEY"), this.Name[len(this.Name)-1], []byte("ID-CERT"))
+}
+
+func (this *Key) Decode(pemData []byte) (err error) {
+	block, _ := pem.Decode(pemData)
+	if block == nil {
+		err = errors.New("not pem data")
+		return
+	}
+	this.Name = nameFromString(block.Type)
+	// Decode the RSA private key
+	this.PrivateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+	return
+}
+
+func (this *Key) Encode() []byte {
+	return pem.EncodeToMemory(&pem.Block{
+		Type:  nameToString(this.Name),
+		Bytes: x509.MarshalPKCS1PrivateKey(this.PrivateKey),
+	})
+}
+
+func (this *Key) EncodeCertificate() (raw []byte, err error) {
+	d := Data{
+		Name: this.LocatorName(),
+		MetaInfo: MetaInfo{
+			ContentType: CONTENT_TYPE_KEY,
+		},
+		Signature: Signature{
+			Type: SIGNATURE_TYPE_SIGNATURE_SHA_256_WITH_RSA,
+			Info: []TLV{
+				{Type: KEY_LOCATOR, Children: []TLV{
+					nameEncode(this.LocatorName()),
+				}},
+			},
+		},
+	}
+	publicKeyBytes, err := asn1.Marshal(rsaPublicKey{
+		N: this.PublicKey.N,
+		E: this.PublicKey.E,
+	})
+	if err != nil {
+		return
+	}
+	d.Content, err = asn1.Marshal(certificate{
+		Validity: validity{
+			NotBefore: time.Now(),
+			NotAfter:  time.Date(2049, 12, 31, 23, 59, 59, 0, time.UTC), // end of asn.1
+		},
+		Subject: []pkix.AttributeTypeAndValue{{
+			Type:  asn1.ObjectIdentifier{2, 5, 4, 41},
+			Value: nameToString(this.Name),
+		}},
+		SubjectPubKeyInfo: subjectPubKeyInfo{
+			AlgorithmIdentifier: pkix.AlgorithmIdentifier{
+				Algorithm: asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 1}, //rsa
+				// This is a NULL parameters value which is technically
+				// superfluous, but most other code includes it and, by
+				// doing this, we match their public key hashes.
+				Parameters: asn1.RawValue{
+					Tag: 5,
+				},
+			},
+			Bytes: asn1.BitString{
+				Bytes:     publicKeyBytes,
+				BitLength: 8 * len(publicKeyBytes),
+			},
+		},
+	})
+	if err != nil {
+		return
+	}
+	b, err := d.Encode()
+	if err != nil {
+		return
+	}
+
+	buf := bytes.NewBufferString(base64.StdEncoding.EncodeToString(b))
+	buf2 := new(bytes.Buffer)
+	for buf.Len() != 0 {
+		buf2.Write(buf.Next(64))
+		buf2.WriteByte(0xA)
+	}
+	raw = buf2.Bytes()
+	return
+}
+
+func NewKey(name string) (key Key, err error) {
+	key.Name = nameFromString(name)
+	key.PrivateKey, err = rsa.GenerateKey(rand.Reader, 2048)
+	return
+}
 
 type certificate struct {
 	Validity          validity
@@ -62,88 +165,8 @@ func PrintCertificate(raw []byte) (err error) {
 	return
 }
 
-func WriteCertificate(key *rsa.PrivateKey) (raw []byte, err error) {
-	d := Data{
-		Name: nameFromString("/testing/KEY/pubkey/ID-CERT"),
-		MetaInfo: MetaInfo{
-			ContentType: CONTENT_TYPE_KEY,
-		},
-		Signature: Signature{
-			Type: SIGNATURE_TYPE_SIGNATURE_SHA_256_WITH_RSA,
-			Info: []TLV{
-				{Type: KEY_LOCATOR, Children: []TLV{
-					nameEncode(nameFromString("/testing/KEY/pubkey/ID-CERT")),
-				}},
-			},
-		},
-	}
-	publicKeyBytes, err := asn1.Marshal(rsaPublicKey{
-		N: key.PublicKey.N,
-		E: key.PublicKey.E,
-	})
-	if err != nil {
-		return
-	}
-	d.Content, err = asn1.Marshal(certificate{
-		Validity: validity{
-			NotBefore: time.Now(),
-			NotAfter:  time.Date(2049, 12, 31, 23, 59, 59, 0, time.UTC), // end of asn.1
-		},
-		Subject: []pkix.AttributeTypeAndValue{{
-			Type:  asn1.ObjectIdentifier{2, 5, 4, 41},
-			Value: "/testing/pubkey",
-		}},
-		SubjectPubKeyInfo: subjectPubKeyInfo{
-			AlgorithmIdentifier: pkix.AlgorithmIdentifier{
-				Algorithm: asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 1}, //rsa
-				// This is a NULL parameters value which is technically
-				// superfluous, but most other code includes it and, by
-				// doing this, we match their public key hashes.
-				Parameters: asn1.RawValue{
-					Tag: 5,
-				},
-			},
-			Bytes: asn1.BitString{
-				Bytes:     publicKeyBytes,
-				BitLength: 8 * len(publicKeyBytes),
-			},
-		},
-	})
-	if err != nil {
-		return
-	}
-	b, err := d.Encode()
-	if err != nil {
-		return
-	}
-	raw = []byte(base64.StdEncoding.EncodeToString(b))
-	return
-}
-
-func ReadRSAKey(pemData []byte) (key *rsa.PrivateKey, err error) {
-	block, _ := pem.Decode(pemData)
-	if block == nil || block.Type != "RSA PRIVATE KEY" {
-		err = errors.New("rsa private key not found")
-		return
-	}
-	// Decode the RSA private key
-	key, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-	return
-}
-
-func WriteRSAKey(key *rsa.PrivateKey) []byte {
-	return pem.EncodeToMemory(&pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(key),
-	})
-}
-
-func GenerateRSAKey() (*rsa.PrivateKey, error) {
-	return rsa.GenerateKey(rand.Reader, 2048)
-}
-
 func signRSA(l []TLV) (signature []byte, err error) {
-	if SignKey == nil {
+	if SignKey.PrivateKey == nil {
 		err = errors.New("signKey not found")
 		return
 	}
@@ -151,12 +174,12 @@ func signRSA(l []TLV) (signature []byte, err error) {
 	if err != nil {
 		return
 	}
-	signature, err = rsa.SignPKCS1v15(rand.Reader, SignKey, crypto.SHA256, digest)
+	signature, err = rsa.SignPKCS1v15(rand.Reader, SignKey.PrivateKey, crypto.SHA256, digest)
 	return
 }
 
 func verifyRSA(l []TLV, signature []byte) bool {
-	if VerifyKey == nil {
+	if VerifyKey.PrivateKey == nil {
 		return false
 	}
 	digest, err := newSHA256(l)

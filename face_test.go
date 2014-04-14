@@ -53,13 +53,16 @@ func TestListen(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	key, err = ReadRSAKey(b)
+	SignKey.Decode(b)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	SignKey = key
-	VerifyKey = key
+	VerifyKey.Decode(b)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 	face, err := NewFace("tcp://127.0.0.1:6363")
 	if err != nil {
 		t.Error(err)

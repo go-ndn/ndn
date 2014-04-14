@@ -238,7 +238,7 @@ func (this *Control) Encode() (i *Interest, err error) {
 	signatureInfo.Add(signatureType)
 	// add empty keyLocator for rsa
 	keyLocator := NewTLV(KEY_LOCATOR)
-	keyLocator.Add(nameEncode(nameFromString("/testing/KEY/pubkey/ID-CERT")))
+	keyLocator.Add(nameEncode(SignKey.LocatorName()))
 	signatureInfo.Add(keyLocator)
 
 	b, err = signatureInfo.Encode()

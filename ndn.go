@@ -405,7 +405,7 @@ func (this *Data) Encode() (raw []byte, err error) {
 	// add empty keyLocator for rsa
 	if this.Signature.Type == SIGNATURE_TYPE_SIGNATURE_SHA_256_WITH_RSA && len(this.Signature.Info) == 0 {
 		keyLocator := NewTLV(KEY_LOCATOR)
-		keyLocator.Add(nameEncode(nameFromString("/testing/KEY/pubkey/ID-CERT")))
+		keyLocator.Add(nameEncode(SignKey.LocatorName()))
 		signatureInfo.Add(keyLocator)
 	}
 	data.Add(signatureInfo)
