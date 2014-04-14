@@ -99,25 +99,6 @@ func typeString(t uint64) string {
 		return "KEY_LOCATOR"
 	case KEY_LOCATOR_DIGEST:
 		return "KEY_LOCATOR_DIGEST"
-	// nfd
-	case CONTROL_PARAMETERS:
-		return "CONTROL_PARAMETERS"
-	case FACE_ID:
-		return "FACE_ID"
-	case URI:
-		return "URI"
-	case LOCAL_CONTROL_FEATURE:
-		return "LOCAL_CONTROL_FEATURE"
-	case COST:
-		return "COST"
-	case STRATEGY:
-		return "STRATEGY"
-	case CONTROL_RESPONSE:
-		return "CONTROL_RESPONSE"
-	case STATUS_CODE:
-		return "STATUS_CODE"
-	case STATUS_TEXT:
-		return "STATUS_TEXT"
 	}
 	return "UNKNOWN"
 }
