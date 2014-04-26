@@ -56,14 +56,12 @@ func (this *Key) EncodeCertificate() (raw []byte, err error) {
 	d := Data{
 		Name: this.LocatorName(),
 		MetaInfo: MetaInfo{
-			ContentType: CONTENT_TYPE_KEY,
+			ContentType: 2, //key
 		},
-		Signature: Signature{
-			Type: SIGNATURE_TYPE_SIGNATURE_SHA_256_WITH_RSA,
-			Info: []TLV{
-				{Type: KEY_LOCATOR, Children: []TLV{
-					nameEncode(this.LocatorName()),
-				}},
+		SignatureInfo: SignatureInfo{
+			SignatureType: SignatureTypeSha256Rsa,
+			KeyLocator: KeyLocator{
+				Name: this.LocatorName(),
 			},
 		},
 	}
@@ -152,7 +150,6 @@ func PrintCertificate(raw []byte) (err error) {
 	}
 	d := Data{}
 	err = d.Decode(b)
-	//spew.Dump(d)
 	if err != nil {
 		return
 	}
@@ -165,26 +162,11 @@ func PrintCertificate(raw []byte) (err error) {
 	return
 }
 
-func signRSA(l []TLV) (signature []byte, err error) {
+func signRSA(digest []byte) (signature []byte, err error) {
 	if SignKey.PrivateKey == nil {
 		err = errors.New("signKey not found")
 		return
 	}
-	digest, err := newSHA256(l)
-	if err != nil {
-		return
-	}
 	signature, err = rsa.SignPKCS1v15(rand.Reader, SignKey.PrivateKey, crypto.SHA256, digest)
 	return
-}
-
-func verifyRSA(l []TLV, signature []byte) bool {
-	if VerifyKey.PrivateKey == nil {
-		return false
-	}
-	digest, err := newSHA256(l)
-	if err != nil {
-		return false
-	}
-	return nil == rsa.VerifyPKCS1v15(&VerifyKey.PublicKey, crypto.SHA256, digest, signature)
 }
