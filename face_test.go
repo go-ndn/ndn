@@ -34,7 +34,7 @@ func TestListen(t *testing.T) {
 	}
 
 	face, err := NewFace("tcp://localhost:6363")
-	face.On("/hello/world", func(b []byte) ([]byte, error) {
+	go face.Listen([]string{"/hello/world"}, func(b []byte) ([]byte, error) {
 		i := new(Interest)
 		err = i.Decode(b)
 		if err != nil {
@@ -44,7 +44,6 @@ func TestListen(t *testing.T) {
 		d.Name = i.Name
 		return d.Encode()
 	})
-	go face.Listen()
 	<-time.After(time.Second)
 	face2, err := NewFace("tcp://localhost:6363")
 	d := new(Data)

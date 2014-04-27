@@ -20,13 +20,10 @@ type Decoder interface {
 	Decode(raw []byte) error
 }
 
-type handler func([]byte) ([]byte, error)
-
 type Face struct {
-	Scheme   string
-	Host     string
-	Id       uint64
-	Handlers map[string]handler
+	Scheme string
+	Host   string
+	Id     uint64
 }
 
 func NewFace(raw string) (f *Face, err error) {
@@ -43,9 +40,8 @@ func NewFace(raw string) (f *Face, err error) {
 		return
 	}
 	f = &Face{
-		Scheme:   u.Scheme,
-		Host:     u.Host,
-		Handlers: make(map[string]handler),
+		Scheme: u.Scheme,
+		Host:   u.Host,
 	}
 	return
 }
@@ -82,10 +78,6 @@ func (this *Face) Dial(e Encoder, d Decoder) (err error) {
 	return
 }
 
-func (this *Face) On(name string, h handler) {
-	this.Handlers[name] = h
-}
-
 func (this *Face) dial(rw *bufio.ReadWriter, e Encoder, d Decoder) (err error) {
 	b, err := e.Encode()
 	if err != nil {
@@ -120,8 +112,8 @@ func (this *Face) create(rw *bufio.ReadWriter, addr string) (err error) {
 	return
 }
 
-func (this *Face) announcePrefix(rw *bufio.ReadWriter) error {
-	for prefix := range this.Handlers {
+func (this *Face) announcePrefix(rw *bufio.ReadWriter, prefixList []string) error {
+	for _, prefix := range prefixList {
 		control := new(ControlPacket)
 		control.Name.Module = "fib"
 		control.Name.Command = "add-nexthop"
@@ -140,7 +132,7 @@ func (this *Face) announcePrefix(rw *bufio.ReadWriter) error {
 	return nil
 }
 
-func (this *Face) Listen() (err error) {
+func (this *Face) Listen(prefixList []string, h func(b []byte) ([]byte, error)) (err error) {
 	conn, err := net.Dial(this.Scheme, this.Host)
 	if err != nil {
 		fmt.Println(err)
@@ -159,7 +151,7 @@ func (this *Face) Listen() (err error) {
 		}
 	}
 	// announce prefix
-	err = this.announcePrefix(rw)
+	err = this.announcePrefix(rw, prefixList)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -172,17 +164,7 @@ func (this *Face) Listen() (err error) {
 			fmt.Println(err)
 			continue
 		}
-		i := new(Interest)
-		err = i.Decode(b)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		h, ok := this.Handlers[nameToString(i.Name)]
-		if !ok {
-			continue
-		}
-		go func(h handler, b []byte) {
+		go func(b []byte) {
 			b, err := h(b)
 			if err != nil {
 				fmt.Println(err)
@@ -190,6 +172,6 @@ func (this *Face) Listen() (err error) {
 			}
 			rw.Write(b)
 			rw.Flush()
-		}(h, b)
+		}(b)
 	}
 }
