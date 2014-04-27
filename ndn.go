@@ -87,8 +87,7 @@ func newNonce() []byte {
 
 func NewInterest(name string) *Interest {
 	return &Interest{
-		Name:  nameFromString(name),
-		Nonce: newNonce(),
+		Name: nameFromString(name),
 	}
 }
 
@@ -97,6 +96,7 @@ func (this *Interest) Print() {
 }
 
 func (this *Interest) Encode() (raw []byte, err error) {
+	this.Nonce = newNonce()
 	raw, err = tlv.Marshal(this, 5)
 	return
 }
@@ -124,6 +124,7 @@ func (this *Data) Encode() (raw []byte, err error) {
 	case SignatureTypeSha256:
 		this.SignatureValue = digest
 	case SignatureTypeSha256Rsa:
+		this.SignatureInfo.KeyLocator.Name = SignKey.LocatorName()
 		this.SignatureValue, err = signRSA(digest)
 		if err != nil {
 			return
@@ -134,17 +135,22 @@ func (this *Data) Encode() (raw []byte, err error) {
 }
 
 func (this *Data) Decode(raw []byte) error {
+	err := tlv.Unmarshal(raw, this, 6)
+	if err != nil {
+		return err
+	}
 	digest, err := tlv.Hash(this, sha256.New(), []int{0, 1, 2, 3})
 	if err != nil {
 		return err
 	}
 	switch this.SignatureInfo.SignatureType {
 	case SignatureTypeSha256:
+		spew.Dump(digest, this.SignatureValue)
 		if !bytes.Equal(this.SignatureValue, digest) {
 			return errors.New("cannot verify sha256")
 		}
 	case SignatureTypeSha256Rsa:
 		// TODO: enable rsa
 	}
-	return tlv.Unmarshal(raw, this, 6)
+	return nil
 }
