@@ -2,7 +2,7 @@ package ndn
 
 import (
 	//"bytes"
-	"github.com/davecgh/go-spew/spew"
+	//"github.com/davecgh/go-spew/spew"
 	"io/ioutil"
 	"testing"
 	"time"
@@ -25,7 +25,7 @@ func TestDial(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	spew.Dump(d2)
+	//spew.Dump(d2)
 }
 
 func TestListen(t *testing.T) {
@@ -58,6 +58,6 @@ func TestListen(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	spew.Dump(d)
+	//spew.Dump(d)
 
 }

@@ -2,7 +2,6 @@ package ndn
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"errors"
 	//"github.com/davecgh/go-spew/spew"
 	"github.com/taylorchu/tlv"
@@ -37,7 +36,7 @@ func (this *ControlPacket) Encode() (raw []byte, err error) {
 	this.Name.SignatureInfo.SignatureInfo.SignatureType = SignatureTypeSha256Rsa
 	this.Name.SignatureInfo.SignatureInfo.KeyLocator.Name = SignKey.LocatorName()
 
-	digest, err := tlv.Hash(this.Name, sha256.New(), []int{0, 1, 2, 3, 4, 5, 6, 7})
+	digest, err := newSha256(this.Name)
 	if err != nil {
 		return
 	}
@@ -101,7 +100,7 @@ func (this *ControlResponsePacket) Decode(raw []byte) error {
 	if err != nil {
 		return err
 	}
-	digest, err := tlv.Hash(this, sha256.New(), []int{0, 1, 2, 3})
+	digest, err := newSha256(this)
 	if err != nil {
 		return err
 	}
@@ -143,7 +142,7 @@ func (this *FibEntryPacket) Decode(raw []byte) error {
 	if err != nil {
 		return err
 	}
-	digest, err := tlv.Hash(this, sha256.New(), []int{0, 1, 2, 3})
+	digest, err := newSha256(this)
 	if err != nil {
 		return err
 	}
@@ -186,7 +185,7 @@ func (this *FaceEntryPacket) Decode(raw []byte) error {
 	if err != nil {
 		return err
 	}
-	digest, err := tlv.Hash(this, sha256.New(), []int{0, 1, 2, 3})
+	digest, err := newSha256(this)
 	if err != nil {
 		return err
 	}
@@ -229,7 +228,7 @@ func (this *ForwarderStatusPacket) Decode(raw []byte) error {
 	if err != nil {
 		return err
 	}
-	digest, err := tlv.Hash(this, sha256.New(), []int{0, 1, 2, 3})
+	digest, err := newSha256(this)
 	if err != nil {
 		return err
 	}

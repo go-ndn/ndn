@@ -7,6 +7,7 @@ import (
 	"errors"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/taylorchu/tlv"
+	"reflect"
 	"strings"
 )
 
@@ -119,8 +120,31 @@ func (this *Data) Print() {
 	spew.Dump(*this)
 }
 
+func newSha256(v interface{}) (digest []byte, err error) {
+	value := reflect.ValueOf(v)
+	if value.Kind() == reflect.Ptr {
+		value = value.Elem()
+	}
+	h := sha256.New()
+	for i := 0; i < value.NumField()-1; i++ {
+		var t uint64
+		t, err = tlv.Type(value, i)
+		if err != nil {
+			return
+		}
+		var b []byte
+		b, err = tlv.Marshal(value.Field(i).Interface(), t)
+		if err != nil {
+			return
+		}
+		h.Write(b)
+	}
+	digest = h.Sum(nil)
+	return
+}
+
 func (this *Data) Encode() (raw []byte, err error) {
-	digest, err := tlv.Hash(this, sha256.New(), []int{0, 1, 2, 3})
+	digest, err := newSha256(this)
 	if err != nil {
 		return
 	}
@@ -143,7 +167,7 @@ func (this *Data) Decode(raw []byte) error {
 	if err != nil {
 		return err
 	}
-	digest, err := tlv.Hash(this, sha256.New(), []int{0, 1, 2, 3})
+	digest, err := newSha256(this)
 	if err != nil {
 		return err
 	}
