@@ -18,15 +18,15 @@ type ControlPacket struct {
 }
 
 type SignedName struct {
-	Localhost               string                  `tlv:"8"`
-	Nfd                     string                  `tlv:"8"`
-	Module                  string                  `tlv:"8"`
-	Command                 string                  `tlv:"8"`
-	ParamComponent          ParamComponent          `tlv:"8"`
-	Timestamp               uint64                  `tlv:"8"`
-	Random                  []byte                  `tlv:"8"`
-	SignatureInfoComponent  SignatureInfoComponent  `tlv:"8"`
-	SignatureValueComponent SignatureValueComponent `tlv:"8"`
+	Localhost      string                  `tlv:"8"`
+	Nfd            string                  `tlv:"8"`
+	Module         string                  `tlv:"8"`
+	Command        string                  `tlv:"8"`
+	Parameters     ParametersComponent     `tlv:"8"`
+	Timestamp      uint64                  `tlv:"8"`
+	Random         []byte                  `tlv:"8"`
+	SignatureInfo  SignatureInfoComponent  `tlv:"8"`
+	SignatureValue SignatureValueComponent `tlv:"8"`
 }
 
 func (this *ControlPacket) Encode() (raw []byte, err error) {
@@ -34,14 +34,14 @@ func (this *ControlPacket) Encode() (raw []byte, err error) {
 	this.Name.Nfd = "nfd"
 	this.Name.Timestamp = uint64(time.Now().UnixNano() / 1000000)
 	this.Name.Random = newNonce()
-	this.Name.SignatureInfoComponent.SignatureInfo.SignatureType = SignatureTypeSha256Rsa
-	this.Name.SignatureInfoComponent.SignatureInfo.KeyLocator.Name = SignKey.LocatorName()
+	this.Name.SignatureInfo.SignatureInfo.SignatureType = SignatureTypeSha256Rsa
+	this.Name.SignatureInfo.SignatureInfo.KeyLocator.Name = SignKey.LocatorName()
 
 	digest, err := tlv.Hash(this.Name, sha256.New(), []int{0, 1, 2, 3, 4, 5, 6, 7})
 	if err != nil {
 		return
 	}
-	this.Name.SignatureValueComponent.SignatureValue, err = signRSA(digest)
+	this.Name.SignatureValue.SignatureValue, err = signRSA(digest)
 	if err != nil {
 		return
 	}
@@ -50,7 +50,7 @@ func (this *ControlPacket) Encode() (raw []byte, err error) {
 	return
 }
 
-type ParamComponent struct {
+type ParametersComponent struct {
 	Parameters Parameters `tlv:"104"`
 }
 
@@ -204,7 +204,7 @@ func (this *FaceEntryPacket) Decode(raw []byte) error {
 type ForwarderStatus struct {
 	NfdVersion       uint64 `tlv:"128"`
 	StartTimestamp   uint64 `tlv:"129"`
-	CurrentTimeStamp uint64 `tlv:"130"`
+	CurrentTimestamp uint64 `tlv:"130"`
 	NameTreeEntry    uint64 `tlv:"131"`
 	FibEntry         uint64 `tlv:"132"`
 	PitEntry         uint64 `tlv:"133"`

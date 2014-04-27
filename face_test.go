@@ -13,12 +13,19 @@ func TestDial(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	d := new(ForwarderStatusPacket)
-	err = face.Dial(NewInterest("/localhost/nfd/status"), d)
+	d := new(Data)
+	err = face.Dial(NewInterest("/localhost/nfd/fib/list"), d)
 	if err != nil {
 		t.Error(err)
 	}
-	//spew.Dump(d)
+	i2 := new(Interest)
+	i2.Name = d.Name
+	d2 := new(FibEntryPacket)
+	err = face.Dial(i2, d2)
+	if err != nil {
+		t.Error(err)
+	}
+	spew.Dump(d2)
 }
 
 func TestListen(t *testing.T) {

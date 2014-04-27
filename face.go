@@ -98,7 +98,7 @@ func (this *Face) create(rw *bufio.ReadWriter, addr string) (err error) {
 	control := new(ControlPacket)
 	control.Name.Module = "faces"
 	control.Name.Command = "create"
-	control.Name.ParamComponent.Parameters.Uri = addr
+	control.Name.Parameters.Parameters.Uri = addr
 	controlResponse := new(ControlResponsePacket)
 	err = this.dial(rw, control, controlResponse)
 	if err != nil {
@@ -117,8 +117,8 @@ func (this *Face) announcePrefix(rw *bufio.ReadWriter, prefixList []string) erro
 		control := new(ControlPacket)
 		control.Name.Module = "fib"
 		control.Name.Command = "add-nexthop"
-		control.Name.ParamComponent.Parameters.Name = nameFromString(prefix)
-		control.Name.ParamComponent.Parameters.FaceId = this.Id
+		control.Name.Parameters.Parameters.Name = nameFromString(prefix)
+		control.Name.Parameters.Parameters.FaceId = this.Id
 
 		controlResponse := new(ControlResponsePacket)
 		err := this.dial(rw, control, controlResponse)
