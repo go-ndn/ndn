@@ -10,9 +10,13 @@ import (
 	"strings"
 )
 
+type Name struct {
+	Components [][]byte `tlv:"8"`
+}
+
 // 5
 type Interest struct {
-	Name      [][]byte  `tlv:"7,8"`
+	Name      Name      `tlv:"7"`
 	Selectors Selectors `tlv:"9,-"`
 	Nonce     []byte    `tlv:"10"`
 	Scope     uint64    `tlv:"11,-"`
@@ -30,7 +34,7 @@ type Selectors struct {
 
 // 6
 type Data struct {
-	Name           [][]byte      `tlv:"7,8"`
+	Name           Name          `tlv:"7"`
 	MetaInfo       MetaInfo      `tlv:"20"`
 	Content        []byte        `tlv:"21"`
 	SignatureInfo  SignatureInfo `tlv:"22"`
@@ -58,22 +62,22 @@ const (
 )
 
 type KeyLocator struct {
-	Name   [][]byte `tlv:"7,8,-"`
-	Digest []byte   `tlv:"29,-"`
+	Name   Name   `tlv:"7,-"`
+	Digest []byte `tlv:"29,-"`
 }
 
-func nameFromString(s string) (b [][]byte) {
+func nameFromString(s string) (name Name) {
 	if len(s) == 0 {
 		return
 	}
 	for _, c := range strings.Split(strings.Trim(s, "/"), "/") {
-		b = append(b, []byte(c))
+		name.Components = append(name.Components, []byte(c))
 	}
 	return
 }
 
-func nameToString(b [][]byte) (s string) {
-	for _, c := range b {
+func nameToString(name Name) (s string) {
+	for _, c := range name.Components {
 		s += "/" + string(c)
 	}
 	return
@@ -145,7 +149,6 @@ func (this *Data) Decode(raw []byte) error {
 	}
 	switch this.SignatureInfo.SignatureType {
 	case SignatureTypeSha256:
-		spew.Dump(digest, this.SignatureValue)
 		if !bytes.Equal(this.SignatureValue, digest) {
 			return errors.New("cannot verify sha256")
 		}

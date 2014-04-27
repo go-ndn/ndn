@@ -35,16 +35,13 @@ func TestListen(t *testing.T) {
 
 	face, err := NewFace("tcp://localhost:6363")
 	face.On("/hello/world", func(b []byte) ([]byte, error) {
-		spew.Dump("visitor")
 		i := new(Interest)
 		err = i.Decode(b)
 		if err != nil {
 			return nil, err
 		}
-		spew.Dump(i)
 		d := new(Data)
 		d.Name = i.Name
-		d.Content = []byte("hello world")
 		return d.Encode()
 	})
 	go face.Listen()

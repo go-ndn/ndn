@@ -22,15 +22,19 @@ var (
 )
 
 type Key struct {
-	Name [][]byte
+	Name Name
 	*rsa.PrivateKey
 }
 
-func (this *Key) LocatorName() [][]byte {
-	if len(this.Name) == 0 {
-		return nil
+func (this *Key) LocatorName() (name Name) {
+	for i := 0; i < len(this.Name.Components); i++ {
+		if i == len(this.Name.Components)-1 {
+			name.Components = append(name.Components, []byte("KEY"))
+		}
+		name.Components = append(name.Components, this.Name.Components[i])
 	}
-	return append(this.Name[:len(this.Name)-1], []byte("KEY"), this.Name[len(this.Name)-1], []byte("ID-CERT"))
+	name.Components = append(name.Components, []byte("ID-CERT"))
+	return
 }
 
 func (this *Key) Decode(pemData []byte) (err error) {

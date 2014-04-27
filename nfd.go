@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"errors"
-	"github.com/davecgh/go-spew/spew"
+	//"github.com/davecgh/go-spew/spew"
 	"github.com/taylorchu/tlv"
 	"time"
 )
@@ -63,7 +63,7 @@ type SignatureValueComponent struct {
 }
 
 type Parameters struct {
-	Name                [][]byte `tlv:"7,8,-"`
+	Name                Name     `tlv:"7,-"`
 	FaceId              uint64   `tlv:"105,-"`
 	Uri                 string   `tlv:"114,-"`
 	LocalControlFeature uint64   `tlv:"110,-"`
@@ -75,7 +75,7 @@ type Parameters struct {
 }
 
 type Strategy struct {
-	Name [][]byte `tlv:"7,8"`
+	Name Name `tlv:"7"`
 }
 
 type ControlResponse struct {
@@ -107,7 +107,6 @@ func (this *ControlResponsePacket) Decode(raw []byte) error {
 	}
 	switch this.SignatureInfo.SignatureType {
 	case SignatureTypeSha256:
-		spew.Dump(digest, this.SignatureValue)
 		if !bytes.Equal(this.SignatureValue, digest) {
 			return errors.New("cannot verify sha256")
 		}
@@ -123,7 +122,7 @@ type NextHopRecord struct {
 }
 
 type FibEntry struct {
-	Name     [][]byte        `tlv:"7,8"`
+	Name     Name            `tlv:"7"`
 	NextHops []NextHopRecord `tlv:"129"`
 }
 
@@ -132,7 +131,7 @@ type FibEntries struct {
 }
 
 type FibEntryPacket struct {
-	Name           [][]byte      `tlv:"7,8"`
+	Name           Name          `tlv:"7"`
 	MetaInfo       MetaInfo      `tlv:"20"`
 	Content        FibEntries    `tlv:"21"`
 	SignatureInfo  SignatureInfo `tlv:"22"`
@@ -150,7 +149,6 @@ func (this *FibEntryPacket) Decode(raw []byte) error {
 	}
 	switch this.SignatureInfo.SignatureType {
 	case SignatureTypeSha256:
-		spew.Dump(digest, this.SignatureValue)
 		if !bytes.Equal(this.SignatureValue, digest) {
 			return errors.New("cannot verify sha256")
 		}
@@ -176,7 +174,7 @@ type FaceEntries struct {
 }
 
 type FaceEntryPacket struct {
-	Name           [][]byte      `tlv:"7,8"`
+	Name           Name          `tlv:"7"`
 	MetaInfo       MetaInfo      `tlv:"20"`
 	Content        FaceEntries   `tlv:"21"`
 	SignatureInfo  SignatureInfo `tlv:"22"`
@@ -194,7 +192,6 @@ func (this *FaceEntryPacket) Decode(raw []byte) error {
 	}
 	switch this.SignatureInfo.SignatureType {
 	case SignatureTypeSha256:
-		spew.Dump(digest, this.SignatureValue)
 		if !bytes.Equal(this.SignatureValue, digest) {
 			return errors.New("cannot verify sha256")
 		}
@@ -220,7 +217,7 @@ type ForwarderStatus struct {
 }
 
 type ForwarderStatusPacket struct {
-	Name           [][]byte        `tlv:"7,8"`
+	Name           Name            `tlv:"7"`
 	MetaInfo       MetaInfo        `tlv:"20"`
 	Content        ForwarderStatus `tlv:"21"`
 	SignatureInfo  SignatureInfo   `tlv:"22"`
@@ -238,7 +235,6 @@ func (this *ForwarderStatusPacket) Decode(raw []byte) error {
 	}
 	switch this.SignatureInfo.SignatureType {
 	case SignatureTypeSha256:
-		spew.Dump(digest, this.SignatureValue)
 		if !bytes.Equal(this.SignatureValue, digest) {
 			return errors.New("cannot verify sha256")
 		}
