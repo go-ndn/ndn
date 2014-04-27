@@ -71,7 +71,7 @@ type Parameters struct {
 	Cost                uint64   `tlv:"106,-"`
 	Flags               uint64   `tlv:"108,-"`
 	Strategy            Strategy `tlv:"107,-"`
-	ExpirationPerioid   uint64   `tlv:"109,-"`
+	ExpirationPeriod    uint64   `tlv:"109,-"`
 }
 
 type Strategy struct {
