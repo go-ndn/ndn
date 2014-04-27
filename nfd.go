@@ -31,7 +31,7 @@ type SignedName struct {
 
 func (this *ControlPacket) Encode() (raw []byte, err error) {
 	this.Name.Localhost = "localhost"
-	this.Name.Localhost = "nfd"
+	this.Name.Nfd = "nfd"
 	this.Name.Timestamp = uint64(time.Now().UnixNano() / 1000000)
 	this.Name.Random = newNonce()
 	this.Name.SignatureInfoComponent.SignatureInfo.SignatureType = SignatureTypeSha256Rsa
@@ -80,7 +80,7 @@ type Strategy struct {
 
 type ControlResponse struct {
 	StatusCode uint64     `tlv:"102"`
-	StatusText string     `tlv:"103`
+	StatusText string     `tlv:"103"`
 	Parameters Parameters `tlv:"104"`
 }
 

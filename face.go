@@ -9,7 +9,7 @@ import (
 	"net"
 	"net/url"
 	"strings"
-	//"time"
+	"time"
 )
 
 type Encoder interface {
@@ -77,6 +77,7 @@ func (this *Face) Dial(e Encoder, d Decoder) (err error) {
 	}
 	defer conn.Close()
 	rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
+	conn.SetDeadline(time.Now().Add(10 * time.Second))
 	err = this.dial(rw, e, d)
 	return
 }
@@ -142,6 +143,7 @@ func (this *Face) announcePrefix(rw *bufio.ReadWriter) error {
 func (this *Face) Listen() (err error) {
 	conn, err := net.Dial(this.Scheme, this.Host)
 	if err != nil {
+		fmt.Println(err)
 		return
 	}
 	defer conn.Close()
@@ -152,12 +154,14 @@ func (this *Face) Listen() (err error) {
 	if this.Id == 0 {
 		err = this.create(rw, addr)
 		if err != nil {
+			fmt.Println(err)
 			return
 		}
 	}
 	// announce prefix
 	err = this.announcePrefix(rw)
 	if err != nil {
+		fmt.Println(err)
 		return
 	}
 	fmt.Printf("Listen(%d) %s\n", this.Id, addr)
@@ -181,6 +185,7 @@ func (this *Face) Listen() (err error) {
 		go func(h handler, b []byte) {
 			b, err := h(b)
 			if err != nil {
+				fmt.Println(err)
 				return
 			}
 			rw.Write(b)
