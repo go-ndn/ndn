@@ -121,10 +121,7 @@ func (this *Data) Print() {
 }
 
 func newSha256(v interface{}) (digest []byte, err error) {
-	value := reflect.ValueOf(v)
-	if value.Kind() == reflect.Ptr {
-		value = value.Elem()
-	}
+	value := reflect.Indirect(reflect.ValueOf(v))
 	h := sha256.New()
 	for i := 0; i < value.NumField()-1; i++ {
 		var t uint64
