@@ -43,7 +43,7 @@ func (this *Key) Decode(pemData []byte) (err error) {
 		err = errors.New("not pem data")
 		return
 	}
-	this.Name = nameFromString(block.Type)
+	this.Name.Set(block.Type)
 	// Decode the RSA private key
 	this.PrivateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
 	return
@@ -51,7 +51,7 @@ func (this *Key) Decode(pemData []byte) (err error) {
 
 func (this *Key) Encode() []byte {
 	return pem.EncodeToMemory(&pem.Block{
-		Type:  nameToString(this.Name),
+		Type:  this.Name.String(),
 		Bytes: x509.MarshalPKCS1PrivateKey(this.PrivateKey),
 	})
 }
@@ -83,7 +83,7 @@ func (this *Key) EncodeCertificate() (raw []byte, err error) {
 		},
 		Subject: []pkix.AttributeTypeAndValue{{
 			Type:  asn1.ObjectIdentifier{2, 5, 4, 41},
-			Value: nameToString(this.Name),
+			Value: this.Name.String(),
 		}},
 		SubjectPubKeyInfo: subjectPubKeyInfo{
 			AlgorithmIdentifier: pkix.AlgorithmIdentifier{
@@ -120,7 +120,7 @@ func (this *Key) EncodeCertificate() (raw []byte, err error) {
 }
 
 func NewKey(name string) (key Key, err error) {
-	key.Name = nameFromString(name)
+	key.Name.Set(name)
 	key.PrivateKey, err = rsa.GenerateKey(rand.Reader, 2048)
 	return
 }

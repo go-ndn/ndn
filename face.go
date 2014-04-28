@@ -117,7 +117,7 @@ func (this *Face) announcePrefix(rw *bufio.ReadWriter, prefixList []string) erro
 		control := new(ControlPacket)
 		control.Name.Module = "fib"
 		control.Name.Command = "add-nexthop"
-		control.Name.Parameters.Parameters.Name = nameFromString(prefix)
+		control.Name.Parameters.Parameters.Name.Set(prefix)
 		control.Name.Parameters.Parameters.FaceId = this.Id
 
 		controlResponse := new(ControlResponsePacket)

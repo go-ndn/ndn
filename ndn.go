@@ -67,18 +67,18 @@ type KeyLocator struct {
 	Digest []byte `tlv:"29,-"`
 }
 
-func nameFromString(s string) (name Name) {
+func (this *Name) Set(s string) {
 	if len(s) == 0 {
 		return
 	}
 	for _, c := range strings.Split(strings.Trim(s, "/"), "/") {
-		name.Components = append(name.Components, []byte(c))
+		this.Components = append(this.Components, []byte(c))
 	}
 	return
 }
 
-func nameToString(name Name) (s string) {
-	for _, c := range name.Components {
+func (this *Name) String() (s string) {
+	for _, c := range this.Components {
 		s += "/" + string(c)
 	}
 	return
@@ -90,10 +90,10 @@ func newNonce() []byte {
 	return b
 }
 
-func NewInterest(name string) *Interest {
-	return &Interest{
-		Name: nameFromString(name),
-	}
+func NewInterest(name string) (i *Interest) {
+	i = new(Interest)
+	i.Name.Set(name)
+	return
 }
 
 func (this *Interest) Print() {
@@ -110,10 +110,10 @@ func (this *Interest) Decode(raw []byte) error {
 	return tlv.Unmarshal(raw, this, 5)
 }
 
-func NewData(name string) *Data {
-	return &Data{
-		Name: nameFromString(name),
-	}
+func NewData(name string) (d *Data) {
+	d = new(Data)
+	d.Name.Set(name)
+	return
 }
 
 func (this *Data) Print() {
