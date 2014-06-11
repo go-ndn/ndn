@@ -18,19 +18,19 @@ type Name struct {
 // 5
 type Interest struct {
 	Name      Name      `tlv:"7"`
-	Selectors Selectors `tlv:"9,-"`
+	Selectors Selectors `tlv:"9?"`
 	Nonce     []byte    `tlv:"10"`
-	Scope     uint64    `tlv:"11,-"`
-	LifeTime  uint64    `tlv:"12,-"`
+	Scope     uint64    `tlv:"11?"`
+	LifeTime  uint64    `tlv:"12?"`
 }
 
 type Selectors struct {
-	MinSuffixComponents       uint64     `tlv:"13,-"`
-	MaxSuffixComponents       uint64     `tlv:"14,-"`
-	PublisherPublicKeyLocator KeyLocator `tlv:"15,-"`
-	Exclude                   []byte     `tlv:"16,-"`
-	ChildSelector             uint64     `tlv:"17,-"`
-	MustBeFresh               bool       `tlv:"18,-"`
+	MinSuffixComponents       uint64     `tlv:"13?"`
+	MaxSuffixComponents       uint64     `tlv:"14?"`
+	PublisherPublicKeyLocator KeyLocator `tlv:"15?"`
+	Exclude                   []byte     `tlv:"16?"`
+	ChildSelector             uint64     `tlv:"17?"`
+	MustBeFresh               bool       `tlv:"18?"`
 }
 
 // 6
@@ -43,9 +43,9 @@ type Data struct {
 }
 
 type MetaInfo struct {
-	ContentType     uint64       `tlv:"24,-"`
-	FreshnessPeriod uint64       `tlv:"25,-"`
-	FinalBlockId    FinalBlockId `tlv:"26,-"`
+	ContentType     uint64       `tlv:"24?"`
+	FreshnessPeriod uint64       `tlv:"25?"`
+	FinalBlockId    FinalBlockId `tlv:"26?"`
 }
 
 type FinalBlockId struct {
@@ -54,7 +54,7 @@ type FinalBlockId struct {
 
 type SignatureInfo struct {
 	SignatureType uint64     `tlv:"27"`
-	KeyLocator    KeyLocator `tlv:"28,-"`
+	KeyLocator    KeyLocator `tlv:"28?"`
 }
 
 const (
@@ -63,8 +63,8 @@ const (
 )
 
 type KeyLocator struct {
-	Name   Name   `tlv:"7,-"`
-	Digest []byte `tlv:"29,-"`
+	Name   Name   `tlv:"7?"`
+	Digest []byte `tlv:"29?"`
 }
 
 func (this *Name) Set(s string) {

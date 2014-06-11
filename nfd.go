@@ -10,10 +10,10 @@ import (
 
 type ControlPacket struct {
 	Name      SignedName `tlv:"7"`
-	Selectors Selectors  `tlv:"9,-"`
+	Selectors Selectors  `tlv:"9?"`
 	Nonce     []byte     `tlv:"10"`
-	Scope     uint64     `tlv:"11,-"`
-	LifeTime  uint64     `tlv:"12,-"`
+	Scope     uint64     `tlv:"11?"`
+	LifeTime  uint64     `tlv:"12?"`
 }
 
 type SignedName struct {
@@ -62,15 +62,15 @@ type SignatureValueComponent struct {
 }
 
 type Parameters struct {
-	Name                Name     `tlv:"7,-"`
-	FaceId              uint64   `tlv:"105,-"`
-	Uri                 string   `tlv:"114,-"`
-	LocalControlFeature uint64   `tlv:"110,-"`
-	Origin              uint64   `tlv:"111,-"`
-	Cost                uint64   `tlv:"106,-"`
-	Flags               uint64   `tlv:"108,-"`
-	Strategy            Strategy `tlv:"107,-"`
-	ExpirationPeriod    uint64   `tlv:"109,-"`
+	Name                Name     `tlv:"7?"`
+	FaceId              uint64   `tlv:"105?"`
+	Uri                 string   `tlv:"114?"`
+	LocalControlFeature uint64   `tlv:"110?"`
+	Origin              uint64   `tlv:"111?"`
+	Cost                uint64   `tlv:"106?"`
+	Flags               uint64   `tlv:"108?"`
+	Strategy            Strategy `tlv:"107?"`
+	ExpirationPeriod    uint64   `tlv:"109?"`
 }
 
 type Strategy struct {
