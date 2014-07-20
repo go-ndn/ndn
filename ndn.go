@@ -58,8 +58,9 @@ type SignatureInfo struct {
 }
 
 const (
-	SignatureTypeSha256    uint64 = 0
-	SignatureTypeSha256Rsa        = 1
+	SignatureTypeSha256          uint64 = 0
+	SignatureTypeSha256WithRsa          = 1
+	SignatureTypeSha256WithEcdsa        = 2
 )
 
 type KeyLocator struct {
@@ -148,9 +149,9 @@ func (this *Data) Encode() (raw []byte, err error) {
 	switch this.SignatureInfo.SignatureType {
 	case SignatureTypeSha256:
 		this.SignatureValue = digest
-	case SignatureTypeSha256Rsa:
+	case SignatureTypeSha256WithRsa:
 		this.SignatureInfo.KeyLocator.Name = SignKey.LocatorName()
-		this.SignatureValue, err = signRSA(digest)
+		this.SignatureValue, err = SignKey.Sign(digest)
 		if err != nil {
 			return
 		}
@@ -173,7 +174,7 @@ func (this *Data) Decode(raw []byte) error {
 		if !bytes.Equal(this.SignatureValue, digest) {
 			return errors.New("cannot verify sha256")
 		}
-	case SignatureTypeSha256Rsa:
+	case SignatureTypeSha256WithRsa:
 		// TODO: enable rsa
 	}
 	return nil

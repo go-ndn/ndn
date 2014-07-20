@@ -33,14 +33,14 @@ func (this *ControlPacket) Encode() (raw []byte, err error) {
 	this.Name.Nfd = "nfd"
 	this.Name.Timestamp = uint64(time.Now().UnixNano() / 1000000)
 	this.Name.Random = newNonce()
-	this.Name.SignatureInfo.SignatureInfo.SignatureType = SignatureTypeSha256Rsa
+	this.Name.SignatureInfo.SignatureInfo.SignatureType = SignatureTypeSha256WithRsa
 	this.Name.SignatureInfo.SignatureInfo.KeyLocator.Name = SignKey.LocatorName()
 
 	digest, err := newSha256(this.Name)
 	if err != nil {
 		return
 	}
-	this.Name.SignatureValue.SignatureValue, err = signRSA(digest)
+	this.Name.SignatureValue.SignatureValue, err = SignKey.Sign(digest)
 	if err != nil {
 		return
 	}
@@ -109,7 +109,7 @@ func (this *ControlResponsePacket) Decode(raw []byte) error {
 		if !bytes.Equal(this.SignatureValue, digest) {
 			return errors.New("cannot verify sha256")
 		}
-	case SignatureTypeSha256Rsa:
+	case SignatureTypeSha256WithRsa:
 		// TODO: enable rsa
 	}
 	return nil
@@ -151,7 +151,7 @@ func (this *FibEntryPacket) Decode(raw []byte) error {
 		if !bytes.Equal(this.SignatureValue, digest) {
 			return errors.New("cannot verify sha256")
 		}
-	case SignatureTypeSha256Rsa:
+	case SignatureTypeSha256WithRsa:
 		// TODO: enable rsa
 	}
 	return nil
@@ -194,7 +194,7 @@ func (this *FaceEntryPacket) Decode(raw []byte) error {
 		if !bytes.Equal(this.SignatureValue, digest) {
 			return errors.New("cannot verify sha256")
 		}
-	case SignatureTypeSha256Rsa:
+	case SignatureTypeSha256WithRsa:
 		// TODO: enable rsa
 	}
 	return nil
@@ -237,7 +237,7 @@ func (this *ForwarderStatusPacket) Decode(raw []byte) error {
 		if !bytes.Equal(this.SignatureValue, digest) {
 			return errors.New("cannot verify sha256")
 		}
-	case SignatureTypeSha256Rsa:
+	case SignatureTypeSha256WithRsa:
 		// TODO: enable rsa
 	}
 	return nil

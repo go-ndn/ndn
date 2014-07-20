@@ -3,6 +3,7 @@ package ndn
 import (
 	"bytes"
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -13,6 +14,7 @@ import (
 	"errors"
 	"github.com/davecgh/go-spew/spew"
 	"math/big"
+	"strings"
 	"time"
 )
 
@@ -22,8 +24,8 @@ var (
 )
 
 type Key struct {
-	Name Name
-	*rsa.PrivateKey
+	Name       Name
+	privateKey crypto.PrivateKey
 }
 
 func (this *Key) LocatorName() (name Name) {
@@ -43,38 +45,87 @@ func (this *Key) Decode(pemData []byte) (err error) {
 		err = errors.New("not pem data")
 		return
 	}
-	this.Name.Set(block.Type)
-	// Decode the RSA private key
-	this.PrivateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+	parts := strings.SplitN(block.Type, " ", 2)
+	if len(parts) != 2 {
+		err = errors.New("missing key type or name")
+		return
+	}
+	this.Name.Set(parts[1])
+	switch parts[0] {
+	case "rsa":
+		this.privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+	case "ecdsa":
+		this.privateKey, err = x509.ParseECPrivateKey(block.Bytes)
+	default:
+		err = errors.New("unsupported key type")
+	}
 	return
 }
 
-func (this *Key) Encode() []byte {
-	return pem.EncodeToMemory(&pem.Block{
-		Type:  this.Name.String(),
-		Bytes: x509.MarshalPKCS1PrivateKey(this.PrivateKey),
+func (this *Key) Encode() (pemData []byte, err error) {
+	var b []byte
+	var keyType string
+	switch this.privateKey.(type) {
+	case (*rsa.PrivateKey):
+		b = x509.MarshalPKCS1PrivateKey(this.privateKey.(*rsa.PrivateKey))
+		keyType = "rsa"
+	case (*ecdsa.PrivateKey):
+		b, err = x509.MarshalECPrivateKey(this.privateKey.(*ecdsa.PrivateKey))
+		if err != nil {
+			return
+		}
+		keyType = "ecdsa"
+	default:
+		err = errors.New("unsupported key type")
+		return
+	}
+	pemData = pem.EncodeToMemory(&pem.Block{
+		Type:  keyType + " " + this.Name.String(),
+		Bytes: b,
 	})
+	return
 }
 
+var (
+	oidSignatureSHA256WithRSA   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 11}
+	oidSignatureECDSAWithSHA256 = asn1.ObjectIdentifier{1, 2, 840, 10045, 4, 3, 2}
+)
+
 func (this *Key) EncodeCertificate() (raw []byte, err error) {
+	var sigType uint64
+	var publicKeyBytes []byte
+	var oidSig asn1.ObjectIdentifier
+	switch this.privateKey.(type) {
+	case (*rsa.PrivateKey):
+		publicKeyBytes, err = asn1.Marshal(this.privateKey.(*rsa.PrivateKey).PublicKey)
+		if err != nil {
+			return
+		}
+		oidSig = oidSignatureSHA256WithRSA
+		sigType = SignatureTypeSha256WithRsa
+	case (*ecdsa.PrivateKey):
+		publicKeyBytes, err = asn1.Marshal(this.privateKey.(*rsa.PrivateKey).PublicKey)
+		if err != nil {
+			return
+		}
+		oidSig = oidSignatureECDSAWithSHA256
+		sigType = SignatureTypeSha256WithEcdsa
+	default:
+		err = errors.New("unsupported key type")
+		return
+	}
+
 	d := Data{
 		Name: this.LocatorName(),
 		MetaInfo: MetaInfo{
 			ContentType: 2, //key
 		},
 		SignatureInfo: SignatureInfo{
-			SignatureType: SignatureTypeSha256Rsa,
+			SignatureType: sigType,
 			KeyLocator: KeyLocator{
 				Name: this.LocatorName(),
 			},
 		},
-	}
-	publicKeyBytes, err := asn1.Marshal(rsaPublicKey{
-		N: this.PublicKey.N,
-		E: this.PublicKey.E,
-	})
-	if err != nil {
-		return
 	}
 	d.Content, err = asn1.Marshal(certificate{
 		Validity: validity{
@@ -87,7 +138,7 @@ func (this *Key) EncodeCertificate() (raw []byte, err error) {
 		}},
 		SubjectPubKeyInfo: subjectPubKeyInfo{
 			AlgorithmIdentifier: pkix.AlgorithmIdentifier{
-				Algorithm: asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 1}, //rsa
+				Algorithm: oidSig,
 				// This is a NULL parameters value which is technically
 				// superfluous, but most other code includes it and, by
 				// doing this, we match their public key hashes.
@@ -119,9 +170,16 @@ func (this *Key) EncodeCertificate() (raw []byte, err error) {
 	return
 }
 
-func NewKey(name string) (key Key, err error) {
+func NewKey(name string, privateKey crypto.PrivateKey) (key Key, err error) {
 	key.Name.Set(name)
-	key.PrivateKey, err = rsa.GenerateKey(rand.Reader, 2048)
+	switch privateKey.(type) {
+	case (*rsa.PrivateKey):
+	case (*ecdsa.PrivateKey):
+	default:
+		err = errors.New("unsupported key type")
+		return
+	}
+	key.privateKey = privateKey
 	return
 }
 
@@ -139,11 +197,6 @@ type validity struct {
 type subjectPubKeyInfo struct {
 	AlgorithmIdentifier pkix.AlgorithmIdentifier
 	Bytes               asn1.BitString
-}
-
-type rsaPublicKey struct {
-	N *big.Int
-	E int
 }
 
 func PrintCertificate(raw []byte) (err error) {
@@ -166,11 +219,23 @@ func PrintCertificate(raw []byte) (err error) {
 	return
 }
 
-func signRSA(digest []byte) (signature []byte, err error) {
-	if SignKey.PrivateKey == nil {
-		err = errors.New("signKey not found")
-		return
+type ecdsaSignature struct {
+	r, s *big.Int
+}
+
+func (this *Key) Sign(digest []byte) (signature []byte, err error) {
+	switch this.privateKey.(type) {
+	case (*rsa.PrivateKey):
+		signature, err = rsa.SignPKCS1v15(rand.Reader, this.privateKey.(*rsa.PrivateKey), crypto.SHA256, digest)
+	case (*ecdsa.PrivateKey):
+		var sig ecdsaSignature
+		sig.r, sig.s, err = ecdsa.Sign(rand.Reader, this.privateKey.(*ecdsa.PrivateKey), digest)
+		if err != nil {
+			return
+		}
+		signature, err = asn1.Marshal(sig)
+	default:
+		err = errors.New("unsupported key type")
 	}
-	signature, err = rsa.SignPKCS1v15(rand.Reader, SignKey.PrivateKey, crypto.SHA256, digest)
 	return
 }
