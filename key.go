@@ -66,10 +66,10 @@ func (this *Key) Encode() (pemData []byte, err error) {
 	var b []byte
 	var keyType string
 	switch this.privateKey.(type) {
-	case (*rsa.PrivateKey):
+	case *rsa.PrivateKey:
 		b = x509.MarshalPKCS1PrivateKey(this.privateKey.(*rsa.PrivateKey))
 		keyType = "rsa"
-	case (*ecdsa.PrivateKey):
+	case *ecdsa.PrivateKey:
 		b, err = x509.MarshalECPrivateKey(this.privateKey.(*ecdsa.PrivateKey))
 		if err != nil {
 			return
@@ -96,15 +96,15 @@ func (this *Key) EncodeCertificate() (raw []byte, err error) {
 	var publicKeyBytes []byte
 	var oidSig asn1.ObjectIdentifier
 	switch this.privateKey.(type) {
-	case (*rsa.PrivateKey):
+	case *rsa.PrivateKey:
 		publicKeyBytes, err = asn1.Marshal(this.privateKey.(*rsa.PrivateKey).PublicKey)
 		if err != nil {
 			return
 		}
 		oidSig = oidSignatureSHA256WithRSA
 		sigType = SignatureTypeSha256WithRsa
-	case (*ecdsa.PrivateKey):
-		publicKeyBytes, err = asn1.Marshal(this.privateKey.(*rsa.PrivateKey).PublicKey)
+	case *ecdsa.PrivateKey:
+		publicKeyBytes, err = asn1.Marshal(this.privateKey.(*ecdsa.PrivateKey).PublicKey)
 		if err != nil {
 			return
 		}
@@ -173,8 +173,8 @@ func (this *Key) EncodeCertificate() (raw []byte, err error) {
 func NewKey(name string, privateKey crypto.PrivateKey) (key Key, err error) {
 	key.Name.Set(name)
 	switch privateKey.(type) {
-	case (*rsa.PrivateKey):
-	case (*ecdsa.PrivateKey):
+	case *rsa.PrivateKey:
+	case *ecdsa.PrivateKey:
 	default:
 		err = errors.New("unsupported key type")
 		return
@@ -225,9 +225,9 @@ type ecdsaSignature struct {
 
 func (this *Key) Sign(digest []byte) (signature []byte, err error) {
 	switch this.privateKey.(type) {
-	case (*rsa.PrivateKey):
+	case *rsa.PrivateKey:
 		signature, err = rsa.SignPKCS1v15(rand.Reader, this.privateKey.(*rsa.PrivateKey), crypto.SHA256, digest)
-	case (*ecdsa.PrivateKey):
+	case *ecdsa.PrivateKey:
 		var sig ecdsaSignature
 		sig.r, sig.s, err = ecdsa.Sign(rand.Reader, this.privateKey.(*ecdsa.PrivateKey), digest)
 		if err != nil {
