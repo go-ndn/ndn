@@ -2,28 +2,30 @@ package ndn
 
 import (
 	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
 	"github.com/taylorchu/tlv"
+	"io"
 	"net"
 	"net/url"
 	"strings"
-	"time"
 )
 
-type Encoder interface {
-	Encode() (raw []byte, err error)
+type ReadFrom interface {
+	ReadFrom(r tlv.PeekReader) (err error)
 }
 
-type Decoder interface {
-	Decode(raw []byte) error
+type WriteTo interface {
+	WriteTo(w tlv.Writer) (err error)
 }
 
 type Face struct {
-	Scheme string
-	Host   string
-	Id     uint64
+	scheme string
+	host   string
+	id     uint64
+	addr   string // local address
+	r      tlv.PeekReader
+	w      io.WriteCloser // tlv.Writer
 }
 
 func NewFace(raw string) (f *Face, err error) {
@@ -40,67 +42,50 @@ func NewFace(raw string) (f *Face, err error) {
 		return
 	}
 	f = &Face{
-		Scheme: u.Scheme,
-		Host:   u.Host,
+		scheme: u.Scheme,
+		host:   u.Host,
+	}
+	conn, err := net.Dial(f.scheme, f.host)
+	if err != nil {
+		return
+	}
+	f.r = bufio.NewReader(conn)
+	f.w = conn
+	f.addr = f.scheme + "://" + conn.LocalAddr().String()
+	// nfd create face
+	err = f.create()
+	return
+}
+
+func (this *Face) Close() error {
+	return this.w.Close()
+}
+
+func (this *Face) Dial(out WriteTo, in ReadFrom) (err error) {
+	err = this.dial(out, in)
+	return
+}
+
+func (this *Face) dial(out WriteTo, in ReadFrom) (err error) {
+	err = out.WriteTo(this.w)
+	if err != nil {
+		return
+	}
+	err = in.ReadFrom(this.r)
+	if err != nil {
+		Print(in)
+		return
 	}
 	return
 }
 
-// read precisely one tlv
-func readChunk(rw *bufio.ReadWriter) (b []byte, err error) {
-	// type and length are at most 1+8+1+8 bytes
-	peek, _ := rw.Peek(18)
-	buf := bytes.NewBuffer(peek)
-	// type
-	_, err = tlv.ReadBytes(buf)
-	if err != nil {
-		return
-	}
-	// length
-	l, err := tlv.ReadBytes(buf)
-	if err != nil {
-		return
-	}
-	b = make([]byte, int(l)+len(peek)-buf.Len())
-	_, err = rw.Read(b)
-	return
-}
-
-func (this *Face) Dial(e Encoder, d Decoder) (err error) {
-	conn, err := net.Dial(this.Scheme, this.Host)
-	if err != nil {
-		return
-	}
-	defer conn.Close()
-	rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
-	conn.SetDeadline(time.Now().Add(10 * time.Second))
-	err = this.dial(rw, e, d)
-	return
-}
-
-func (this *Face) dial(rw *bufio.ReadWriter, e Encoder, d Decoder) (err error) {
-	b, err := e.Encode()
-	if err != nil {
-		return
-	}
-	rw.Write(b)
-	rw.Flush()
-	// read one chunk only
-	b, err = readChunk(rw)
-	if err != nil {
-		return
-	}
-	err = d.Decode(b)
-	return
-}
-
-func (this *Face) create(rw *bufio.ReadWriter, addr string) (err error) {
+func (this *Face) create() (err error) {
 	control := new(ControlPacket)
 	control.Name.Module = "faces"
 	control.Name.Command = "create"
-	control.Name.Parameters.Parameters.Uri = addr
+	control.Name.Parameters.Parameters.Uri = this.addr
 	controlResponse := new(ControlResponsePacket)
-	err = this.dial(rw, control, controlResponse)
+	err = this.dial(control, controlResponse)
 	if err != nil {
 		return
 	}
@@ -108,20 +93,20 @@ func (this *Face) create(rw *bufio.ReadWriter, addr string) (err error) {
 		err = errors.New(fmt.Sprintf("(%d) %s", controlResponse.Content.Response.StatusCode, controlResponse.Content.Response.StatusText))
 		return
 	}
-	this.Id = controlResponse.Content.Response.Parameters.FaceId
+	this.id = controlResponse.Content.Response.Parameters.FaceId
 	return
 }
 
-func (this *Face) announcePrefix(rw *bufio.ReadWriter, prefixList []string) error {
+func (this *Face) announcePrefix(prefixList []string) error {
 	for _, prefix := range prefixList {
 		control := new(ControlPacket)
 		control.Name.Module = "fib"
 		control.Name.Command = "add-nexthop"
 		control.Name.Parameters.Parameters.Name.Set(prefix)
-		control.Name.Parameters.Parameters.FaceId = this.Id
+		control.Name.Parameters.Parameters.FaceId = this.id
 
 		controlResponse := new(ControlResponsePacket)
-		err := this.dial(rw, control, controlResponse)
+		err := this.dial(control, controlResponse)
 		if err != nil {
 			return err
 		}
@@ -132,46 +117,32 @@ func (this *Face) announcePrefix(rw *bufio.ReadWriter, prefixList []string) erro
 	return nil
 }
 
-func (this *Face) Listen(prefixList []string, h func(b []byte) ([]byte, error)) (err error) {
-	conn, err := net.Dial(this.Scheme, this.Host)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer conn.Close()
-	rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
-
-	addr := this.Scheme + "://" + conn.LocalAddr().String()
-	// nfd create face
-	if this.Id == 0 {
-		err = this.create(rw, addr)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-	}
+func (this *Face) Listen(prefixList []string, packet ReadFrom, handler func(ReadFrom) (WriteTo, error)) (err error) {
 	// announce prefix
-	err = this.announcePrefix(rw, prefixList)
+	err = this.announcePrefix(prefixList)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	fmt.Printf("Listen(%d) %s\n", this.Id, addr)
+	fmt.Printf("Listen(%d) %s\n", this.id, this.addr)
 	for {
 		// read one chunk only
-		b, err := readChunk(rw)
+		err = packet.ReadFrom(this.r)
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
-		go func(b []byte) {
-			b, err := h(b)
+		go func(in ReadFrom) {
+			out, err := handler(in)
 			if err != nil {
 				fmt.Println(err)
 				return
 			}
-			rw.Write(b)
-			rw.Flush()
-		}(b)
+			err = out.WriteTo(this.w)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+		}(packet)
 	}
 }

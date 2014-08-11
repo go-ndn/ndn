@@ -1,6 +1,7 @@
 package ndn
 
 import (
+	"bufio"
 	"bytes"
 	"crypto"
 	"crypto/ecdsa"
@@ -12,7 +13,6 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"errors"
-	"github.com/davecgh/go-spew/spew"
 	"math/big"
 	"strings"
 	"time"
@@ -155,18 +155,17 @@ func (this *Key) EncodeCertificate() (raw []byte, err error) {
 	if err != nil {
 		return
 	}
-	b, err := d.Encode()
+	buf := new(bytes.Buffer)
+	enc := base64.NewEncoder(base64.StdEncoding, buf)
+	err = d.WriteTo(enc)
 	if err != nil {
 		return
 	}
-
-	buf := bytes.NewBufferString(base64.StdEncoding.EncodeToString(b))
-	buf2 := new(bytes.Buffer)
+	enc.Close()
 	for buf.Len() != 0 {
-		buf2.Write(buf.Next(64))
-		buf2.WriteByte(0xA)
+		raw = append(raw, buf.Next(64)...)
+		raw = append(raw, 0xA)
 	}
-	raw = buf2.Bytes()
 	return
 }
 
@@ -201,12 +200,9 @@ type subjectPubKeyInfo struct {
 
 func PrintCertificate(raw []byte) (err error) {
 	// newline does not matter
-	b, err := base64.StdEncoding.DecodeString(string(raw))
-	if err != nil {
-		return
-	}
-	d := Data{}
-	err = d.Decode(b)
+	dec := base64.NewDecoder(base64.StdEncoding, bytes.NewBuffer(raw))
+	var d Data
+	err = d.ReadFrom(bufio.NewReader(dec))
 	if err != nil {
 		return
 	}
@@ -215,7 +211,7 @@ func PrintCertificate(raw []byte) (err error) {
 	if err != nil {
 		return
 	}
-	spew.Dump(cert)
+	Print(cert)
 	return
 }
 

@@ -7,9 +7,12 @@ import (
 	"errors"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/taylorchu/tlv"
-	"reflect"
 	"strings"
 )
+
+func Print(i interface{}) {
+	spew.Dump(i)
+}
 
 type Name struct {
 	Components [][]byte `tlv:"8"`
@@ -39,7 +42,7 @@ type Data struct {
 	MetaInfo       MetaInfo      `tlv:"20"`
 	Content        []byte        `tlv:"21"`
 	SignatureInfo  SignatureInfo `tlv:"22"`
-	SignatureValue []byte        `tlv:"23"`
+	SignatureValue []byte        `tlv:"23*"`
 }
 
 type MetaInfo struct {
@@ -78,7 +81,7 @@ func (this *Name) Set(s string) {
 	return
 }
 
-func (this *Name) String() (s string) {
+func (this Name) String() (s string) {
 	for _, c := range this.Components {
 		s += "/" + string(c)
 	}
@@ -97,18 +100,13 @@ func NewInterest(name string) (i *Interest) {
 	return
 }
 
-func (this *Interest) Print() {
-	spew.Dump(*this)
-}
-
-func (this *Interest) Encode() (raw []byte, err error) {
+func (this *Interest) WriteTo(w tlv.Writer) error {
 	this.Nonce = newNonce()
-	raw, err = tlv.Marshal(this, 5)
-	return
+	return tlv.Marshal(w, this, 5)
 }
 
-func (this *Interest) Decode(raw []byte) error {
-	return tlv.Unmarshal(raw, this, 5)
+func (this *Interest) ReadFrom(r tlv.PeekReader) error {
+	return tlv.Unmarshal(r, this, 5)
 }
 
 func NewData(name string) (d *Data) {
@@ -117,31 +115,17 @@ func NewData(name string) (d *Data) {
 	return
 }
 
-func (this *Data) Print() {
-	spew.Dump(*this)
-}
-
 func newSha256(v interface{}) (digest []byte, err error) {
-	value := reflect.Indirect(reflect.ValueOf(v))
 	h := sha256.New()
-	for i := 0; i < value.NumField()-1; i++ {
-		var t uint64
-		t, err = tlv.Type(value, i)
-		if err != nil {
-			return
-		}
-		var b []byte
-		b, err = tlv.Marshal(value.Field(i).Interface(), t)
-		if err != nil {
-			return
-		}
-		h.Write(b)
+	err = tlv.Data(h, v)
+	if err != nil {
+		return
 	}
 	digest = h.Sum(nil)
 	return
 }
 
-func (this *Data) Encode() (raw []byte, err error) {
+func (this *Data) WriteTo(w tlv.Writer) (err error) {
 	digest, err := newSha256(this)
 	if err != nil {
 		return
@@ -149,33 +133,34 @@ func (this *Data) Encode() (raw []byte, err error) {
 	switch this.SignatureInfo.SignatureType {
 	case SignatureTypeSha256:
 		this.SignatureValue = digest
-	case SignatureTypeSha256WithRsa:
+	default:
 		this.SignatureInfo.KeyLocator.Name = SignKey.LocatorName()
 		this.SignatureValue, err = SignKey.Sign(digest)
 		if err != nil {
 			return
 		}
 	}
-	raw, err = tlv.Marshal(this, 6)
+	err = tlv.Marshal(w, this, 6)
 	return
 }
 
-func (this *Data) Decode(raw []byte) error {
-	err := tlv.Unmarshal(raw, this, 6)
+func (this *Data) ReadFrom(r tlv.PeekReader) (err error) {
+	err = tlv.Unmarshal(r, this, 6)
 	if err != nil {
-		return err
+		return
 	}
 	digest, err := newSha256(this)
 	if err != nil {
-		return err
+		return
 	}
 	switch this.SignatureInfo.SignatureType {
 	case SignatureTypeSha256:
 		if !bytes.Equal(this.SignatureValue, digest) {
-			return errors.New("cannot verify sha256")
+			err = errors.New("cannot verify sha256")
+			return
 		}
 	case SignatureTypeSha256WithRsa:
 		// TODO: enable rsa
 	}
-	return nil
+	return
 }

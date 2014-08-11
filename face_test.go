@@ -2,21 +2,32 @@ package ndn
 
 import (
 	//"bytes"
-	//"github.com/davecgh/go-spew/spew"
 	"io/ioutil"
 	"testing"
 	"time"
 )
 
 func TestDial(t *testing.T) {
+	b, err := ioutil.ReadFile("key/testing.pri")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	err = SignKey.Decode(b)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 	face, err := NewFace("tcp://localhost:6363")
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	d := new(Data)
 	err = face.Dial(NewInterest("/localhost/nfd/fib/list"), d)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	i2 := new(Interest)
 	i2.Name = d.Name
@@ -24,8 +35,9 @@ func TestDial(t *testing.T) {
 	err = face.Dial(i2, d2)
 	if err != nil {
 		t.Error(err)
+		return
 	}
-	//spew.Dump(d2)
+	Print(d2)
 }
 
 func TestListen(t *testing.T) {
@@ -34,22 +46,21 @@ func TestListen(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	SignKey.Decode(b)
+	err = SignKey.Decode(b)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
 	face, err := NewFace("tcp://localhost:6363")
-	go face.Listen([]string{"/hello/world"}, func(b []byte) ([]byte, error) {
-		i := new(Interest)
-		err = i.Decode(b)
-		if err != nil {
-			return nil, err
-		}
-		d := new(Data)
-		d.Name = i.Name
-		return d.Encode()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	go face.Listen([]string{"/hello/world"}, new(Interest), func(r ReadFrom) (w WriteTo, err error) {
+		i, _ := r.(*Interest)
+		w = NewData(i.Name.String())
+		return
 	})
 	<-time.After(time.Second)
 	face2, err := NewFace("tcp://localhost:6363")
@@ -58,6 +69,5 @@ func TestListen(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	//spew.Dump(d)
-
+	Print(d)
 }

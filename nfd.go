@@ -3,7 +3,6 @@ package ndn
 import (
 	"bytes"
 	"errors"
-	//"github.com/davecgh/go-spew/spew"
 	"github.com/taylorchu/tlv"
 	"time"
 )
@@ -25,10 +24,10 @@ type SignedName struct {
 	Timestamp      uint64                  `tlv:"8"`
 	Random         []byte                  `tlv:"8"`
 	SignatureInfo  SignatureInfoComponent  `tlv:"8"`
-	SignatureValue SignatureValueComponent `tlv:"8"`
+	SignatureValue SignatureValueComponent `tlv:"8*"`
 }
 
-func (this *ControlPacket) Encode() (raw []byte, err error) {
+func (this *ControlPacket) WriteTo(w tlv.Writer) (err error) {
 	this.Name.Localhost = "localhost"
 	this.Name.Nfd = "nfd"
 	this.Name.Timestamp = uint64(time.Now().UnixNano() / 1000000)
@@ -45,7 +44,7 @@ func (this *ControlPacket) Encode() (raw []byte, err error) {
 		return
 	}
 	this.Nonce = newNonce()
-	raw, err = tlv.Marshal(this, 5)
+	err = tlv.Marshal(w, this, 5)
 	return
 }
 
@@ -80,7 +79,7 @@ type Strategy struct {
 type ControlResponse struct {
 	StatusCode uint64     `tlv:"102"`
 	StatusText string     `tlv:"103"`
-	Parameters Parameters `tlv:"104"`
+	Parameters Parameters `tlv:"104?"`
 }
 
 type Response struct {
@@ -92,11 +91,11 @@ type ControlResponsePacket struct {
 	MetaInfo       MetaInfo      `tlv:"20"`
 	Content        Response      `tlv:"21"`
 	SignatureInfo  SignatureInfo `tlv:"22"`
-	SignatureValue []byte        `tlv:"23"`
+	SignatureValue []byte        `tlv:"23*"`
 }
 
-func (this *ControlResponsePacket) Decode(raw []byte) error {
-	err := tlv.Unmarshal(raw, this, 6)
+func (this *ControlResponsePacket) ReadFrom(r tlv.PeekReader) error {
+	err := tlv.Unmarshal(r, this, 6)
 	if err != nil {
 		return err
 	}
@@ -134,11 +133,11 @@ type FibEntryPacket struct {
 	MetaInfo       MetaInfo      `tlv:"20"`
 	Content        FibEntries    `tlv:"21"`
 	SignatureInfo  SignatureInfo `tlv:"22"`
-	SignatureValue []byte        `tlv:"23"`
+	SignatureValue []byte        `tlv:"23*"`
 }
 
-func (this *FibEntryPacket) Decode(raw []byte) error {
-	err := tlv.Unmarshal(raw, this, 6)
+func (this *FibEntryPacket) ReadFrom(r tlv.PeekReader) error {
+	err := tlv.Unmarshal(r, this, 6)
 	if err != nil {
 		return err
 	}
@@ -177,11 +176,11 @@ type FaceEntryPacket struct {
 	MetaInfo       MetaInfo      `tlv:"20"`
 	Content        FaceEntries   `tlv:"21"`
 	SignatureInfo  SignatureInfo `tlv:"22"`
-	SignatureValue []byte        `tlv:"23"`
+	SignatureValue []byte        `tlv:"23*"`
 }
 
-func (this *FaceEntryPacket) Decode(raw []byte) error {
-	err := tlv.Unmarshal(raw, this, 6)
+func (this *FaceEntryPacket) ReadFrom(r tlv.PeekReader) error {
+	err := tlv.Unmarshal(r, this, 6)
 	if err != nil {
 		return err
 	}
@@ -220,11 +219,11 @@ type ForwarderStatusPacket struct {
 	MetaInfo       MetaInfo        `tlv:"20"`
 	Content        ForwarderStatus `tlv:"21"`
 	SignatureInfo  SignatureInfo   `tlv:"22"`
-	SignatureValue []byte          `tlv:"23"`
+	SignatureValue []byte          `tlv:"23*"`
 }
 
-func (this *ForwarderStatusPacket) Decode(raw []byte) error {
-	err := tlv.Unmarshal(raw, this, 6)
+func (this *ForwarderStatusPacket) ReadFrom(r tlv.PeekReader) error {
+	err := tlv.Unmarshal(r, this, 6)
 	if err != nil {
 		return err
 	}
