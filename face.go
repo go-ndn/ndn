@@ -19,13 +19,18 @@ type WriteTo interface {
 	WriteTo(w tlv.Writer) (err error)
 }
 
+func AcceptInterest() ReadFrom {
+	return new(Interest)
+}
+
 type Face struct {
 	scheme string
 	host   string
 	id     uint64
 	addr   string // local address
 	r      tlv.PeekReader
-	w      io.WriteCloser // tlv.Writer
+	w      tlv.Writer
+	closer io.Closer
 }
 
 func NewFace(raw string) (f *Face, err error) {
@@ -51,6 +56,7 @@ func NewFace(raw string) (f *Face, err error) {
 	}
 	f.r = bufio.NewReader(conn)
 	f.w = conn
+	f.closer = conn
 	f.addr = f.scheme + "://" + conn.LocalAddr().String()
 	// nfd create face
 	err = f.create()
@@ -59,7 +65,7 @@ func NewFace(raw string) (f *Face, err error) {
 }
 
 func (this *Face) Close() error {
-	return this.w.Close()
+	return this.closer.Close()
 }
 
 func (this *Face) Dial(out WriteTo, in ReadFrom) (err error) {
@@ -115,7 +121,6 @@ func (this *Face) Announce(prefixList ...string) error {
 }
 
 func (this *Face) Listen(gen func() ReadFrom, handler func(ReadFrom) (WriteTo, error)) (err error) {
-	fmt.Printf("Listen(%d) %s\n", this.id, this.addr)
 	for {
 		packet := gen()
 		err = packet.ReadFrom(this.r)

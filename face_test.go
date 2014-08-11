@@ -49,7 +49,7 @@ func TestListen(t *testing.T) {
 		return
 	}
 	err = face.Announce("/hello/world")
-	go face.Listen(func() ReadFrom { return new(Interest) }, func(r ReadFrom) (w WriteTo, err error) {
+	go face.Listen(AcceptInterest, func(r ReadFrom) (w WriteTo, err error) {
 		i, _ := r.(*Interest)
 		w = NewData(i.Name.String())
 		return
