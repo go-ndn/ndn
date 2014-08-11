@@ -14,7 +14,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"math/big"
-	"strings"
 	"time"
 )
 
@@ -29,13 +28,7 @@ type Key struct {
 }
 
 func (this *Key) LocatorName() (name Name) {
-	for i := 0; i < len(this.Name.Components); i++ {
-		if i == len(this.Name.Components)-1 {
-			name.Components = append(name.Components, []byte("KEY"))
-		}
-		name.Components = append(name.Components, this.Name.Components[i])
-	}
-	name.Components = append(name.Components, []byte("ID-CERT"))
+	name.Components = append(this.Name.Components, []byte("KEY"), []byte("ID-CERT"))
 	return
 }
 
@@ -45,16 +38,11 @@ func (this *Key) Decode(pemData []byte) (err error) {
 		err = errors.New("not pem data")
 		return
 	}
-	parts := strings.SplitN(block.Type, " ", 2)
-	if len(parts) != 2 {
-		err = errors.New("missing key type or name")
-		return
-	}
-	this.Name.Set(parts[1])
-	switch parts[0] {
-	case "rsa":
+	this.Name.Set(block.Headers["NAME"])
+	switch block.Type {
+	case "RSA PRIVATE KEY":
 		this.privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-	case "ecdsa":
+	case "ECDSA PRIVATE KEY":
 		this.privateKey, err = x509.ParseECPrivateKey(block.Bytes)
 	default:
 		err = errors.New("unsupported key type")
@@ -68,27 +56,30 @@ func (this *Key) Encode() (pemData []byte, err error) {
 	switch this.privateKey.(type) {
 	case *rsa.PrivateKey:
 		b = x509.MarshalPKCS1PrivateKey(this.privateKey.(*rsa.PrivateKey))
-		keyType = "rsa"
+		keyType = "RSA PRIVATE KEY"
 	case *ecdsa.PrivateKey:
 		b, err = x509.MarshalECPrivateKey(this.privateKey.(*ecdsa.PrivateKey))
 		if err != nil {
 			return
 		}
-		keyType = "ecdsa"
+		keyType = "ECDSA PRIVATE KEY"
 	default:
 		err = errors.New("unsupported key type")
 		return
 	}
 	pemData = pem.EncodeToMemory(&pem.Block{
-		Type:  keyType + " " + this.Name.String(),
+		Type: keyType,
+		Headers: map[string]string{
+			"NAME": this.Name.String(),
+		},
 		Bytes: b,
 	})
 	return
 }
 
 var (
-	oidSignatureSHA256WithRSA   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 11}
-	oidSignatureECDSAWithSHA256 = asn1.ObjectIdentifier{1, 2, 840, 10045, 4, 3, 2}
+	oidRsa   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 1}
+	oidEcdsa = asn1.ObjectIdentifier{1, 2, 840, 10045, 2, 1}
 )
 
 func (this *Key) EncodeCertificate() (raw []byte, err error) {
@@ -101,14 +92,14 @@ func (this *Key) EncodeCertificate() (raw []byte, err error) {
 		if err != nil {
 			return
 		}
-		oidSig = oidSignatureSHA256WithRSA
+		oidSig = oidRsa
 		sigType = SignatureTypeSha256WithRsa
 	case *ecdsa.PrivateKey:
 		publicKeyBytes, err = asn1.Marshal(this.privateKey.(*ecdsa.PrivateKey).PublicKey)
 		if err != nil {
 			return
 		}
-		oidSig = oidSignatureECDSAWithSHA256
+		oidSig = oidEcdsa
 		sigType = SignatureTypeSha256WithEcdsa
 	default:
 		err = errors.New("unsupported key type")
@@ -211,7 +202,7 @@ func PrintCertificate(raw []byte) (err error) {
 	if err != nil {
 		return
 	}
-	Print(cert)
+	Print(d, cert)
 	return
 }
 

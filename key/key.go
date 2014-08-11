@@ -9,6 +9,12 @@ import (
 )
 
 func main() {
+	sample, err := ioutil.ReadFile("sample.ndncert")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	ndn.PrintCertificate(sample)
 	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		fmt.Println(err)
@@ -27,7 +33,7 @@ func main() {
 		return
 	}
 	ioutil.WriteFile("testing.pri", b, 0777)
-	// public key	
+	// public key
 	b, err = ndn.SignKey.EncodeCertificate()
 	if err != nil {
 		fmt.Println(err)

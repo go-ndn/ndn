@@ -54,6 +54,7 @@ func NewFace(raw string) (f *Face, err error) {
 	f.addr = f.scheme + "://" + conn.LocalAddr().String()
 	// nfd create face
 	err = f.create()
+	fmt.Printf("Create(%d) %s\n", f.id, f.addr)
 	return
 }
 

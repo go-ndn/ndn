@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestDial(t *testing.T) {
+func TestSignKey(t *testing.T) {
 	b, err := ioutil.ReadFile("key/testing.pri")
 	if err != nil {
 		t.Error(err)
@@ -17,6 +17,9 @@ func TestDial(t *testing.T) {
 		t.Error(err)
 		return
 	}
+}
+
+func TestDial(t *testing.T) {
 	face, err := NewFace("tcp://localhost:6363")
 	if err != nil {
 		t.Error(err)
@@ -34,23 +37,12 @@ func TestDial(t *testing.T) {
 	err = face.Dial(i2, d2)
 	if err != nil {
 		t.Error(err)
+		Print(d2)
 		return
 	}
-	Print(d2)
 }
 
 func TestListen(t *testing.T) {
-	b, err := ioutil.ReadFile("key/testing.pri")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	err = SignKey.Decode(b)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
 	face, err := NewFace("tcp://localhost:6363")
 	if err != nil {
 		t.Error(err)
@@ -67,6 +59,7 @@ func TestListen(t *testing.T) {
 	err = face2.Dial(NewInterest("/hello/world"), d)
 	if err != nil {
 		t.Error(err)
+		Print(d)
+		return
 	}
-	Print(d)
 }

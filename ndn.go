@@ -10,8 +10,8 @@ import (
 	"strings"
 )
 
-func Print(i interface{}) {
-	spew.Dump(i)
+func Print(i ...interface{}) {
+	spew.Dump(i...)
 }
 
 type Name struct {
@@ -72,6 +72,7 @@ type KeyLocator struct {
 }
 
 func (this *Name) Set(s string) {
+	this.Components = nil
 	if len(s) == 0 {
 		return
 	}
