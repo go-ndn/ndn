@@ -8,7 +8,6 @@ import (
 	"io"
 	"net"
 	"net/url"
-	"reflect"
 	"strings"
 )
 
@@ -114,11 +113,10 @@ func (this *Face) Announce(prefixList ...string) error {
 	return nil
 }
 
-func (this *Face) Listen(sample ReadFrom, handler func(ReadFrom) (WriteTo, error)) (err error) {
+func (this *Face) Listen(gen func() ReadFrom, handler func(ReadFrom) (WriteTo, error)) (err error) {
 	fmt.Printf("Listen(%d) %s\n", this.id, this.addr)
-	packetType := reflect.TypeOf(sample).Elem()
 	for {
-		packet := reflect.New(packetType).Interface().(ReadFrom)
+		packet := gen()
 		err = packet.ReadFrom(this.r)
 		if err != nil {
 			fmt.Println(err)

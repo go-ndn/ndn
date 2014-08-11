@@ -4,7 +4,6 @@ import (
 	//"bytes"
 	"io/ioutil"
 	"testing"
-	"time"
 )
 
 func TestDial(t *testing.T) {
@@ -58,12 +57,11 @@ func TestListen(t *testing.T) {
 		return
 	}
 	err = face.Announce("/hello/world")
-	go face.Listen(new(Interest), func(r ReadFrom) (w WriteTo, err error) {
+	go face.Listen(func() ReadFrom { return new(Interest) }, func(r ReadFrom) (w WriteTo, err error) {
 		i, _ := r.(*Interest)
 		w = NewData(i.Name.String())
 		return
 	})
-	<-time.After(time.Second)
 	face2, err := NewFace("tcp://localhost:6363")
 	d := new(Data)
 	err = face2.Dial(NewInterest("/hello/world"), d)
