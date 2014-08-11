@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/url"
+	"reflect"
 	"strings"
 )
 
@@ -72,10 +73,6 @@ func (this *Face) dial(out WriteTo, in ReadFrom) (err error) {
 		return
 	}
 	err = in.ReadFrom(this.r)
-	if err != nil {
-		Print(in)
-		return
-	}
 	return
 }
 
@@ -97,7 +94,7 @@ func (this *Face) create() (err error) {
 	return
 }
 
-func (this *Face) announcePrefix(prefixList []string) error {
+func (this *Face) Announce(prefixList ...string) error {
 	for _, prefix := range prefixList {
 		control := new(ControlPacket)
 		control.Name.Module = "fib"
@@ -117,16 +114,11 @@ func (this *Face) announcePrefix(prefixList []string) error {
 	return nil
 }
 
-func (this *Face) Listen(prefixList []string, packet ReadFrom, handler func(ReadFrom) (WriteTo, error)) (err error) {
-	// announce prefix
-	err = this.announcePrefix(prefixList)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+func (this *Face) Listen(sample ReadFrom, handler func(ReadFrom) (WriteTo, error)) (err error) {
 	fmt.Printf("Listen(%d) %s\n", this.id, this.addr)
+	packetType := reflect.TypeOf(sample).Elem()
 	for {
-		// read one chunk only
+		packet := reflect.New(packetType).Interface().(ReadFrom)
 		err = packet.ReadFrom(this.r)
 		if err != nil {
 			fmt.Println(err)
