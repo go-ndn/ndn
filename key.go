@@ -207,7 +207,7 @@ func PrintCertificate(raw []byte) (err error) {
 }
 
 type ecdsaSignature struct {
-	r, s *big.Int
+	R, S *big.Int
 }
 
 func (this *Key) Sign(digest []byte) (signature []byte, err error) {
@@ -216,7 +216,7 @@ func (this *Key) Sign(digest []byte) (signature []byte, err error) {
 		signature, err = rsa.SignPKCS1v15(rand.Reader, this.privateKey.(*rsa.PrivateKey), crypto.SHA256, digest)
 	case *ecdsa.PrivateKey:
 		var sig ecdsaSignature
-		sig.r, sig.s, err = ecdsa.Sign(rand.Reader, this.privateKey.(*ecdsa.PrivateKey), digest)
+		sig.R, sig.S, err = ecdsa.Sign(rand.Reader, this.privateKey.(*ecdsa.PrivateKey), digest)
 		if err != nil {
 			return
 		}

@@ -30,13 +30,12 @@ Benchmark
 
 2014-08
 ```
-BenchmarkDataEncodeRsa	     100	  10595565 ns/op
-BenchmarkDataEncodeEcdsa	     100	  10585431 ns/op
-BenchmarkDataEncode	   50000	     34698 ns/op
-BenchmarkDataDecode	   50000	     69516 ns/op
-BenchmarkInterestEncode	  200000	     11347 ns/op
-BenchmarkInterestDecode	  100000	     31748 ns/op
-
+BenchmarkDataEncodeRsa	     100	  10602984 ns/op
+BenchmarkDataEncodeEcdsa	    1000	   2331976 ns/op
+BenchmarkDataEncode	   50000	     34764 ns/op
+BenchmarkDataDecode	   50000	     71636 ns/op
+BenchmarkInterestEncode	  200000	     11575 ns/op
+BenchmarkInterestDecode	  100000	     33929 ns/op
 ```
 
 2014-01
