@@ -23,6 +23,10 @@ func AcceptInterest() ReadFrom {
 	return new(Interest)
 }
 
+func AcceptData() ReadFrom {
+	return new(Data)
+}
+
 type Face struct {
 	scheme string
 	host   string

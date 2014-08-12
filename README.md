@@ -10,20 +10,37 @@ To use this packege, you should do `import "github.com/taylorchu/ndn"`.
 Detailed Documentation is on [godoc](https://godoc.org/github.com/taylorchu/ndn).
 Use *_test.go as examples.
 
-The current test coverage is about 70%. I hope someone can help me reach 100%.
+Changelog
+=========
+* 2014-01: first release with go reflection
+* 2014-04: update ecdsa key implementation
+* 2014-08: refactor with interface
 
 What is it?
 ===========
-1. TLV (tlv.go)
-2. Raw NDN TLV encoder/decoder (encoding.go)
-3. NDN packet management in go (ndn.go)
-4. NDN server/client abstraction (WIP)
-5. NFD forward daemon client api (nfd.go)
+1. [TLV](https://github.com/taylorchu/tlv)
+2. NDN packet management in go (ndn.go)
+3. NDN server/client abstraction (face.go)
+4. NFD forward daemon client api (nfd.go)
 
 ![Imgur](http://i.imgur.com/68hMHZu.png?1)
 
 Benchmark
 =========
+
+2014-08
+```
+BenchmarkDataEncodeRsa	     100	  10595565 ns/op
+BenchmarkDataEncodeEcdsa	     100	  10585431 ns/op
+BenchmarkDataEncode	   50000	     34698 ns/op
+BenchmarkDataDecode	   50000	     69516 ns/op
+BenchmarkInterestEncode	  200000	     11347 ns/op
+BenchmarkInterestDecode	  100000	     31748 ns/op
+
+```
+
+2014-01
+
 ```
 BenchmarkDataSHA256Encode     100000         22272 ns/op
 BenchmarkDataSHA256Decode     100000         27381 ns/op
