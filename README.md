@@ -48,7 +48,4 @@ BenchmarkDataRSADecode     50000         68238 ns/op
 BenchmarkInterestEncode   200000          9064 ns/op
 BenchmarkInterestDecode   100000         17223 ns/op
 ```
-Note: RSA key is 2048 bits. 
-
-In general, creating Interests is quick, creating sha256 data is 2x slower, and creating rsa data is 4000x slower.
-Except for RSA encoding, encoding is faster than decoding.
+Note: RSA key is 2048 bits. ECDSA uses P224.
