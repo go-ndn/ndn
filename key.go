@@ -226,3 +226,23 @@ func (this *Key) Sign(digest []byte) (signature []byte, err error) {
 	}
 	return
 }
+
+func (this *Key) Verify(digest, signature []byte) error {
+	switch this.privateKey.(type) {
+	case *rsa.PrivateKey:
+		return rsa.VerifyPKCS1v15(&this.privateKey.(*rsa.PrivateKey).PublicKey, crypto.SHA256, digest, signature)
+	case *ecdsa.PrivateKey:
+		var sig ecdsaSignature
+		_, err := asn1.Unmarshal(signature, &sig)
+		if err != nil {
+			return err
+		}
+		if ecdsa.Verify(&this.privateKey.(*ecdsa.PrivateKey).PublicKey, digest, sig.R, sig.S) {
+			return nil
+		} else {
+			return errors.New("crypto/ecdsa: verification error")
+		}
+	default:
+		return errors.New("unsupported key type")
+	}
+}
