@@ -2,7 +2,7 @@ package ndn
 
 import (
 	"bytes"
-	"errors"
+	"fmt"
 	"github.com/taylorchu/tlv"
 	"time"
 )
@@ -106,7 +106,7 @@ func (this *ControlResponsePacket) ReadFrom(r tlv.PeekReader) error {
 	switch this.SignatureInfo.SignatureType {
 	case SignatureTypeSha256:
 		if !bytes.Equal(this.SignatureValue, digest) {
-			return errors.New("cannot verify sha256")
+			return fmt.Errorf("cannot verify sha256")
 		}
 	case SignatureTypeSha256WithRsa:
 		// TODO: enable rsa
@@ -148,7 +148,7 @@ func (this *FibEntryPacket) ReadFrom(r tlv.PeekReader) error {
 	switch this.SignatureInfo.SignatureType {
 	case SignatureTypeSha256:
 		if !bytes.Equal(this.SignatureValue, digest) {
-			return errors.New("cannot verify sha256")
+			return fmt.Errorf("cannot verify sha256")
 		}
 	case SignatureTypeSha256WithRsa:
 		// TODO: enable rsa
@@ -191,7 +191,7 @@ func (this *FaceEntryPacket) ReadFrom(r tlv.PeekReader) error {
 	switch this.SignatureInfo.SignatureType {
 	case SignatureTypeSha256:
 		if !bytes.Equal(this.SignatureValue, digest) {
-			return errors.New("cannot verify sha256")
+			return fmt.Errorf("cannot verify sha256")
 		}
 	case SignatureTypeSha256WithRsa:
 		// TODO: enable rsa
@@ -234,7 +234,7 @@ func (this *ForwarderStatusPacket) ReadFrom(r tlv.PeekReader) error {
 	switch this.SignatureInfo.SignatureType {
 	case SignatureTypeSha256:
 		if !bytes.Equal(this.SignatureValue, digest) {
-			return errors.New("cannot verify sha256")
+			return fmt.Errorf("cannot verify sha256")
 		}
 	case SignatureTypeSha256WithRsa:
 		// TODO: enable rsa

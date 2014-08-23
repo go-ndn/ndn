@@ -12,7 +12,7 @@ import (
 	"encoding/asn1"
 	"encoding/base64"
 	"encoding/pem"
-	"errors"
+	"fmt"
 	"math/big"
 	"time"
 )
@@ -35,7 +35,7 @@ func (this *Key) LocatorName() (name Name) {
 func (this *Key) Decode(pemData []byte) (err error) {
 	block, _ := pem.Decode(pemData)
 	if block == nil {
-		err = errors.New("not pem data")
+		err = fmt.Errorf("not pem data")
 		return
 	}
 	this.Name.Set(block.Headers["NAME"])
@@ -45,7 +45,7 @@ func (this *Key) Decode(pemData []byte) (err error) {
 	case "ECDSA PRIVATE KEY":
 		this.privateKey, err = x509.ParseECPrivateKey(block.Bytes)
 	default:
-		err = errors.New("unsupported key type")
+		err = fmt.Errorf("unsupported key type")
 	}
 	return
 }
@@ -64,7 +64,7 @@ func (this *Key) Encode() (pemData []byte, err error) {
 		}
 		keyType = "ECDSA PRIVATE KEY"
 	default:
-		err = errors.New("unsupported key type")
+		err = fmt.Errorf("unsupported key type")
 		return
 	}
 	pemData = pem.EncodeToMemory(&pem.Block{
@@ -102,7 +102,7 @@ func (this *Key) EncodeCertificate() (raw []byte, err error) {
 		oidSig = oidEcdsa
 		sigType = SignatureTypeSha256WithEcdsa
 	default:
-		err = errors.New("unsupported key type")
+		err = fmt.Errorf("unsupported key type")
 		return
 	}
 
@@ -166,7 +166,7 @@ func NewKey(name string, privateKey crypto.PrivateKey) (key Key, err error) {
 	case *rsa.PrivateKey:
 	case *ecdsa.PrivateKey:
 	default:
-		err = errors.New("unsupported key type")
+		err = fmt.Errorf("unsupported key type")
 		return
 	}
 	key.privateKey = privateKey
@@ -191,9 +191,8 @@ type subjectPubKeyInfo struct {
 
 func PrintCertificate(raw []byte) (err error) {
 	// newline does not matter
-	dec := base64.NewDecoder(base64.StdEncoding, bytes.NewBuffer(raw))
 	var d Data
-	err = d.ReadFrom(bufio.NewReader(dec))
+	err = d.ReadFrom(bufio.NewReader(base64.NewDecoder(base64.StdEncoding, bytes.NewBuffer(raw))))
 	if err != nil {
 		return
 	}
@@ -222,7 +221,7 @@ func (this *Key) Sign(digest []byte) (signature []byte, err error) {
 		}
 		signature, err = asn1.Marshal(sig)
 	default:
-		err = errors.New("unsupported key type")
+		err = fmt.Errorf("unsupported key type")
 	}
 	return
 }
@@ -240,9 +239,9 @@ func (this *Key) Verify(digest, signature []byte) error {
 		if ecdsa.Verify(&this.privateKey.(*ecdsa.PrivateKey).PublicKey, digest, sig.R, sig.S) {
 			return nil
 		} else {
-			return errors.New("crypto/ecdsa: verification error")
+			return fmt.Errorf("crypto/ecdsa: verification error")
 		}
 	default:
-		return errors.New("unsupported key type")
+		return fmt.Errorf("unsupported key type")
 	}
 }

@@ -2,7 +2,6 @@ package ndn
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"github.com/taylorchu/tlv"
 	"io"
@@ -23,10 +22,6 @@ func AcceptInterest() ReadFrom {
 	return new(Interest)
 }
 
-func AcceptData() ReadFrom {
-	return new(Data)
-}
-
 type Face struct {
 	scheme string
 	host   string
@@ -43,11 +38,11 @@ func NewFace(raw string) (f *Face, err error) {
 		return
 	}
 	if len(u.Scheme) == 0 || len(u.Host) == 0 {
-		err = errors.New("scheme and host should not be empty")
+		err = fmt.Errorf("scheme and host should not be empty")
 		return
 	}
 	if !strings.Contains(u.Host, ":") && (strings.HasPrefix(u.Scheme, "tcp") || strings.HasPrefix(u.Scheme, "udp")) {
-		err = errors.New("tcp and udp should have port number")
+		err = fmt.Errorf("tcp and udp should have port number")
 		return
 	}
 	f = &Face{
@@ -97,7 +92,7 @@ func (this *Face) create() (err error) {
 		return
 	}
 	if controlResponse.Content.Response.StatusCode != 200 {
-		err = errors.New(fmt.Sprintf("(%d) %s", controlResponse.Content.Response.StatusCode, controlResponse.Content.Response.StatusText))
+		err = fmt.Errorf("(%d) %s", controlResponse.Content.Response.StatusCode, controlResponse.Content.Response.StatusText)
 		return
 	}
 	this.id = controlResponse.Content.Response.Parameters.FaceId
@@ -118,7 +113,7 @@ func (this *Face) Announce(prefixList ...string) error {
 			return err
 		}
 		if controlResponse.Content.Response.StatusCode != 200 {
-			return errors.New(fmt.Sprintf("(%d) %s", controlResponse.Content.Response.StatusCode, controlResponse.Content.Response.StatusText))
+			return fmt.Errorf("(%d) %s", controlResponse.Content.Response.StatusCode, controlResponse.Content.Response.StatusText)
 		}
 	}
 	return nil

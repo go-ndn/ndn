@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
-	"errors"
+	"fmt"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/taylorchu/tlv"
 	"strings"
@@ -157,7 +157,7 @@ func (this *Data) ReadFrom(r tlv.PeekReader) (err error) {
 	switch this.SignatureInfo.SignatureType {
 	case SignatureTypeSha256:
 		if !bytes.Equal(this.SignatureValue, digest) {
-			err = errors.New("cannot verify sha256")
+			err = fmt.Errorf("cannot verify sha256")
 			return
 		}
 	case SignatureTypeSha256WithRsa:
