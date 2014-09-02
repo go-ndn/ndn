@@ -32,7 +32,7 @@ func (this *ControlPacket) WriteTo(w tlv.Writer) (err error) {
 	this.Name.Nfd = "nfd"
 	this.Name.Timestamp = uint64(time.Now().UnixNano() / 1000000)
 	this.Name.Random = newNonce()
-	this.Name.SignatureInfo.SignatureInfo.SignatureType = SignatureTypeSha256WithRsa
+	this.Name.SignatureInfo.SignatureInfo.SignatureType = SignKey.SignatureType()
 	this.Name.SignatureInfo.SignatureInfo.KeyLocator.Name = SignKey.LocatorName()
 
 	digest, err := newSha256(this.Name)

@@ -131,10 +131,12 @@ func (this *Data) WriteTo(w tlv.Writer) (err error) {
 	if err != nil {
 		return
 	}
-	switch this.SignatureInfo.SignatureType {
+	sigType := SignKey.SignatureType()
+	switch sigType {
 	case SignatureTypeSha256:
 		this.SignatureValue = digest
 	default:
+		this.SignatureInfo.SignatureType = sigType
 		this.SignatureInfo.KeyLocator.Name = SignKey.LocatorName()
 		this.SignatureValue, err = SignKey.Sign(digest)
 		if err != nil {

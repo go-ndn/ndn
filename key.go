@@ -82,8 +82,17 @@ var (
 	oidEcdsa = asn1.ObjectIdentifier{1, 2, 840, 10045, 2, 1}
 )
 
+func (this *Key) SignatureType() uint64 {
+	switch this.privateKey.(type) {
+	case *rsa.PrivateKey:
+		return SignatureTypeSha256WithRsa
+	case *ecdsa.PrivateKey:
+		return SignatureTypeSha256WithEcdsa
+	}
+	return SignatureTypeSha256
+}
+
 func (this *Key) EncodeCertificate() (raw []byte, err error) {
-	var sigType uint64
 	var publicKeyBytes []byte
 	var oidSig asn1.ObjectIdentifier
 	switch this.privateKey.(type) {
@@ -93,14 +102,12 @@ func (this *Key) EncodeCertificate() (raw []byte, err error) {
 			return
 		}
 		oidSig = oidRsa
-		sigType = SignatureTypeSha256WithRsa
 	case *ecdsa.PrivateKey:
 		publicKeyBytes, err = asn1.Marshal(this.privateKey.(*ecdsa.PrivateKey).PublicKey)
 		if err != nil {
 			return
 		}
 		oidSig = oidEcdsa
-		sigType = SignatureTypeSha256WithEcdsa
 	default:
 		err = fmt.Errorf("unsupported key type")
 		return
@@ -112,7 +119,6 @@ func (this *Key) EncodeCertificate() (raw []byte, err error) {
 			ContentType: 2, //key
 		},
 		SignatureInfo: SignatureInfo{
-			SignatureType: sigType,
 			KeyLocator: KeyLocator{
 				Name: this.LocatorName(),
 			},
