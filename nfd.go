@@ -7,6 +7,11 @@ import (
 	"time"
 )
 
+var (
+	NfdNetwork = "tcp"
+	NfdAddress = "localhost:6363"
+)
+
 type ControlPacket struct {
 	Name      SignedName `tlv:"7"`
 	Selectors Selectors  `tlv:"9?"`
@@ -22,7 +27,7 @@ type SignedName struct {
 	Command        string                  `tlv:"8"`
 	Parameters     ParametersComponent     `tlv:"8"`
 	Timestamp      uint64                  `tlv:"8"`
-	Random         []byte                  `tlv:"8"`
+	Nonce          []byte                  `tlv:"8"`
 	SignatureInfo  SignatureInfoComponent  `tlv:"8"`
 	SignatureValue SignatureValueComponent `tlv:"8*"`
 }
@@ -31,7 +36,7 @@ func (this *ControlPacket) WriteTo(w tlv.Writer) (err error) {
 	this.Name.Localhost = "localhost"
 	this.Name.Nfd = "nfd"
 	this.Name.Timestamp = uint64(time.Now().UnixNano() / 1000000)
-	this.Name.Random = newNonce()
+	this.Name.Nonce = newNonce()
 	this.Name.SignatureInfo.SignatureInfo.SignatureType = SignKey.SignatureType()
 	this.Name.SignatureInfo.SignatureInfo.KeyLocator.Name = SignKey.LocatorName()
 

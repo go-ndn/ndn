@@ -6,8 +6,6 @@ import (
 	"github.com/taylorchu/tlv"
 	"io"
 	"net"
-	"net/url"
-	"strings"
 )
 
 type ReadFrom interface {
@@ -18,13 +16,7 @@ type WriteTo interface {
 	WriteTo(w tlv.Writer) (err error)
 }
 
-func AcceptInterest() ReadFrom {
-	return new(Interest)
-}
-
 type Face struct {
-	scheme string
-	host   string
 	id     uint64
 	addr   string // local address
 	r      tlv.PeekReader
@@ -32,33 +24,22 @@ type Face struct {
 	closer io.Closer
 }
 
-func NewFace(raw string) (f *Face, err error) {
-	u, err := url.Parse(raw)
+func NewFace() (f *Face, err error) {
+	conn, err := net.Dial(NfdNetwork, NfdAddress)
 	if err != nil {
-		return
-	}
-	if len(u.Scheme) == 0 || len(u.Host) == 0 {
-		err = fmt.Errorf("scheme and host should not be empty")
-		return
-	}
-	if !strings.Contains(u.Host, ":") && (strings.HasPrefix(u.Scheme, "tcp") || strings.HasPrefix(u.Scheme, "udp")) {
-		err = fmt.Errorf("tcp and udp should have port number")
 		return
 	}
 	f = &Face{
-		scheme: u.Scheme,
-		host:   u.Host,
+		r:      bufio.NewReader(conn),
+		w:      conn,
+		closer: conn,
+		addr:   NfdNetwork + "://" + conn.LocalAddr().String(),
 	}
-	conn, err := net.Dial(f.scheme, f.host)
+	// nfd create face
+	err = f.create()
 	if err != nil {
 		return
 	}
-	f.r = bufio.NewReader(conn)
-	f.w = conn
-	f.closer = conn
-	f.addr = f.scheme + "://" + conn.LocalAddr().String()
-	// nfd create face
-	err = f.create()
 	fmt.Printf("Create(%d) %s\n", f.id, f.addr)
 	return
 }
@@ -67,8 +48,9 @@ func (this *Face) Close() error {
 	return this.closer.Close()
 }
 
-func (this *Face) Dial(out WriteTo, in ReadFrom) (err error) {
-	err = this.dial(out, in)
+func (this *Face) Dial(i *Interest) (d *Data, err error) {
+	d = new(Data)
+	err = this.dial(i, d)
 	return
 }
 
@@ -119,15 +101,15 @@ func (this *Face) Announce(prefixList ...string) error {
 	return nil
 }
 
-func (this *Face) Listen(gen func() ReadFrom, handler func(ReadFrom) (WriteTo, error)) (err error) {
+func (this *Face) Listen(handler func(*Interest) (*Data, error)) (err error) {
 	for {
-		packet := gen()
+		packet := new(Interest)
 		err = packet.ReadFrom(this.r)
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
-		go func(in ReadFrom) {
+		go func(in *Interest) {
 			out, err := handler(in)
 			if err != nil {
 				fmt.Println(err)
