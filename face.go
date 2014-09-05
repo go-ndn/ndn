@@ -30,7 +30,7 @@ func NewFace(addr string) (f *Face, err error) {
 	if err != nil {
 		return
 	}
-	conn, err := net.Dial(u.Scheme, u.Host)
+	conn, err := net.Dial(u.Scheme, u.Host+u.Path)
 	if err != nil {
 		return
 	}
@@ -40,12 +40,6 @@ func NewFace(addr string) (f *Face, err error) {
 		closer: conn,
 		addr:   u.Scheme + "://" + conn.LocalAddr().String(),
 	}
-	// nfd create face
-	err = f.create()
-	if err != nil {
-		return
-	}
-	fmt.Printf("Create(%d) %s\n", f.id, f.addr)
 	return
 }
 
@@ -87,6 +81,14 @@ func (this *Face) create() (err error) {
 }
 
 func (this *Face) Announce(prefixList ...string) error {
+	if this.id == 0 {
+		// nfd create face
+		err := this.create()
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Create(%d) %s\n", this.id, this.addr)
+	}
 	for _, prefix := range prefixList {
 		control := new(ControlPacket)
 		control.Name.Module = "fib"

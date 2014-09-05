@@ -8,14 +8,14 @@ import (
 )
 
 type ControlPacket struct {
-	Name      SignedName `tlv:"7"`
-	Selectors Selectors  `tlv:"9?"`
-	Nonce     []byte     `tlv:"10"`
-	Scope     uint64     `tlv:"11?"`
-	LifeTime  uint64     `tlv:"12?"`
+	Name      Command   `tlv:"7"`
+	Selectors Selectors `tlv:"9?"`
+	Nonce     []byte    `tlv:"10"`
+	Scope     uint64    `tlv:"11?"`
+	LifeTime  uint64    `tlv:"12?"`
 }
 
-type SignedName struct {
+type Command struct {
 	Localhost      string                  `tlv:"8"`
 	Nfd            string                  `tlv:"8"`
 	Module         string                  `tlv:"8"`
@@ -87,7 +87,7 @@ type Response struct {
 }
 
 type ControlResponsePacket struct {
-	Name           SignedName    `tlv:"7"`
+	Name           Command       `tlv:"7"`
 	MetaInfo       MetaInfo      `tlv:"20"`
 	Content        Response      `tlv:"21"`
 	SignatureInfo  SignatureInfo `tlv:"22"`
