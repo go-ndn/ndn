@@ -18,7 +18,7 @@ func TestSignKey(t *testing.T) {
 }
 
 func TestListen(t *testing.T) {
-	face, err := NewFace()
+	face, err := NewFace("tcp://localhost:6363")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -29,7 +29,7 @@ func TestListen(t *testing.T) {
 	go face.Listen(func(i *Interest) (*Data, error) {
 		return NewData(i.Name.String()), nil
 	})
-	face2, err := NewFace()
+	face2, err := NewFace("tcp://localhost:6363")
 	if err != nil {
 		t.Fatal(err)
 	}

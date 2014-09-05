@@ -7,11 +7,6 @@ import (
 	"time"
 )
 
-var (
-	NfdNetwork = "tcp"
-	NfdAddress = "localhost:6363"
-)
-
 type ControlPacket struct {
 	Name      SignedName `tlv:"7"`
 	Selectors Selectors  `tlv:"9?"`

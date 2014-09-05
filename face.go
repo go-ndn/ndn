@@ -6,6 +6,7 @@ import (
 	"github.com/taylorchu/tlv"
 	"io"
 	"net"
+	"net/url"
 )
 
 type ReadFrom interface {
@@ -24,8 +25,12 @@ type Face struct {
 	closer io.Closer
 }
 
-func NewFace() (f *Face, err error) {
-	conn, err := net.Dial(NfdNetwork, NfdAddress)
+func NewFace(addr string) (f *Face, err error) {
+	u, err := url.Parse(addr)
+	if err != nil {
+		return
+	}
+	conn, err := net.Dial(u.Scheme, u.Host)
 	if err != nil {
 		return
 	}
@@ -33,7 +38,7 @@ func NewFace() (f *Face, err error) {
 		r:      bufio.NewReader(conn),
 		w:      conn,
 		closer: conn,
-		addr:   NfdNetwork + "://" + conn.LocalAddr().String(),
+		addr:   u.Scheme + "://" + conn.LocalAddr().String(),
 	}
 	// nfd create face
 	err = f.create()
