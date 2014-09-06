@@ -33,7 +33,7 @@ func (this *ControlPacket) WriteTo(w tlv.Writer) (err error) {
 	this.Name.Timestamp = uint64(time.Now().UnixNano() / 1000000)
 	this.Name.Nonce = newNonce()
 	this.Name.SignatureInfo.SignatureInfo.SignatureType = SignKey.SignatureType()
-	this.Name.SignatureInfo.SignatureInfo.KeyLocator.Name = SignKey.LocatorName()
+	this.Name.SignatureInfo.SignatureInfo.KeyLocator.Name = SignKey.CertName()
 
 	digest, err := newSha256(this.Name)
 	if err != nil {

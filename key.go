@@ -2,7 +2,6 @@ package ndn
 
 import (
 	"bufio"
-	"bytes"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
@@ -13,6 +12,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"math/big"
 	"time"
 )
@@ -27,7 +27,7 @@ type Key struct {
 	privateKey crypto.PrivateKey
 }
 
-func (this *Key) LocatorName() (name Name) {
+func (this *Key) CertName() (name Name) {
 	name.Components = append(this.Name.Components, []byte("KEY"), []byte("ID-CERT"))
 	return
 }
@@ -92,7 +92,7 @@ func (this *Key) SignatureType() uint64 {
 	return SignatureTypeSha256
 }
 
-func (this *Key) EncodeCertificate() (raw []byte, err error) {
+func (this *Key) EncodeCertificate(buf io.Writer) (err error) {
 	var publicKeyBytes []byte
 	var oidSig asn1.ObjectIdentifier
 	switch key := this.privateKey.(type) {
@@ -113,15 +113,10 @@ func (this *Key) EncodeCertificate() (raw []byte, err error) {
 		return
 	}
 
-	d := Data{
-		Name: this.LocatorName(),
+	d := &Data{
+		Name: this.CertName(),
 		MetaInfo: MetaInfo{
 			ContentType: 2, //key
-		},
-		SignatureInfo: SignatureInfo{
-			KeyLocator: KeyLocator{
-				Name: this.LocatorName(),
-			},
 		},
 	}
 	d.Content, err = asn1.Marshal(certificate{
@@ -152,17 +147,12 @@ func (this *Key) EncodeCertificate() (raw []byte, err error) {
 	if err != nil {
 		return
 	}
-	buf := new(bytes.Buffer)
 	enc := base64.NewEncoder(base64.StdEncoding, buf)
 	err = d.WriteTo(enc)
 	if err != nil {
 		return
 	}
 	enc.Close()
-	for buf.Len() != 0 {
-		raw = append(raw, buf.Next(64)...)
-		raw = append(raw, 0xA)
-	}
 	return
 }
 
@@ -195,19 +185,41 @@ type subjectPubKeyInfo struct {
 	Bytes               asn1.BitString
 }
 
-func PrintCertificate(raw []byte) (err error) {
+func (this *Key) DecodeCertificate(buf io.Reader) (err error) {
 	// newline does not matter
-	var d Data
-	err = d.ReadFrom(bufio.NewReader(base64.NewDecoder(base64.StdEncoding, bytes.NewBuffer(raw))))
+	d := new(Data)
+	err = d.ReadFrom(bufio.NewReader(base64.NewDecoder(base64.StdEncoding, buf)))
 	if err != nil {
 		return
 	}
-	cert := &certificate{}
+	cert := new(certificate)
 	_, err = asn1.Unmarshal(d.Content, cert)
 	if err != nil {
 		return
 	}
-	Print(d, cert)
+	if len(cert.Subject) == 0 {
+		fmt.Errorf("subject not found")
+		return
+	}
+	this.Name = NewName(cert.Subject[0].Value.(string))
+	switch cert.SubjectPubKeyInfo.AlgorithmIdentifier.Algorithm.String() {
+	case oidRsa.String():
+		pri := &rsa.PrivateKey{}
+		_, err = asn1.Unmarshal(cert.SubjectPubKeyInfo.Bytes.Bytes, pri.PublicKey)
+		if err != nil {
+			return
+		}
+		this.privateKey = pri
+	case oidEcdsa.String():
+		pri := &ecdsa.PrivateKey{}
+		_, err = asn1.Unmarshal(cert.SubjectPubKeyInfo.Bytes.Bytes, pri.PublicKey)
+		if err != nil {
+			return
+		}
+		this.privateKey = pri
+	default:
+		err = fmt.Errorf("unsupported key type")
+	}
 	return
 }
 
