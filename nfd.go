@@ -43,6 +43,10 @@ func (this *ControlPacket) WriteTo(w tlv.Writer) (err error) {
 	if err != nil {
 		return
 	}
+
+	if this.LifeTime == 0 {
+		this.LifeTime = 4000
+	}
 	this.Nonce = newNonce()
 	err = tlv.Marshal(w, this, 5)
 	return
@@ -87,7 +91,7 @@ type Response struct {
 }
 
 type ControlResponsePacket struct {
-	Name           Command       `tlv:"7"`
+	Name           Name          `tlv:"7"`
 	MetaInfo       MetaInfo      `tlv:"20"`
 	Content        Response      `tlv:"21"`
 	SignatureInfo  SignatureInfo `tlv:"22"`
@@ -128,34 +132,6 @@ type FibEntries struct {
 	FibEntries []FibEntry `tlv:"128"`
 }
 
-type FibEntryPacket struct {
-	Name           Name          `tlv:"7"`
-	MetaInfo       MetaInfo      `tlv:"20"`
-	Content        FibEntries    `tlv:"21"`
-	SignatureInfo  SignatureInfo `tlv:"22"`
-	SignatureValue []byte        `tlv:"23*"`
-}
-
-func (this *FibEntryPacket) ReadFrom(r tlv.PeekReader) error {
-	err := tlv.Unmarshal(r, this, 6)
-	if err != nil {
-		return err
-	}
-	digest, err := newSha256(this)
-	if err != nil {
-		return err
-	}
-	switch this.SignatureInfo.SignatureType {
-	case SignatureTypeSha256:
-		if !bytes.Equal(this.SignatureValue, digest) {
-			return fmt.Errorf("cannot verify sha256")
-		}
-	case SignatureTypeSha256WithRsa:
-		// TODO: enable rsa
-	}
-	return nil
-}
-
 type FaceEntry struct {
 	FaceId      uint64 `tlv:"105"`
 	Uri         string `tlv:"114"`
@@ -169,34 +145,6 @@ type FaceEntry struct {
 
 type FaceEntries struct {
 	FaceEntries []FaceEntry `tlv:"128"`
-}
-
-type FaceEntryPacket struct {
-	Name           Name          `tlv:"7"`
-	MetaInfo       MetaInfo      `tlv:"20"`
-	Content        FaceEntries   `tlv:"21"`
-	SignatureInfo  SignatureInfo `tlv:"22"`
-	SignatureValue []byte        `tlv:"23*"`
-}
-
-func (this *FaceEntryPacket) ReadFrom(r tlv.PeekReader) error {
-	err := tlv.Unmarshal(r, this, 6)
-	if err != nil {
-		return err
-	}
-	digest, err := newSha256(this)
-	if err != nil {
-		return err
-	}
-	switch this.SignatureInfo.SignatureType {
-	case SignatureTypeSha256:
-		if !bytes.Equal(this.SignatureValue, digest) {
-			return fmt.Errorf("cannot verify sha256")
-		}
-	case SignatureTypeSha256WithRsa:
-		// TODO: enable rsa
-	}
-	return nil
 }
 
 type ForwarderStatus struct {

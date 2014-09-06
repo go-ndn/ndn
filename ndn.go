@@ -4,9 +4,13 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/taylorchu/tlv"
+	"io"
+	"math"
+	"net/url"
 	"strings"
 )
 
@@ -14,8 +18,10 @@ func Print(i ...interface{}) {
 	spew.Dump(i...)
 }
 
+type Component []byte
+
 type Name struct {
-	Components [][]byte `tlv:"8"`
+	Components []Component `tlv:"8"`
 }
 
 // 5
@@ -52,7 +58,7 @@ type MetaInfo struct {
 }
 
 type FinalBlockId struct {
-	NameComponent []byte `tlv:"8"`
+	Component Component `tlv:"8"`
 }
 
 type SignatureInfo struct {
@@ -71,20 +77,88 @@ type KeyLocator struct {
 	Digest []byte `tlv:"29?"`
 }
 
-func (this *Name) Set(s string) {
-	this.Components = nil
-	if len(s) == 0 {
-		return
-	}
+type Marker uint8
+
+const (
+	Segment    Marker = 0x00
+	ByteOffset        = 0xFB
+	Version           = 0xFD
+	Timestamp         = 0xFC
+	Sequence          = 0xFE
+)
+
+func NewName(s string) (n Name) {
 	for _, c := range strings.Split(strings.Trim(s, "/"), "/") {
-		this.Components = append(this.Components, []byte(c))
+		uc, _ := url.QueryUnescape(c)
+		n.Components = append(n.Components, []byte(uc))
 	}
 	return
 }
 
-func (this Name) String() (s string) {
+func encodeUint64(buf io.Writer, v uint64) (err error) {
+	switch {
+	case v > math.MaxUint32:
+		err = binary.Write(buf, binary.BigEndian, v)
+	case v > math.MaxUint16:
+		err = binary.Write(buf, binary.BigEndian, uint32(v))
+	case v > math.MaxUint8:
+		err = binary.Write(buf, binary.BigEndian, uint16(v))
+	default:
+		err = binary.Write(buf, binary.BigEndian, uint8(v))
+	}
+	return
+}
+
+func decodeUint64(buf *bytes.Buffer) (v uint64, err error) {
+	switch buf.Len() {
+	case 8:
+		err = binary.Read(buf, binary.BigEndian, &v)
+	case 4:
+		var v32 uint32
+		err = binary.Read(buf, binary.BigEndian, &v32)
+		v = uint64(v32)
+	case 2:
+		var v16 uint16
+		err = binary.Read(buf, binary.BigEndian, &v16)
+		v = uint64(v16)
+	case 1:
+		var v8 uint8
+		err = binary.Read(buf, binary.BigEndian, &v8)
+		v = uint64(v8)
+	}
+	return
+}
+
+func (this *Name) Push(m Marker, v uint64) (err error) {
+	buf := new(bytes.Buffer)
+	buf.WriteByte(uint8(m))
+	err = encodeUint64(buf, v)
+	if err != nil {
+		return
+	}
+	this.Components = append(this.Components, buf.Bytes())
+	return
+}
+
+func (this *Name) Pop() (c Component) {
+	if len(this.Components) > 0 {
+		c = this.Components[len(this.Components)-1]
+		this.Components = this.Components[:len(this.Components)-1]
+	}
+	return
+}
+
+func (this Component) To(m Marker) (v uint64, err error) {
+	if len(this) == 0 || this[0] != uint8(m) {
+		err = fmt.Errorf("marker not found: %v", m)
+		return
+	}
+	return decodeUint64(bytes.NewBuffer(this[1:]))
+}
+
+func (this Name) String() (name string) {
 	for _, c := range this.Components {
-		s += "/" + string(c)
+		name += "/" + url.QueryEscape(string(c))
 	}
 	return
 }
@@ -95,25 +169,16 @@ func newNonce() []byte {
 	return b
 }
 
-func NewInterest(name string) (i *Interest) {
-	i = new(Interest)
-	i.Name.Set(name)
-	return
-}
-
 func (this *Interest) WriteTo(w tlv.Writer) error {
 	this.Nonce = newNonce()
+	if this.LifeTime == 0 {
+		this.LifeTime = 4000
+	}
 	return tlv.Marshal(w, this, 5)
 }
 
 func (this *Interest) ReadFrom(r tlv.PeekReader) error {
 	return tlv.Unmarshal(r, this, 5)
-}
-
-func NewData(name string) (d *Data) {
-	d = new(Data)
-	d.Name.Set(name)
-	return
 }
 
 func newSha256(v interface{}) (digest []byte, err error) {

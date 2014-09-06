@@ -21,7 +21,9 @@ func BenchmarkDataEncodeRsa(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	packet := NewData("/testing/ndn")
+	packet := &Data{
+		Name: NewName("/testing/ndn"),
+	}
 	packet.SignatureInfo.SignatureType = SignatureTypeSha256WithRsa
 	buf := new(bytes.Buffer)
 	b.StartTimer()
@@ -44,7 +46,9 @@ func BenchmarkDataEncodeEcdsa(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	packet := NewData("/testing/ndn")
+	packet := &Data{
+		Name: NewName("/testing/ndn"),
+	}
 	packet.SignatureInfo.SignatureType = SignatureTypeSha256WithEcdsa
 	buf := new(bytes.Buffer)
 	b.StartTimer()
@@ -58,7 +62,9 @@ func BenchmarkDataEncodeEcdsa(b *testing.B) {
 
 func BenchmarkDataEncode(b *testing.B) {
 	b.StopTimer()
-	packet := NewData("/testing/ndn")
+	packet := &Data{
+		Name: NewName("/testing/ndn"),
+	}
 	buf := new(bytes.Buffer)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
@@ -71,7 +77,9 @@ func BenchmarkDataEncode(b *testing.B) {
 
 func BenchmarkDataDecode(b *testing.B) {
 	b.StopTimer()
-	packet := NewData("/testing/ndn")
+	packet := &Data{
+		Name: NewName("/testing/ndn"),
+	}
 	buf := new(bytes.Buffer)
 	for i := 0; i < b.N; i++ {
 		packet.WriteTo(buf)
@@ -86,7 +94,9 @@ func BenchmarkDataDecode(b *testing.B) {
 
 func BenchmarkInterestEncode(b *testing.B) {
 	b.StopTimer()
-	packet := NewInterest("/testing/ndn")
+	packet := &Interest{
+		Name: NewName("/testing/ndn"),
+	}
 	buf := new(bytes.Buffer)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
@@ -99,7 +109,9 @@ func BenchmarkInterestEncode(b *testing.B) {
 
 func BenchmarkInterestDecode(b *testing.B) {
 	b.StopTimer()
-	packet := NewInterest("/testing/ndn")
+	packet := &Interest{
+		Name: NewName("/testing/ndn"),
+	}
 	buf := new(bytes.Buffer)
 	for i := 0; i < b.N; i++ {
 		packet.WriteTo(buf)

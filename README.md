@@ -15,6 +15,7 @@ Changelog
 * 2014-01: first release with go reflection
 * 2014-04: update ecdsa key implementation
 * 2014-08: refactor with interface
+* 2014-09: support (naming convention)[http://named-data.net/doc/tech-memos/naming-conventions.pdf]
 
 What is it?
 ===========
