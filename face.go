@@ -88,13 +88,6 @@ func (this *Face) dial(out WriteTo, in func() ReadFrom) (c chan ReadFrom) {
 				if err != nil {
 					goto EXIT
 				}
-				maxn, err := d.MetaInfo.FinalBlockId.Component.To(Segment)
-				if err != nil {
-					goto EXIT
-				}
-				if maxn <= segn {
-					goto EXIT
-				}
 				name.Push(Segment, segn+1)
 				(&Data{
 					Name: name,
