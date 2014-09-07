@@ -27,6 +27,9 @@ type Command struct {
 	SignatureValue SignatureValueComponent `tlv:"8*"`
 }
 
+// WriteTo writes control interest packet to tlv.Writer after it signs the name automatically
+//
+// Everything except Module, Command and Parameters will be populated.
 func (this *ControlPacket) WriteTo(w tlv.Writer) (err error) {
 	this.Name.Localhost = "localhost"
 	this.Name.Nfd = "nfd"
@@ -98,6 +101,7 @@ type ControlResponsePacket struct {
 	SignatureValue []byte        `tlv:"23*"`
 }
 
+// see data.ReadFrom
 func (this *ControlResponsePacket) ReadFrom(r tlv.PeekReader) (err error) {
 	err = tlv.Unmarshal(r, this, 6)
 	if err != nil {
@@ -108,7 +112,7 @@ func (this *ControlResponsePacket) ReadFrom(r tlv.PeekReader) (err error) {
 		return
 	}
 	switch this.SignatureInfo.SignatureType {
-	case SignatureTypeSha256:
+	case SignatureTypeDigestSha256:
 		if !bytes.Equal(this.SignatureValue, digest) {
 			err = fmt.Errorf("cannot verify sha256")
 			return
@@ -169,6 +173,7 @@ type ForwarderStatusPacket struct {
 	SignatureValue []byte          `tlv:"23*"`
 }
 
+// see data.ReadFrom
 func (this *ForwarderStatusPacket) ReadFrom(r tlv.PeekReader) (err error) {
 	err = tlv.Unmarshal(r, this, 6)
 	if err != nil {
@@ -179,7 +184,7 @@ func (this *ForwarderStatusPacket) ReadFrom(r tlv.PeekReader) (err error) {
 		return
 	}
 	switch this.SignatureInfo.SignatureType {
-	case SignatureTypeSha256:
+	case SignatureTypeDigestSha256:
 		if !bytes.Equal(this.SignatureValue, digest) {
 			err = fmt.Errorf("cannot verify sha256")
 			return

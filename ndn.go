@@ -9,11 +9,11 @@ import (
 	"github.com/taylorchu/tlv"
 )
 
+// Print dumps interest, data, or any variable in detail for debugging
 func Print(i ...interface{}) {
 	spew.Dump(i...)
 }
 
-// 5
 type Interest struct {
 	Name      Name      `tlv:"7"`
 	Selectors Selectors `tlv:"9?"`
@@ -31,7 +31,6 @@ type Selectors struct {
 	MustBeFresh               bool       `tlv:"18?"`
 }
 
-// 6
 type Data struct {
 	Name           Name          `tlv:"7"`
 	MetaInfo       MetaInfo      `tlv:"20"`
@@ -56,9 +55,9 @@ type SignatureInfo struct {
 }
 
 const (
-	SignatureTypeSha256          uint64 = 0
+	SignatureTypeDigestSha256    uint64 = 0
 	SignatureTypeSha256WithRsa          = 1
-	SignatureTypeSha256WithEcdsa        = 3
+	SignatureTypeSha256WithEcdsa        = 3 // 2 is already used
 )
 
 type KeyLocator struct {
@@ -72,6 +71,7 @@ func newNonce() []byte {
 	return b
 }
 
+// WriteTo writes interest to tlv.Writer after it populates nonce and lifeTime(if not defined) automatically
 func (this *Interest) WriteTo(w tlv.Writer) error {
 	this.Nonce = newNonce()
 	if this.LifeTime == 0 {
@@ -94,6 +94,9 @@ func newSha256(v interface{}) (digest []byte, err error) {
 	return
 }
 
+// WriteTo writes data to tlv.Writer after it signs data automatically
+//
+// If SignKey is not ready, it will only provide DigestSha256.
 func (this *Data) WriteTo(w tlv.Writer) (err error) {
 	digest, err := newSha256(this)
 	if err != nil {
@@ -101,7 +104,7 @@ func (this *Data) WriteTo(w tlv.Writer) (err error) {
 	}
 	sigType := SignKey.SignatureType()
 	switch sigType {
-	case SignatureTypeSha256:
+	case SignatureTypeDigestSha256:
 		this.SignatureValue = digest
 	default:
 		this.SignatureInfo.SignatureType = sigType
@@ -115,6 +118,9 @@ func (this *Data) WriteTo(w tlv.Writer) (err error) {
 	return
 }
 
+// ReadFrom reads data from tlv.PeekReader but it does not verify the signature
+//
+// If DigestSha256 is present, the integrity will be verified.
 func (this *Data) ReadFrom(r tlv.PeekReader) (err error) {
 	err = tlv.Unmarshal(r, this, 6)
 	if err != nil {
@@ -125,7 +131,7 @@ func (this *Data) ReadFrom(r tlv.PeekReader) (err error) {
 		return
 	}
 	switch this.SignatureInfo.SignatureType {
-	case SignatureTypeSha256:
+	case SignatureTypeDigestSha256:
 		if !bytes.Equal(this.SignatureValue, digest) {
 			err = fmt.Errorf("cannot verify sha256")
 			return

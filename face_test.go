@@ -1,7 +1,6 @@
 package ndn
 
 import (
-	//"bytes"
 	"io/ioutil"
 	"testing"
 )

@@ -24,6 +24,10 @@ type Face struct {
 	c  net.Conn
 }
 
+// NewFace creates PIT-less face to avoid O(N) PIT lookup, but the face is not reusable
+//
+// Known networks are tcp(4|6)?, udp(4|6)?, ip(4|6)?, unix.
+// Known address are "localhost:6363", "/var/run/nfd.sock".
 func NewFace(network, address string) (f *Face, err error) {
 	conn, err := net.Dial(network, address)
 	if err != nil {
@@ -41,6 +45,7 @@ func (this *Face) Close() error {
 	return this.c.Close()
 }
 
+// Dial expresses interest, and return a channel of segmented/sequenced data
 func (this *Face) Dial(i *Interest) (dc chan *Data) {
 	c := this.dial(i, func() ReadFrom { return new(Data) })
 	dc = make(chan *Data)
@@ -54,7 +59,6 @@ func (this *Face) Dial(i *Interest) (dc chan *Data) {
 }
 
 func (this *Face) Verify(d *Data) (err error) {
-	// digest
 	digest, err := newSha256(d)
 	if err != nil {
 		return
@@ -75,7 +79,7 @@ func (this *Face) Verify(d *Data) (err error) {
 		return
 	}
 	key := new(Key)
-	err = key.DecodeCertificate(cd.Content)
+	err = key.DecodePubKey(cd.Content)
 	if err != nil {
 		return
 	}
@@ -183,10 +187,13 @@ func (this *Face) announce(prefixList ...string) error {
 	return nil
 }
 
+// Listen registers prefix to nfd, and listens to incoming interests
+//
+// A server should read from interest channel and write to data channel.
+// Data channel must be closed.
 func (this *Face) Listen(prefixList ...string) (ic chan *Interest, dc chan *Data) {
 	ic = make(chan *Interest)
 	dc = make(chan *Data)
-	// nfd create face
 	err := this.create()
 	if err != nil {
 		close(ic)

@@ -16,6 +16,7 @@ type Name struct {
 	Components []Component `tlv:"8"`
 }
 
+// NewName creates a name from string representation
 func NewName(s string) (n Name) {
 	s = strings.Trim(s, "/")
 	if s == "" {
@@ -64,6 +65,7 @@ func decodeUint64(buf *bytes.Buffer) (v uint64, err error) {
 
 type Marker uint8
 
+// see http://named-data.net/doc/tech-memos/naming-conventions.pdf
 const (
 	Segment   Marker = 0x00
 	Offset           = 0xFB
@@ -84,11 +86,13 @@ func (this *Name) Equal(n Name) bool {
 	return true
 }
 
+// CertName creates a new identity certificate name
 func (this *Name) CertName() (name Name) {
 	name.Components = append(this.Components, []byte("KEY"), []byte("ID-CERT"))
 	return
 }
 
+// Push appends a new markerWithNumber to the end of the name
 func (this *Name) Push(m Marker, v uint64) (err error) {
 	buf := new(bytes.Buffer)
 	buf.WriteByte(uint8(m))
@@ -100,6 +104,7 @@ func (this *Name) Push(m Marker, v uint64) (err error) {
 	return
 }
 
+// Pop removes the last component from the name, and returns it
 func (this *Name) Pop() (c Component) {
 	if len(this.Components) > 0 {
 		c = this.Components[len(this.Components)-1]
@@ -108,6 +113,7 @@ func (this *Name) Pop() (c Component) {
 	return
 }
 
+// Marker returns the marker from name component
 func (this Component) Marker() (m Marker, err error) {
 	if len(this) == 0 {
 		err = fmt.Errorf("no marker")
@@ -130,6 +136,7 @@ func (this Component) Marker() (m Marker, err error) {
 	return
 }
 
+// Marker returns the number from name component
 func (this Component) Number() (v uint64, err error) {
 	_, err = this.Marker()
 	if err != nil {
