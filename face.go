@@ -83,7 +83,7 @@ func (this *Face) Verify(p *Data) (err error) {
 	})
 	d, ok := <-c
 	if !ok {
-		err = fmt.Errorf("%v cannot retrieve key: %v\n", p.Name, keyName)
+		err = fmt.Errorf("verify: %v cannot fetch %v", p.Name, keyName)
 		return
 	}
 	key := new(Key)
@@ -126,7 +126,7 @@ func (this *Face) dial(out WriteTo, in func() ReadFrom) (c chan ReadFrom) {
 					goto EXIT
 				}
 				name.Push(Segment, segn+1)
-				(&Data{
+				(&Interest{
 					Name: name,
 				}).WriteTo(this.w)
 			default:
