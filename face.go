@@ -41,18 +41,18 @@ type Face struct {
 // in this form.
 //
 // Examples:
-//	Dial("tcp", "12.34.56.78:80")
-//	Dial("tcp", "google.com:http")
-//	Dial("tcp", "[2001:db8::1]:http")
-//	Dial("tcp", "[fe80::1%lo0]:80")
+//	NewFace("tcp", "12.34.56.78:80")
+//	NewFace("tcp", "google.com:http")
+//	NewFace("tcp", "[2001:db8::1]:http")
+//	NewFace("tcp", "[fe80::1%lo0]:80")
 //
 // For IP networks, the network must be "ip", "ip4" or "ip6" followed
 // by a colon and a protocol number or name and the addr must be a
 // literal IP address.
 //
 // Examples:
-//	Dial("ip4:1", "127.0.0.1")
-//	Dial("ip6:ospf", "::1")
+//	NewFace("ip4:1", "127.0.0.1")
+//	NewFace("ip6:ospf", "::1")
 //
 // For Unix networks, the address must be a file system path.
 func NewFace(network, address string) (f *Face, err error) {
