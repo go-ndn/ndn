@@ -21,7 +21,7 @@ func main() {
 		return
 	}
 	// private key
-	f, err := os.Create("testing.ndncert")
+	f, err := os.Create("testing.pri")
 	if err != nil {
 		fmt.Println(err)
 		return

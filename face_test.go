@@ -54,11 +54,7 @@ func TestListen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = face.Announce("/hello/world")
-	if err != nil {
-		t.Fatal(err)
-	}
-	ic, dc := face.Listen()
+	ic, dc := face.Listen("/hello/world")
 	go func() {
 		for i := range ic {
 			t.Logf("producer got %v", i.Name)

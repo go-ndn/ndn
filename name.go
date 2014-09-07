@@ -89,19 +89,6 @@ func (this *Name) CertName() (name Name) {
 	return
 }
 
-func (this *Name) PubKeyName() (name Name) {
-	for _, c := range this.Components {
-		if bytes.Equal(c, []byte("KEY")) {
-			continue
-		} else if bytes.Equal(c, []byte("ID-CERT")) {
-			break
-		} else {
-			name.Components = append(name.Components, c)
-		}
-	}
-	return
-}
-
 func (this *Name) Push(m Marker, v uint64) (err error) {
 	buf := new(bytes.Buffer)
 	buf.WriteByte(uint8(m))

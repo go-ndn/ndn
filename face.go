@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/taylorchu/tlv"
-	"io"
 	"net"
 	"time"
 )
@@ -19,13 +18,10 @@ type WriteTo interface {
 }
 
 type Face struct {
-	network  string
-	address  string
-	id       uint64
-	localUrl string
-	r        tlv.PeekReader
-	w        tlv.Writer
-	closer   io.Closer
+	id uint64
+	r  tlv.PeekReader
+	w  tlv.Writer
+	c  net.Conn
 }
 
 func NewFace(network, address string) (f *Face, err error) {
@@ -34,46 +30,38 @@ func NewFace(network, address string) (f *Face, err error) {
 		return
 	}
 	f = &Face{
-		network:  network,
-		address:  address,
-		r:        bufio.NewReader(conn),
-		w:        conn,
-		closer:   conn,
-		localUrl: network + "://" + conn.LocalAddr().String(),
+		r: bufio.NewReader(conn),
+		w: conn,
+		c: conn,
 	}
 	return
 }
 
 func (this *Face) Close() error {
-	return this.closer.Close()
+	return this.c.Close()
 }
 
 func (this *Face) Dial(i *Interest) (dc chan *Data) {
 	c := this.dial(i, func() ReadFrom { return new(Data) })
 	dc = make(chan *Data)
-	timeout := time.Duration(i.LifeTime) * time.Millisecond
 	go func() {
-		this.closer.(net.Conn).SetDeadline(time.Now().Add(timeout))
 		for p := range c {
 			dc <- p.(*Data)
-			this.closer.(net.Conn).SetDeadline(time.Now().Add(timeout))
 		}
-		this.closer.(net.Conn).SetDeadline(time.Time{})
 		close(dc)
 	}()
 	return
 }
 
-func (this *Face) Verify(p *Data) (err error) {
+func (this *Face) Verify(d *Data) (err error) {
 	// digest
-	digest, err := newSha256(p)
+	digest, err := newSha256(d)
 	if err != nil {
 		return
 	}
-	keyName := p.SignatureInfo.KeyLocator.Name
-	keyName.Pop()
+	keyName := d.SignatureInfo.KeyLocator.Name
 	var face *Face
-	face, err = NewFace(this.network, this.address)
+	face, err = NewFace(this.c.RemoteAddr().Network(), this.c.RemoteAddr().String())
 	if err != nil {
 		return
 	}
@@ -81,38 +69,40 @@ func (this *Face) Verify(p *Data) (err error) {
 	c := face.Dial(&Interest{
 		Name: keyName,
 	})
-	d, ok := <-c
+	cd, ok := <-c
 	if !ok {
-		err = fmt.Errorf("verify: %v cannot fetch %v", p.Name, keyName)
+		err = fmt.Errorf("verify: %v cannot fetch %v", d.Name, keyName)
 		return
 	}
 	key := new(Key)
-	err = key.DecodeCertificate(d.Content)
+	err = key.DecodeCertificate(cd.Content)
 	if err != nil {
 		return
 	}
-	err = key.Verify(digest, p.SignatureValue)
+	err = key.Verify(digest, d.SignatureValue)
 	return
 }
 
 func (this *Face) dial(out WriteTo, in func() ReadFrom) (c chan ReadFrom) {
-	out.WriteTo(this.w)
 	c = make(chan ReadFrom)
 	go func() {
+		out.WriteTo(this.w)
 		for {
 			p := in()
+			this.c.SetDeadline(time.Now().Add(4 * time.Second))
 			err := p.ReadFrom(this.r)
+			this.c.SetDeadline(time.Time{})
 			if err != nil {
 				goto EXIT
 			}
-			switch d := p.(type) {
-			case *Data:
-				err := this.Verify(d)
-				if err != nil {
-					fmt.Println(err)
-					goto EXIT
-				}
-			}
+			// switch d := p.(type) {
+			// case *Data:
+			// 	err := this.Verify(d)
+			// 	if err != nil {
+			// 		fmt.Println(err)
+			// 		goto EXIT
+			// 	}
+			// }
 			c <- p
 			switch d := p.(type) {
 			case *Data:
@@ -143,7 +133,7 @@ func (this *Face) create() (err error) {
 	control := new(ControlPacket)
 	control.Name.Module = "faces"
 	control.Name.Command = "create"
-	control.Name.Parameters.Parameters.Uri = this.localUrl
+	control.Name.Parameters.Parameters.Uri = this.c.LocalAddr().Network() + "://" + this.c.LocalAddr().String()
 	c := this.dial(control, func() ReadFrom { return new(ControlResponsePacket) })
 	p, ok := <-c
 	if !ok {
@@ -159,15 +149,7 @@ func (this *Face) create() (err error) {
 	return
 }
 
-func (this *Face) Announce(prefixList ...string) error {
-	if this.id == 0 {
-		// nfd create face
-		err := this.create()
-		if err != nil {
-			return err
-		}
-		fmt.Printf("Create(%d) %s\n", this.id, this.localUrl)
-	}
+func (this *Face) announce(prefixList ...string) error {
 	for _, prefix := range prefixList {
 		control := new(ControlPacket)
 		control.Name.Module = "fib"
@@ -188,18 +170,28 @@ func (this *Face) Announce(prefixList ...string) error {
 	return nil
 }
 
-func (this *Face) Listen() (ic chan *Interest, dc chan *Data) {
+func (this *Face) Listen(prefixList ...string) (ic chan *Interest, dc chan *Data) {
 	ic = make(chan *Interest)
 	dc = make(chan *Data)
+	// nfd create face
+	err := this.create()
+	if err != nil {
+		close(ic)
+		fmt.Println(err)
+		return
+	}
+	fmt.Printf("Create(%d) %s://%s\n", this.id, this.c.LocalAddr().Network(), this.c.LocalAddr().String())
+	err = this.announce(prefixList...)
+	if err != nil {
+		close(ic)
+		fmt.Println(err)
+		return
+	}
+
 	go func() {
 		for d := range dc {
-			err := d.WriteTo(this.w)
-			if err != nil {
-				fmt.Println(err)
-				break
-			}
+			d.WriteTo(this.w)
 		}
-		close(dc)
 	}()
 	go func() {
 		for {
