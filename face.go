@@ -26,8 +26,35 @@ type Face struct {
 
 // NewFace creates PIT-less face to avoid O(N) PIT lookup, but the face is not reusable
 //
-// Known networks are tcp(4|6)?, udp(4|6)?, ip(4|6)?, unix.
-// Known address are "localhost:6363", "/var/run/nfd.sock".
+// Common local nfd address: "localhost:6363", "/var/run/nfd.sock"
+//
+// Known networks are "tcp", "tcp4" (IPv4-only), "tcp6" (IPv6-only),
+// "udp", "udp4" (IPv4-only), "udp6" (IPv6-only), "ip", "ip4"
+// (IPv4-only), "ip6" (IPv6-only), "unix", "unixgram" and
+// "unixpacket".
+//
+// For TCP and UDP networks, addresses have the form host:port.
+// If host is a literal IPv6 address or host name, it must be enclosed
+// in square brackets as in "[::1]:80", "[ipv6-host]:http" or
+// "[ipv6-host%zone]:80".
+// The functions JoinHostPort and SplitHostPort manipulate addresses
+// in this form.
+//
+// Examples:
+//	Dial("tcp", "12.34.56.78:80")
+//	Dial("tcp", "google.com:http")
+//	Dial("tcp", "[2001:db8::1]:http")
+//	Dial("tcp", "[fe80::1%lo0]:80")
+//
+// For IP networks, the network must be "ip", "ip4" or "ip6" followed
+// by a colon and a protocol number or name and the addr must be a
+// literal IP address.
+//
+// Examples:
+//	Dial("ip4:1", "127.0.0.1")
+//	Dial("ip6:ospf", "::1")
+//
+// For Unix networks, the address must be a file system path.
 func NewFace(network, address string) (f *Face, err error) {
 	conn, err := net.Dial(network, address)
 	if err != nil {
