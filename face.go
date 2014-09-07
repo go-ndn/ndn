@@ -9,11 +9,11 @@ import (
 	"time"
 )
 
-type ReadFrom interface {
+type readFrom interface {
 	ReadFrom(r tlv.PeekReader) (err error)
 }
 
-type WriteTo interface {
+type writeTo interface {
 	WriteTo(w tlv.Writer) (err error)
 }
 
@@ -24,7 +24,7 @@ type Face struct {
 	c  net.Conn
 }
 
-// NewFace creates PIT-less face to avoid O(N) PIT lookup, but the face is not reusable
+// NewFace creates PIT-free face to avoid O(N) PIT lookup, but the face is not reusable
 //
 // Common local nfd address: "localhost:6363", "/var/run/nfd.sock"
 //
@@ -74,7 +74,7 @@ func (this *Face) Close() error {
 
 // Dial expresses interest, and return a channel of segmented/sequenced data
 func (this *Face) Dial(i *Interest) (dc chan *Data) {
-	c := this.dial(i, func() ReadFrom { return new(Data) })
+	c := this.dial(i, func() readFrom { return new(Data) })
 	dc = make(chan *Data)
 	go func() {
 		for p := range c {
@@ -114,8 +114,8 @@ func (this *Face) Verify(d *Data) (err error) {
 	return
 }
 
-func (this *Face) dial(out WriteTo, in func() ReadFrom) (c chan ReadFrom) {
-	c = make(chan ReadFrom)
+func (this *Face) dial(out writeTo, in func() readFrom) (c chan readFrom) {
+	c = make(chan readFrom)
 	go func() {
 		out.WriteTo(this.w)
 		for {
@@ -178,7 +178,7 @@ func (this *Face) create() (err error) {
 	control.Name.Module = "faces"
 	control.Name.Command = "create"
 	control.Name.Parameters.Parameters.Uri = this.c.LocalAddr().Network() + "://" + this.c.LocalAddr().String()
-	c := this.dial(control, func() ReadFrom { return new(ControlResponsePacket) })
+	c := this.dial(control, func() readFrom { return new(ControlResponsePacket) })
 	p, ok := <-c
 	if !ok {
 		fmt.Errorf("faces/create no response")
@@ -201,7 +201,7 @@ func (this *Face) announce(prefixList ...string) error {
 		control.Name.Parameters.Parameters.Name = NewName(prefix)
 		control.Name.Parameters.Parameters.FaceId = this.id
 
-		c := this.dial(control, func() ReadFrom { return new(ControlResponsePacket) })
+		c := this.dial(control, func() readFrom { return new(ControlResponsePacket) })
 		p, ok := <-c
 		if !ok {
 			return fmt.Errorf("fib/add-nexthop no response")
