@@ -18,18 +18,12 @@ import (
 )
 
 var (
-	SignKey   Key
-	VerifyKey Key
+	SignKey Key
 )
 
 type Key struct {
 	Name       Name
 	privateKey crypto.PrivateKey
-}
-
-func (this *Key) CertName() (name Name) {
-	name.Components = append(this.Name.Components, []byte("KEY"), []byte("ID-CERT"))
-	return
 }
 
 func (this *Key) Decode(pemData []byte) (err error) {
@@ -50,7 +44,7 @@ func (this *Key) Decode(pemData []byte) (err error) {
 	return
 }
 
-func (this *Key) Encode() (pemData []byte, err error) {
+func (this *Key) Encode(buf io.Writer) (err error) {
 	var b []byte
 	var keyType string
 	switch key := this.privateKey.(type) {
@@ -67,7 +61,7 @@ func (this *Key) Encode() (pemData []byte, err error) {
 		err = fmt.Errorf("unsupported key type")
 		return
 	}
-	pemData = pem.EncodeToMemory(&pem.Block{
+	err = pem.Encode(buf, &pem.Block{
 		Type: keyType,
 		Headers: map[string]string{
 			"NAME": this.Name.String(),
@@ -114,7 +108,7 @@ func (this *Key) EncodeCertificate(buf io.Writer) (err error) {
 	}
 
 	d := &Data{
-		Name: this.CertName(),
+		Name: this.Name.CertName(),
 		MetaInfo: MetaInfo{
 			ContentType: 2, //key
 		},
@@ -185,7 +179,7 @@ type subjectPubKeyInfo struct {
 	Bytes               asn1.BitString
 }
 
-func (this *Key) DecodeCertificate(buf io.Reader) (err error) {
+func PrintCertificate(buf io.Reader) (err error) {
 	// newline does not matter
 	d := new(Data)
 	err = d.ReadFrom(bufio.NewReader(base64.NewDecoder(base64.StdEncoding, buf)))
@@ -197,11 +191,16 @@ func (this *Key) DecodeCertificate(buf io.Reader) (err error) {
 	if err != nil {
 		return
 	}
-	if len(cert.Subject) == 0 {
-		fmt.Errorf("subject not found")
+	Print(d, cert)
+	return
+}
+
+func (this *Key) DecodeCertificate(raw []byte) (err error) {
+	cert := new(certificate)
+	_, err = asn1.Unmarshal(raw, cert)
+	if err != nil {
 		return
 	}
-	this.Name = NewName(cert.Subject[0].Value.(string))
 	switch cert.SubjectPubKeyInfo.AlgorithmIdentifier.Algorithm.String() {
 	case oidRsa.String():
 		pri := &rsa.PrivateKey{}

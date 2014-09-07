@@ -33,7 +33,7 @@ func (this *ControlPacket) WriteTo(w tlv.Writer) (err error) {
 	this.Name.Timestamp = uint64(time.Now().UnixNano() / 1000000)
 	this.Name.Nonce = newNonce()
 	this.Name.SignatureInfo.SignatureInfo.SignatureType = SignKey.SignatureType()
-	this.Name.SignatureInfo.SignatureInfo.KeyLocator.Name = SignKey.CertName()
+	this.Name.SignatureInfo.SignatureInfo.KeyLocator.Name = SignKey.Name.CertName()
 
 	digest, err := newSha256(this.Name)
 	if err != nil {
@@ -98,24 +98,23 @@ type ControlResponsePacket struct {
 	SignatureValue []byte        `tlv:"23*"`
 }
 
-func (this *ControlResponsePacket) ReadFrom(r tlv.PeekReader) error {
-	err := tlv.Unmarshal(r, this, 6)
+func (this *ControlResponsePacket) ReadFrom(r tlv.PeekReader) (err error) {
+	err = tlv.Unmarshal(r, this, 6)
 	if err != nil {
-		return err
+		return
 	}
 	digest, err := newSha256(this)
 	if err != nil {
-		return err
+		return
 	}
 	switch this.SignatureInfo.SignatureType {
 	case SignatureTypeSha256:
 		if !bytes.Equal(this.SignatureValue, digest) {
-			return fmt.Errorf("cannot verify sha256")
+			err = fmt.Errorf("cannot verify sha256")
+			return
 		}
-	case SignatureTypeSha256WithRsa:
-		// TODO: enable rsa
 	}
-	return nil
+	return
 }
 
 type NextHopRecord struct {
@@ -170,22 +169,21 @@ type ForwarderStatusPacket struct {
 	SignatureValue []byte          `tlv:"23*"`
 }
 
-func (this *ForwarderStatusPacket) ReadFrom(r tlv.PeekReader) error {
-	err := tlv.Unmarshal(r, this, 6)
+func (this *ForwarderStatusPacket) ReadFrom(r tlv.PeekReader) (err error) {
+	err = tlv.Unmarshal(r, this, 6)
 	if err != nil {
-		return err
+		return
 	}
 	digest, err := newSha256(this)
 	if err != nil {
-		return err
+		return
 	}
 	switch this.SignatureInfo.SignatureType {
 	case SignatureTypeSha256:
 		if !bytes.Equal(this.SignatureValue, digest) {
-			return fmt.Errorf("cannot verify sha256")
+			err = fmt.Errorf("cannot verify sha256")
+			return
 		}
-	case SignatureTypeSha256WithRsa:
-		// TODO: enable rsa
 	}
-	return nil
+	return
 }

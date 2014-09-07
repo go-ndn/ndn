@@ -17,6 +17,38 @@ func TestSignKey(t *testing.T) {
 	}
 }
 
+func TestDialRemote(t *testing.T) {
+	face, err := NewFace("tcp4", "aleph.ndn.ucla.edu:6363")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dc := face.Dial(&Interest{
+		Name: NewName("/ndn/edu/ucla"),
+	})
+	t.Logf("[names]")
+	for d := range dc {
+		t.Logf("name: %v, sig: %v", d.Name, d.SignatureInfo.KeyLocator.Name)
+	}
+}
+
+func TestDial(t *testing.T) {
+	face, err := NewFace("tcp", "localhost:6363")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dc := face.Dial(&Interest{
+		Name: NewName("/localhost/nfd/fib/list"),
+		Selectors: Selectors{
+			ChildSelector: 1,
+			MustBeFresh:   true,
+		},
+	})
+	t.Logf("[names]")
+	for d := range dc {
+		t.Logf("name: %v, final block: %v", d.Name, d.MetaInfo.FinalBlockId.Component)
+	}
+}
+
 func TestListen(t *testing.T) {
 	face, err := NewFace("tcp", "localhost:6363")
 	if err != nil {
@@ -47,23 +79,5 @@ func TestListen(t *testing.T) {
 		if d.Name.String() != "/hello/world" {
 			t.Fatal("fail to echo")
 		}
-	}
-}
-
-func TestDial(t *testing.T) {
-	face, err := NewFace("tcp", "localhost:6363")
-	if err != nil {
-		t.Fatal(err)
-	}
-	dc := face.Dial(&Interest{
-		Name: NewName("/localhost/nfd/fib/list"),
-		Selectors: Selectors{
-			ChildSelector: 1,
-			MustBeFresh:   true,
-		},
-	})
-	t.Logf("[names]")
-	for d := range dc {
-		t.Logf("name: %v, final block: %v", d.Name, d.MetaInfo.FinalBlockId.Component)
 	}
 }

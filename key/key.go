@@ -5,16 +5,10 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"github.com/taylorchu/ndn"
-	"io/ioutil"
+	"os"
 )
 
 func main() {
-	sample, err := ioutil.ReadFile("sample.ndncert")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	ndn.PrintCertificate(sample)
 	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		fmt.Println(err)
@@ -27,22 +21,35 @@ func main() {
 		return
 	}
 	// private key
-	b, err := ndn.SignKey.Encode()
+	f, err := os.Create("testing.ndncert")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	ioutil.WriteFile("testing.pri", b, 0777)
+	defer f.Close()
+	err = ndn.SignKey.Encode(f)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	// public key
-	b, err = ndn.SignKey.EncodeCertificate()
+	f, err = os.Create("testing.ndncert")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	ioutil.WriteFile("testing.ndncert", b, 0777)
-	err = ndn.PrintCertificate(b)
+	defer f.Close()
+	err = ndn.SignKey.EncodeCertificate(f)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	// print
+	f, err = os.Open("testing.ndncert")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer f.Close()
+	ndn.PrintCertificate(f)
 }

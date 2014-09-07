@@ -17,7 +17,11 @@ type Name struct {
 }
 
 func NewName(s string) (n Name) {
-	for _, c := range strings.Split(strings.Trim(s, "/"), "/") {
+	s = strings.Trim(s, "/")
+	if s == "" {
+		return
+	}
+	for _, c := range strings.Split(s, "/") {
 		uc, _ := url.QueryUnescape(c)
 		n.Components = append(n.Components, []byte(uc))
 	}
@@ -68,6 +72,36 @@ const (
 	Sequence          = 0xFE
 )
 
+func (this *Name) Equal(n Name) bool {
+	if len(this.Components) != len(n.Components) {
+		return false
+	}
+	for i := range this.Components {
+		if !bytes.Equal(this.Components[i], n.Components[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func (this *Name) CertName() (name Name) {
+	name.Components = append(this.Components, []byte("KEY"), []byte("ID-CERT"))
+	return
+}
+
+func (this *Name) PubKeyName() (name Name) {
+	for _, c := range this.Components {
+		if bytes.Equal(c, []byte("KEY")) {
+			continue
+		} else if bytes.Equal(c, []byte("ID-CERT")) {
+			break
+		} else {
+			name.Components = append(name.Components, c)
+		}
+	}
+	return
+}
+
 func (this *Name) Push(m Marker, v uint64) (err error) {
 	buf := new(bytes.Buffer)
 	buf.WriteByte(uint8(m))
@@ -96,6 +130,9 @@ func (this Component) To(m Marker) (v uint64, err error) {
 }
 
 func (this Name) String() (name string) {
+	if len(this.Components) == 0 {
+		return "/"
+	}
 	for _, c := range this.Components {
 		name += "/" + url.QueryEscape(string(c))
 	}

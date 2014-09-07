@@ -58,7 +58,7 @@ type SignatureInfo struct {
 const (
 	SignatureTypeSha256          uint64 = 0
 	SignatureTypeSha256WithRsa          = 1
-	SignatureTypeSha256WithEcdsa        = 2
+	SignatureTypeSha256WithEcdsa        = 3
 )
 
 type KeyLocator struct {
@@ -105,7 +105,7 @@ func (this *Data) WriteTo(w tlv.Writer) (err error) {
 		this.SignatureValue = digest
 	default:
 		this.SignatureInfo.SignatureType = sigType
-		this.SignatureInfo.KeyLocator.Name = SignKey.CertName()
+		this.SignatureInfo.KeyLocator.Name = SignKey.Name.CertName()
 		this.SignatureValue, err = SignKey.Sign(digest)
 		if err != nil {
 			return
@@ -130,8 +130,6 @@ func (this *Data) ReadFrom(r tlv.PeekReader) (err error) {
 			err = fmt.Errorf("cannot verify sha256")
 			return
 		}
-	case SignatureTypeSha256WithRsa:
-		// TODO: enable rsa
 	}
 	return
 }
