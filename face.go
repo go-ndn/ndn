@@ -111,11 +111,24 @@ func (this *Face) dial(out WriteTo, in func() ReadFrom) (c chan ReadFrom) {
 				if bytes.Equal(d.MetaInfo.FinalBlockId.Component, last) {
 					goto EXIT
 				}
-				segn, err := last.To(Segment)
+				m, err := last.Marker()
 				if err != nil {
 					goto EXIT
 				}
-				name.Push(Segment, segn+1)
+				n, err := last.Number()
+				if err != nil {
+					goto EXIT
+				}
+				switch m {
+				case Segment:
+					fallthrough
+				case Sequence:
+					name.Push(m, n+1)
+				case Offset:
+					name.Push(m, n+uint64(len(d.Content)))
+				default:
+					goto EXIT
+				}
 				(&Interest{
 					Name: name,
 				}).WriteTo(this.w)

@@ -65,11 +65,11 @@ func decodeUint64(buf *bytes.Buffer) (v uint64, err error) {
 type Marker uint8
 
 const (
-	Segment    Marker = 0x00
-	ByteOffset        = 0xFB
-	Version           = 0xFD
-	Timestamp         = 0xFC
-	Sequence          = 0xFE
+	Segment   Marker = 0x00
+	Offset           = 0xFB
+	Version          = 0xFD
+	Timestamp        = 0xFC
+	Sequence         = 0xFE
 )
 
 func (this *Name) Equal(n Name) bool {
@@ -108,9 +108,31 @@ func (this *Name) Pop() (c Component) {
 	return
 }
 
-func (this Component) To(m Marker) (v uint64, err error) {
-	if len(this) == 0 || this[0] != uint8(m) {
-		err = fmt.Errorf("marker not found: %v", m)
+func (this Component) Marker() (m Marker, err error) {
+	if len(this) == 0 {
+		err = fmt.Errorf("no marker")
+		return
+	}
+	switch Marker(this[0]) {
+	case Segment:
+		m = Segment
+	case Offset:
+		m = Offset
+	case Version:
+		m = Version
+	case Timestamp:
+		m = Timestamp
+	case Sequence:
+		m = Sequence
+	default:
+		err = fmt.Errorf("unsupported marker")
+	}
+	return
+}
+
+func (this Component) Number() (v uint64, err error) {
+	_, err = this.Marker()
+	if err != nil {
 		return
 	}
 	return decodeUint64(bytes.NewBuffer(this[1:]))
