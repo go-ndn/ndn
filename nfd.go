@@ -15,6 +15,7 @@ type ControlPacket struct {
 	LifeTime  uint64    `tlv:"12?"`
 }
 
+// see http://redmine.named-data.net/projects/nfd/wiki/Management
 type Command struct {
 	Localhost      string                  `tlv:"8"`
 	Nfd            string                  `tlv:"8"`
