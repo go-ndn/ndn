@@ -6,25 +6,26 @@ This package is intended to work with nfd, the new NDN forwarding daemon.
 
 The author is taylorchu (Tai-Lin Chu). This package is released under GPL2 license.
 
-To use this packege, you should do `import "github.com/taylorchu/ndn"`.
-Detailed Documentation is on [godoc](https://godoc.org/github.com/taylorchu/ndn).
-Use *_test.go as examples.
+Get started
+===========
+1. [install and run nfd](http://named-data.net/doc/NFD/current/INSTALL.html)
+2. [set up go work environment](https://golang.org/doc/install)
+3. get this package by running `go get "github.com/taylorchu/ndn"`
+4. read nice and detailed documentation with examples on __[godoc](https://godoc.org/github.com/taylorchu/ndn)__
+	(Testcases in *_test.go are extra examples.)
+
+
+![Imgur](http://i.imgur.com/68hMHZu.png?1)
 
 Changelog
 =========
-* 2014-01: first release with go reflection
-* 2014-04: update ecdsa key implementation
-* 2014-08: refactor with interface
-* 2014-09: support [naming convention](http://named-data.net/doc/tech-memos/naming-conventions.pdf)
 
-What is it?
-===========
-1. [TLV](https://github.com/taylorchu/tlv)
-2. NDN packet management in go (ndn.go)
-3. NDN server/client abstraction (face.go)
-4. NFD forward daemon client api (nfd.go)
-
-![Imgur](http://i.imgur.com/68hMHZu.png?1)
+```
+2014-01: first release with go reflection
+2014-04: update ecdsa key implementation
+2014-08: refactor with interface
+2014-09: support [naming convention](http://named-data.net/doc/tech-memos/naming-conventions.pdf)
+```
 
 Benchmark
 =========
