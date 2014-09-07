@@ -34,7 +34,6 @@
 //		}
 //	}
 //
-
 package ndn
 
 import (
