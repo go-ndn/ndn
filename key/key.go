@@ -27,7 +27,7 @@ func main() {
 		return
 	}
 	defer f.Close()
-	err = ndn.SignKey.Encode(f)
+	err = ndn.SignKey.EncodePriKey(f)
 	if err != nil {
 		fmt.Println(err)
 		return

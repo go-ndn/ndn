@@ -28,10 +28,10 @@ type Command struct {
 	SignatureValue SignatureValueComponent `tlv:"8*"`
 }
 
-// WriteTo writes control interest packet to tlv.Writer after it signs the name automatically
+// writeTo writes control interest packet to tlv.Writer after it signs the name automatically
 //
 // Everything except Module, Command and Parameters will be populated.
-func (this *ControlPacket) WriteTo(w tlv.Writer) (err error) {
+func (this *ControlPacket) writeTo(w tlv.Writer) (err error) {
 	this.Name.Localhost = "localhost"
 	this.Name.Nfd = "nfd"
 	this.Name.Timestamp = uint64(time.Now().UnixNano() / 1000000)
@@ -43,7 +43,7 @@ func (this *ControlPacket) WriteTo(w tlv.Writer) (err error) {
 	if err != nil {
 		return
 	}
-	this.Name.SignatureValue.SignatureValue, err = SignKey.Sign(digest)
+	this.Name.SignatureValue.SignatureValue, err = SignKey.sign(digest)
 	if err != nil {
 		return
 	}
@@ -102,8 +102,8 @@ type ControlResponsePacket struct {
 	SignatureValue []byte        `tlv:"23*"`
 }
 
-// see data.ReadFrom
-func (this *ControlResponsePacket) ReadFrom(r tlv.PeekReader) (err error) {
+// see data.readFrom
+func (this *ControlResponsePacket) readFrom(r tlv.PeekReader) (err error) {
 	err = tlv.Unmarshal(r, this, 6)
 	if err != nil {
 		return
@@ -174,8 +174,8 @@ type ForwarderStatusPacket struct {
 	SignatureValue []byte          `tlv:"23*"`
 }
 
-// see data.ReadFrom
-func (this *ForwarderStatusPacket) ReadFrom(r tlv.PeekReader) (err error) {
+// see data.readFrom
+func (this *ForwarderStatusPacket) readFrom(r tlv.PeekReader) (err error) {
 	err = tlv.Unmarshal(r, this, 6)
 	if err != nil {
 		return

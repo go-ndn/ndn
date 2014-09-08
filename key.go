@@ -26,8 +26,8 @@ type Key struct {
 	privateKey crypto.PrivateKey
 }
 
-// Decode reads key from pem bytes
-func (this *Key) Decode(pemData []byte) (err error) {
+// DecodePriKey reads key from pem bytes
+func (this *Key) DecodePriKey(pemData []byte) (err error) {
 	block, _ := pem.Decode(pemData)
 	if block == nil {
 		err = fmt.Errorf("not pem data")
@@ -45,8 +45,8 @@ func (this *Key) Decode(pemData []byte) (err error) {
 	return
 }
 
-// Encode writes key to io.Writer
-func (this *Key) Encode(buf io.Writer) (err error) {
+// EncodePriKey writes key to io.Writer
+func (this *Key) EncodePriKey(buf io.Writer) (err error) {
 	var b []byte
 	var keyType string
 	switch key := this.privateKey.(type) {
@@ -155,7 +155,7 @@ func (this *Key) EncodeCertificate(buf io.Writer) (err error) {
 		return
 	}
 	enc := base64.NewEncoder(base64.StdEncoding, buf)
-	err = d.WriteTo(enc)
+	err = d.writeTo(enc)
 	if err != nil {
 		return
 	}
@@ -198,7 +198,7 @@ type subjectPubKeyInfo struct {
 func PrintCertificate(buf io.Reader) (err error) {
 	// newline will be ignored
 	d := new(Data)
-	err = d.ReadFrom(bufio.NewReader(base64.NewDecoder(base64.StdEncoding, buf)))
+	err = d.readFrom(bufio.NewReader(base64.NewDecoder(base64.StdEncoding, buf)))
 	if err != nil {
 		return
 	}
@@ -242,7 +242,7 @@ type ecdsaSignature struct {
 	R, S *big.Int
 }
 
-func (this *Key) Sign(digest []byte) (signature []byte, err error) {
+func (this *Key) sign(digest []byte) (signature []byte, err error) {
 	switch key := this.privateKey.(type) {
 	case *rsa.PrivateKey:
 		signature, err = rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA256, digest)
@@ -259,7 +259,7 @@ func (this *Key) Sign(digest []byte) (signature []byte, err error) {
 	return
 }
 
-func (this *Key) Verify(digest, signature []byte) error {
+func (this *Key) verify(digest, signature []byte) error {
 	switch key := this.privateKey.(type) {
 	case *rsa.PrivateKey:
 		return rsa.VerifyPKCS1v15(&key.PublicKey, crypto.SHA256, digest, signature)

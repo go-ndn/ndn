@@ -10,11 +10,11 @@ import (
 )
 
 type readFrom interface {
-	ReadFrom(r tlv.PeekReader) (err error)
+	readFrom(r tlv.PeekReader) (err error)
 }
 
 type writeTo interface {
-	WriteTo(w tlv.Writer) (err error)
+	writeTo(w tlv.Writer) (err error)
 }
 
 type Face struct {
@@ -73,9 +73,9 @@ func (this *Face) Close() error {
 }
 
 type handle struct {
-	ReadFrom chan readFrom
-	WriteTo  chan writeTo
-	Error    chan error
+	readFrom chan readFrom
+	writeTo  chan writeTo
+	error    chan error
 }
 
 type Handle struct {
@@ -89,17 +89,17 @@ func (this *Face) Dial(i *Interest) (h *Handle) {
 	ih := this.dial(i, func() readFrom { return new(Data) })
 	h = &Handle{
 		Data:  make(chan *Data),
-		Error: ih.Error,
+		Error: ih.error,
 	}
 	go func() {
-		for p := range ih.ReadFrom {
+		for p := range ih.readFrom {
 			h.Data <- p.(*Data)
 		}
 	}()
 	return
 }
 
-func (this *Face) Verify(d *Data) (err error) {
+func (this *Face) verify(d *Data) (err error) {
 	digest, err := newSha256(d)
 	if err != nil {
 		return
@@ -121,7 +121,7 @@ func (this *Face) Verify(d *Data) (err error) {
 		if err != nil {
 			return
 		}
-		err = key.Verify(digest, d.SignatureValue)
+		err = key.verify(digest, d.SignatureValue)
 	case err = <-h.Error:
 		return
 	}
@@ -130,25 +130,25 @@ func (this *Face) Verify(d *Data) (err error) {
 
 func (this *Face) dial(out writeTo, in func() readFrom) (h *handle) {
 	h = &handle{
-		ReadFrom: make(chan readFrom),
-		Error:    make(chan error),
+		readFrom: make(chan readFrom),
+		error:    make(chan error),
 	}
 	go func() {
-		err := out.WriteTo(this.w)
+		err := out.writeTo(this.w)
 		if err != nil {
-			h.Error <- err
+			h.error <- err
 			goto EXIT
 		}
 		for {
 			p := in()
 			this.c.SetDeadline(time.Now().Add(4 * time.Second))
-			err := p.ReadFrom(this.r)
+			err := p.readFrom(this.r)
 			this.c.SetDeadline(time.Time{})
 			if err != nil {
-				h.Error <- err
+				h.error <- err
 				goto EXIT
 			}
-			h.ReadFrom <- p
+			h.readFrom <- p
 			switch d := p.(type) {
 			case *Data:
 				name := d.Name
@@ -176,9 +176,9 @@ func (this *Face) dial(out writeTo, in func() readFrom) (h *handle) {
 				}
 				err = (&Interest{
 					Name: name,
-				}).WriteTo(this.w)
+				}).writeTo(this.w)
 				if err != nil {
-					h.Error <- err
+					h.error <- err
 					goto EXIT
 				}
 			default:
@@ -197,14 +197,14 @@ func (this *Face) create() (err error) {
 	control.Name.Parameters.Parameters.Uri = this.c.LocalAddr().Network() + "://" + this.c.LocalAddr().String()
 	h := this.dial(control, func() readFrom { return new(ControlResponsePacket) })
 	select {
-	case cd := <-h.ReadFrom:
+	case cd := <-h.readFrom:
 		controlResponse := cd.(*ControlResponsePacket)
 		if controlResponse.Content.Response.StatusCode != 200 {
 			err = fmt.Errorf("(%d) %s", controlResponse.Content.Response.StatusCode, controlResponse.Content.Response.StatusText)
 			return
 		}
 		this.id = controlResponse.Content.Response.Parameters.FaceId
-	case err = <-h.Error:
+	case err = <-h.error:
 		return
 	}
 	return
@@ -219,13 +219,13 @@ func (this *Face) announce(prefix string) (err error) {
 
 	h := this.dial(control, func() readFrom { return new(ControlResponsePacket) })
 	select {
-	case cd := <-h.ReadFrom:
+	case cd := <-h.readFrom:
 		controlResponse := cd.(*ControlResponsePacket)
 		if controlResponse.Content.Response.StatusCode != 200 {
 			err = fmt.Errorf("(%d) %s", controlResponse.Content.Response.StatusCode, controlResponse.Content.Response.StatusText)
 			return
 		}
-	case err = <-h.Error:
+	case err = <-h.error:
 		return
 	}
 	return
@@ -256,7 +256,7 @@ func (this *Face) Listen(prefix string) (h *Handle) {
 
 		go func() {
 			for d := range h.Data {
-				err := d.WriteTo(this.w)
+				err := d.writeTo(this.w)
 				if err != nil {
 					h.Error <- err
 				}
@@ -264,7 +264,7 @@ func (this *Face) Listen(prefix string) (h *Handle) {
 		}()
 		for {
 			i := new(Interest)
-			err := i.ReadFrom(this.r)
+			err := i.readFrom(this.r)
 			if err != nil {
 				h.Error <- err
 				break

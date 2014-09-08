@@ -10,7 +10,7 @@ func TestSignKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = SignKey.Decode(b)
+	err = SignKey.DecodePriKey(b)
 	if err != nil {
 		t.Fatal(err)
 	}

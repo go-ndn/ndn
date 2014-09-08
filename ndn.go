@@ -80,8 +80,8 @@ func newNonce() []byte {
 	return b
 }
 
-// WriteTo writes interest to tlv.Writer after it populates nonce and lifeTime(if not defined) automatically
-func (this *Interest) WriteTo(w tlv.Writer) error {
+// writeTo writes interest to tlv.Writer after it populates nonce and lifeTime(if not defined) automatically
+func (this *Interest) writeTo(w tlv.Writer) error {
 	this.Nonce = newNonce()
 	if this.LifeTime == 0 {
 		this.LifeTime = 4000
@@ -89,7 +89,7 @@ func (this *Interest) WriteTo(w tlv.Writer) error {
 	return tlv.Marshal(w, this, 5)
 }
 
-func (this *Interest) ReadFrom(r tlv.PeekReader) error {
+func (this *Interest) readFrom(r tlv.PeekReader) error {
 	return tlv.Unmarshal(r, this, 5)
 }
 
@@ -103,10 +103,10 @@ func newSha256(v interface{}) (digest []byte, err error) {
 	return
 }
 
-// WriteTo writes data to tlv.Writer after it signs data automatically
+// writeTo writes data to tlv.Writer after it signs data automatically
 //
 // If SignKey is not ready, it will only provide DigestSha256.
-func (this *Data) WriteTo(w tlv.Writer) (err error) {
+func (this *Data) writeTo(w tlv.Writer) (err error) {
 	digest, err := newSha256(this)
 	if err != nil {
 		return
@@ -118,7 +118,7 @@ func (this *Data) WriteTo(w tlv.Writer) (err error) {
 	default:
 		this.SignatureInfo.SignatureType = sigType
 		this.SignatureInfo.KeyLocator.Name = SignKey.Name.CertName()
-		this.SignatureValue, err = SignKey.Sign(digest)
+		this.SignatureValue, err = SignKey.sign(digest)
 		if err != nil {
 			return
 		}
@@ -127,10 +127,10 @@ func (this *Data) WriteTo(w tlv.Writer) (err error) {
 	return
 }
 
-// ReadFrom reads data from tlv.PeekReader but it does not verify the signature
+// readFrom reads data from tlv.PeekReader but it does not verify the signature
 //
 // If DigestSha256 is present, the integrity will be verified.
-func (this *Data) ReadFrom(r tlv.PeekReader) (err error) {
+func (this *Data) readFrom(r tlv.PeekReader) (err error) {
 	err = tlv.Unmarshal(r, this, 6)
 	if err != nil {
 		return
