@@ -3,25 +3,30 @@ package main
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"flag"
 	"fmt"
 	"github.com/taylorchu/ndn"
 	"os"
 )
 
+var (
+	identity = flag.String("i", "/testing/key", "identity")
+)
+
 func main() {
+	flag.Parse()
 	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	ndn.SignKey, err = ndn.NewKey("/testing/key", rsaKey)
-	fmt.Println("name", ndn.SignKey.Name)
+	ndn.SignKey, err = ndn.NewKey(*identity, rsaKey)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 	// private key
-	f, err := os.Create("testing.pri")
+	f, err := os.Create("default.pri")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -33,7 +38,7 @@ func main() {
 		return
 	}
 	// public key
-	f, err = os.Create("testing.ndncert")
+	f, err = os.Create("default.ndncert")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -44,12 +49,5 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-	// print
-	f, err = os.Open("testing.ndncert")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer f.Close()
-	ndn.PrintCertificate(f)
+	fmt.Println(*identity, "exported")
 }

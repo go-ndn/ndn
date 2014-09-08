@@ -1,7 +1,6 @@
 package ndn
 
 import (
-	"bufio"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
@@ -73,11 +72,6 @@ func (this *Key) EncodePrivateKey(buf io.Writer) (err error) {
 	return
 }
 
-var (
-	oidRsa   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 1}
-	oidEcdsa = asn1.ObjectIdentifier{1, 2, 840, 10045, 2, 1}
-)
-
 // SignatureType shows key type in ndn signature type
 //
 // If the key is not initialized, it will return SignatureTypeDigestSha256.
@@ -91,27 +85,30 @@ func (this *Key) SignatureType() uint64 {
 	return SignatureTypeDigestSha256
 }
 
-func (this *Key) Certificate() (c *certificate, err error) {
-	var publicKeyBytes []byte
-	var oidSig asn1.ObjectIdentifier
+func (this *Key) EncodeCertificate(buf io.Writer) (err error) {
+	d := &Data{
+		Name: this.Name.CertificateName(),
+		MetaInfo: MetaInfo{
+			ContentType: 2, //key
+		},
+	}
+	var keyBytes []byte
 	switch key := this.privateKey.(type) {
 	case *rsa.PrivateKey:
-		publicKeyBytes, err = asn1.Marshal(key.PublicKey)
+		keyBytes, err = x509.MarshalPKIXPublicKey(&key.PublicKey)
 		if err != nil {
 			return
 		}
-		oidSig = oidRsa
 	case *ecdsa.PrivateKey:
-		publicKeyBytes, err = asn1.Marshal(key.PublicKey)
+		keyBytes, err = x509.MarshalPKIXPublicKey(&key.PublicKey)
 		if err != nil {
 			return
 		}
-		oidSig = oidEcdsa
 	default:
 		err = fmt.Errorf("unsupported key type")
 		return
 	}
-	c = &certificate{
+	d.Content, err = asn1.Marshal(certificate{
 		Validity: validity{
 			NotBefore: time.Now(),
 			NotAfter:  time.Date(2049, 12, 31, 23, 59, 59, 0, time.UTC), // end of asn.1
@@ -120,37 +117,8 @@ func (this *Key) Certificate() (c *certificate, err error) {
 			Type:  asn1.ObjectIdentifier{2, 5, 4, 41},
 			Value: this.Name.String(),
 		}},
-		SubjectPubKeyInfo: subjectPubKeyInfo{
-			AlgorithmIdentifier: pkix.AlgorithmIdentifier{
-				Algorithm: oidSig,
-				// This is a NULL parameters value which is technically
-				// superfluous, but most other code includes it and, by
-				// doing this, we match their public key hashes.
-				Parameters: asn1.RawValue{
-					Tag: 5,
-				},
-			},
-			Bytes: asn1.BitString{
-				Bytes:     publicKeyBytes,
-				BitLength: 8 * len(publicKeyBytes),
-			},
-		},
-	}
-	return
-}
-
-func (this *Key) EncodeCertificate(buf io.Writer) (err error) {
-	d := &Data{
-		Name: this.Name.CertificateName(),
-		MetaInfo: MetaInfo{
-			ContentType: 2, //key
-		},
-	}
-	c, err := this.Certificate()
-	if err != nil {
-		return
-	}
-	d.Content, err = asn1.Marshal(c)
+		PublicKeyInfo: asn1.RawValue{FullBytes: keyBytes},
+	})
 	if err != nil {
 		return
 	}
@@ -180,9 +148,9 @@ func NewKey(name string, privateKey crypto.PrivateKey) (key Key, err error) {
 }
 
 type certificate struct {
-	Validity          validity
-	Subject           []pkix.AttributeTypeAndValue
-	SubjectPubKeyInfo subjectPubKeyInfo
+	Validity      validity
+	Subject       []pkix.AttributeTypeAndValue
+	PublicKeyInfo asn1.RawValue
 }
 
 type validity struct {
@@ -190,48 +158,25 @@ type validity struct {
 	NotAfter  time.Time
 }
 
-type subjectPubKeyInfo struct {
-	AlgorithmIdentifier pkix.AlgorithmIdentifier
-	Bytes               asn1.BitString
-}
-
-func PrintCertificate(buf io.Reader) (err error) {
-	// newline will be ignored
-	d := new(Data)
-	err = d.readFrom(bufio.NewReader(base64.NewDecoder(base64.StdEncoding, buf)))
-	if err != nil {
-		return
-	}
-	c := new(certificate)
-	_, err = asn1.Unmarshal(d.Content, c)
-	if err != nil {
-		return
-	}
-	Print(d, c)
-	return
-}
-
 func (this *Key) DecodePublicKey(raw []byte) (err error) {
-	cert := new(certificate)
-	_, err = asn1.Unmarshal(raw, cert)
+	var c certificate
+	_, err = asn1.Unmarshal(raw, &c)
 	if err != nil {
 		return
 	}
-	switch cert.SubjectPubKeyInfo.AlgorithmIdentifier.Algorithm.String() {
-	case oidRsa.String():
-		var pri rsa.PrivateKey
-		_, err = asn1.Unmarshal(cert.SubjectPubKeyInfo.Bytes.Bytes, &pri.PublicKey)
-		if err != nil {
-			return
+	pub, err := x509.ParsePKIXPublicKey(c.PublicKeyInfo.FullBytes)
+	if err != nil {
+		return
+	}
+	switch key := pub.(type) {
+	case *rsa.PublicKey:
+		this.privateKey = &rsa.PrivateKey{
+			PublicKey: *key,
 		}
-		this.privateKey = &pri
-	case oidEcdsa.String():
-		var pri ecdsa.PrivateKey
-		_, err = asn1.Unmarshal(cert.SubjectPubKeyInfo.Bytes.Bytes, &pri.PublicKey)
-		if err != nil {
-			return
+	case *ecdsa.PublicKey:
+		this.privateKey = &ecdsa.PrivateKey{
+			PublicKey: *key,
 		}
-		this.privateKey = &pri
 	default:
 		err = fmt.Errorf("unsupported key type")
 	}

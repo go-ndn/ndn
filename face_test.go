@@ -6,7 +6,7 @@ import (
 )
 
 func TestSignKey(t *testing.T) {
-	b, err := ioutil.ReadFile("key/testing.pri")
+	b, err := ioutil.ReadFile("key/default.pri")
 	if err != nil {
 		t.Fatal(err)
 	}
