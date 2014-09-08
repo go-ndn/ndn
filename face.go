@@ -85,8 +85,11 @@ type Handle struct {
 }
 
 // Dial expresses interest, and return a channel of segmented/sequenced data
-func (this *Face) Dial(i *Interest) (h *Handle) {
-	ih := this.dial(i, func() readFrom { return new(Data) })
+func (this *Face) Dial(i *Interest) (h *Handle, err error) {
+	ih, err := this.dial(i, func() readFrom { return new(Data) })
+	if err != nil {
+		return
+	}
 	h = &Handle{
 		Data:  make(chan *Data),
 		Error: ih.error,
@@ -111,9 +114,12 @@ func (this *Face) verify(d *Data) (err error) {
 		return
 	}
 	defer face.Close()
-	h := face.Dial(&Interest{
+	h, err := face.Dial(&Interest{
 		Name: keyName,
 	})
+	if err != nil {
+		return
+	}
 	select {
 	case cd := <-h.Data:
 		key := new(Key)
@@ -128,17 +134,16 @@ func (this *Face) verify(d *Data) (err error) {
 	return
 }
 
-func (this *Face) dial(out writeTo, in func() readFrom) (h *handle) {
+func (this *Face) dial(out writeTo, in func() readFrom) (h *handle, err error) {
+	err = out.writeTo(this.w)
+	if err != nil {
+		return
+	}
 	h = &handle{
 		readFrom: make(chan readFrom),
 		error:    make(chan error),
 	}
 	go func() {
-		err := out.writeTo(this.w)
-		if err != nil {
-			h.error <- err
-			goto EXIT
-		}
 		for {
 			p := in()
 			this.c.SetDeadline(time.Now().Add(4 * time.Second))
@@ -195,7 +200,10 @@ func (this *Face) create() (err error) {
 	control.Name.Module = "faces"
 	control.Name.Command = "create"
 	control.Name.Parameters.Parameters.Uri = this.c.LocalAddr().Network() + "://" + this.c.LocalAddr().String()
-	h := this.dial(control, func() readFrom { return new(ControlResponsePacket) })
+	h, err := this.dial(control, func() readFrom { return new(ControlResponsePacket) })
+	if err != nil {
+		return
+	}
 	select {
 	case cd := <-h.readFrom:
 		controlResponse := cd.(*ControlResponsePacket)
@@ -217,7 +225,10 @@ func (this *Face) announce(prefix string) (err error) {
 	control.Name.Parameters.Parameters.Name = NewName(prefix)
 	control.Name.Parameters.Parameters.FaceId = this.id
 
-	h := this.dial(control, func() readFrom { return new(ControlResponsePacket) })
+	h, err := this.dial(control, func() readFrom { return new(ControlResponsePacket) })
+	if err != nil {
+		return
+	}
 	select {
 	case cd := <-h.readFrom:
 		controlResponse := cd.(*ControlResponsePacket)
@@ -235,33 +246,31 @@ func (this *Face) announce(prefix string) (err error) {
 //
 // A server should read from interest channel and write to data channel.
 // Data channel must be closed.
-func (this *Face) Listen(prefix string) (h *Handle) {
+func (this *Face) Listen(prefix string) (h *Handle, err error) {
+	err = this.create()
+	if err != nil {
+		return
+	}
+	err = this.announce(prefix)
+	if err != nil {
+		return
+	}
+	fmt.Printf("Listen(%d) %s %s://%s\n", this.id, prefix, this.c.LocalAddr().Network(), this.c.LocalAddr().String())
 	h = &Handle{
 		Interest: make(chan *Interest),
 		Data:     make(chan *Data),
 		Error:    make(chan error),
 	}
 	go func() {
-		err := this.create()
-		if err != nil {
-			h.Error <- err
-			return
-		}
-		fmt.Printf("Create(%d) %s://%s\n", this.id, this.c.LocalAddr().Network(), this.c.LocalAddr().String())
-		err = this.announce(prefix)
-		if err != nil {
-			h.Error <- err
-			return
-		}
-
-		go func() {
-			for d := range h.Data {
-				err := d.writeTo(this.w)
-				if err != nil {
-					h.Error <- err
-				}
+		for d := range h.Data {
+			err := d.writeTo(this.w)
+			if err != nil {
+				h.Error <- err
 			}
-		}()
+		}
+	}()
+	go func() {
+
 		for {
 			i := new(Interest)
 			err := i.readFrom(this.r)

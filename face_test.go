@@ -21,9 +21,12 @@ func TestDialRemote(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h := face.Dial(&Interest{
+	h, err := face.Dial(&Interest{
 		Name: NewName("/ndn/edu/ucla"),
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	select {
 	case d := <-h.Data:
 		t.Logf("name: %v, sig: %v", d.Name, d.SignatureInfo.KeyLocator.Name)
@@ -37,13 +40,16 @@ func TestDial(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h := face.Dial(&Interest{
+	h, err := face.Dial(&Interest{
 		Name: NewName("/localhost/nfd/fib/list"),
 		Selectors: Selectors{
 			ChildSelector: 1,
 			MustBeFresh:   true,
 		},
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	select {
 	case d := <-h.Data:
 		t.Logf("name: %v, final block: %v", d.Name, d.MetaInfo.FinalBlockId.Component)
@@ -57,7 +63,10 @@ func TestListen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h := face.Listen("/hello/world")
+	h, err := face.Listen("/hello/world")
+	if err != nil {
+		t.Fatal(err)
+	}
 	go func() {
 		select {
 		case i := <-h.Interest:
@@ -74,9 +83,12 @@ func TestListen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h2 := face2.Dial(&Interest{
+	h2, err := face2.Dial(&Interest{
 		Name: NewName("/hello/world"),
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	select {
 	case d := <-h2.Data:
 		t.Logf("consumer got %v", d.Name)
