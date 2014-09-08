@@ -154,8 +154,7 @@ type certificate struct {
 }
 
 type validity struct {
-	NotBefore time.Time
-	NotAfter  time.Time
+	NotBefore, NotAfter time.Time
 }
 
 func (this *Key) DecodePublicKey(raw []byte) (err error) {
