@@ -5,34 +5,7 @@
 //
 // Examples
 //
-// Create a face:
-//
-//	face, err := ndn.NewFace("tcp4", "aleph.ndn.ucla.edu:6363")
-//	if err != nil {
-//		return
-//	}
-//	defer face.Close()
-//
-// Because face is PIT-free, it is not reusable.
-//
-// A simple consumer:
-//
-//	dc := face.Dial(&ndn.Interest{
-//		Name: ndn.NewName("/ndn/edu/ucla"),
-//	})
-//	for d := range dc {
-//		fmt.Println(d.Name)
-//	}
-//
-// A simple producer:
-//
-//	ic, dc := face.Listen("/hello/world")
-//	for i := range ic {
-//		fmt.Println(i.Name)
-//		dc <- &ndn.Data{
-//			Name: i.Name,
-//		}
-//	}
+// see https://github.com/taylorchu/ndn/blob/master/face_test.go
 //
 package ndn
 

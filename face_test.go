@@ -21,12 +21,14 @@ func TestDialRemote(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dc := face.Dial(&Interest{
+	h := face.Dial(&Interest{
 		Name: NewName("/ndn/edu/ucla"),
 	})
-	t.Logf("[names]")
-	for d := range dc {
+	select {
+	case d := <-h.Data:
 		t.Logf("name: %v, sig: %v", d.Name, d.SignatureInfo.KeyLocator.Name)
+	case err := <-h.Error:
+		t.Fatal(err)
 	}
 }
 
@@ -35,16 +37,18 @@ func TestDial(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dc := face.Dial(&Interest{
+	h := face.Dial(&Interest{
 		Name: NewName("/localhost/nfd/fib/list"),
 		Selectors: Selectors{
 			ChildSelector: 1,
 			MustBeFresh:   true,
 		},
 	})
-	t.Logf("[names]")
-	for d := range dc {
+	select {
+	case d := <-h.Data:
 		t.Logf("name: %v, final block: %v", d.Name, d.MetaInfo.FinalBlockId.Component)
+	case err := <-h.Error:
+		t.Fatal(err)
 	}
 }
 
@@ -53,26 +57,33 @@ func TestListen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ic, dc := face.Listen("/hello/world")
+	h := face.Listen("/hello/world")
 	go func() {
-		for i := range ic {
+		select {
+		case i := <-h.Interest:
 			t.Logf("producer got %v", i.Name)
-			dc <- &Data{
+			h.Data <- &Data{
 				Name: i.Name,
 			}
+			close(h.Data)
+		case err := <-h.Error:
+			t.Fatal(err)
 		}
 	}()
 	face2, err := NewFace("tcp", "localhost:6363")
 	if err != nil {
 		t.Fatal(err)
 	}
-	echo := face2.Dial(&Interest{
+	h2 := face2.Dial(&Interest{
 		Name: NewName("/hello/world"),
 	})
-	for d := range echo {
+	select {
+	case d := <-h2.Data:
 		t.Logf("consumer got %v", d.Name)
 		if d.Name.String() != "/hello/world" {
 			t.Fatal("fail to echo")
 		}
+	case err := <-h2.Error:
+		t.Fatal(err)
 	}
 }

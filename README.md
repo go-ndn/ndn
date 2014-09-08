@@ -11,11 +11,11 @@ Get started
 1. [install and run nfd](http://named-data.net/doc/NFD/current/INSTALL.html)
 2. [set up go work environment](https://golang.org/doc/install)
 3. get this package by running `go get "github.com/taylorchu/ndn"`
-4. read nice and detailed documentation with examples on __[godoc](https://godoc.org/github.com/taylorchu/ndn)__
-	(Testcases in *_test.go are extra examples.)
+4. read nice and detailed documentation with examples on ___[godoc](https://godoc.org/github.com/taylorchu/ndn)___
+	(test cases in *_test.go are extra examples.)
 
 
-![Imgur](http://i.imgur.com/68hMHZu.png?1)
+![Imgur](http://i.imgur.com/mWMese2.jpg)
 
 Changelog
 =========
