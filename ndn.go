@@ -117,7 +117,7 @@ func (this *Data) writeTo(w tlv.Writer) (err error) {
 		this.SignatureValue = digest
 	default:
 		this.SignatureInfo.SignatureType = sigType
-		this.SignatureInfo.KeyLocator.Name = SignKey.Name.CertName()
+		this.SignatureInfo.KeyLocator.Name = SignKey.Name.CertificateName()
 		this.SignatureValue, err = SignKey.sign(digest)
 		if err != nil {
 			return

@@ -26,8 +26,8 @@ type Key struct {
 	privateKey crypto.PrivateKey
 }
 
-// DecodePriKey reads key from pem bytes
-func (this *Key) DecodePriKey(pemData []byte) (err error) {
+// DecodePrivateKey reads key from pem bytes
+func (this *Key) DecodePrivateKey(pemData []byte) (err error) {
 	block, _ := pem.Decode(pemData)
 	if block == nil {
 		err = fmt.Errorf("not pem data")
@@ -45,8 +45,8 @@ func (this *Key) DecodePriKey(pemData []byte) (err error) {
 	return
 }
 
-// EncodePriKey writes key to io.Writer
-func (this *Key) EncodePriKey(buf io.Writer) (err error) {
+// EncodePrivateKey writes key to io.Writer
+func (this *Key) EncodePrivateKey(buf io.Writer) (err error) {
 	var b []byte
 	var keyType string
 	switch key := this.privateKey.(type) {
@@ -141,7 +141,7 @@ func (this *Key) Certificate() (c *certificate, err error) {
 
 func (this *Key) EncodeCertificate(buf io.Writer) (err error) {
 	d := &Data{
-		Name: this.Name.CertName(),
+		Name: this.Name.CertificateName(),
 		MetaInfo: MetaInfo{
 			ContentType: 2, //key
 		},
@@ -211,7 +211,7 @@ func PrintCertificate(buf io.Reader) (err error) {
 	return
 }
 
-func (this *Key) DecodePubKey(raw []byte) (err error) {
+func (this *Key) DecodePublicKey(raw []byte) (err error) {
 	cert := new(certificate)
 	_, err = asn1.Unmarshal(raw, cert)
 	if err != nil {

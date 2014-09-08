@@ -86,8 +86,7 @@ func (this *Name) Equal(n Name) bool {
 	return true
 }
 
-// CertName creates a new identity certificate name
-func (this *Name) CertName() (name Name) {
+func (this *Name) CertificateName() (name Name) {
 	name.Components = append(this.Components, []byte("KEY"), []byte("ID-CERT"))
 	return
 }

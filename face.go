@@ -117,7 +117,7 @@ func (this *Face) verify(d *Data) (err error) {
 	select {
 	case cd := <-h.Data:
 		key := new(Key)
-		err = key.DecodePubKey(cd.Content)
+		err = key.DecodePublicKey(cd.Content)
 		if err != nil {
 			return
 		}
