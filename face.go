@@ -146,7 +146,12 @@ func (this *Face) dial(out writeTo, in func() readFrom) (h *handle, err error) {
 	go func() {
 		for {
 			p := in()
-			this.c.SetDeadline(time.Now().Add(4 * time.Second))
+			switch i := out.(type) {
+			case *Interest:
+				this.c.SetDeadline(time.Now().Add(time.Duration(i.LifeTime) * time.Millisecond))
+			case *ControlPacket:
+				this.c.SetDeadline(time.Now().Add(time.Duration(i.LifeTime) * time.Millisecond))
+			}
 			err := p.readFrom(this.r)
 			this.c.SetDeadline(time.Time{})
 			if err != nil {
@@ -179,9 +184,8 @@ func (this *Face) dial(out writeTo, in func() readFrom) (h *handle, err error) {
 				default:
 					goto EXIT
 				}
-				err = (&Interest{
-					Name: name,
-				}).writeTo(this.w)
+				out = &Interest{Name: name}
+				err = out.writeTo(this.w)
 				if err != nil {
 					h.error <- err
 					goto EXIT
@@ -200,18 +204,22 @@ func (this *Face) create() (err error) {
 	control.Name.Module = "faces"
 	control.Name.Command = "create"
 	control.Name.Parameters.Parameters.Uri = this.c.LocalAddr().Network() + "://" + this.c.LocalAddr().String()
-	h, err := this.dial(control, func() readFrom { return new(ControlResponsePacket) })
+	h, err := this.dial(control, func() readFrom { return new(Data) })
 	if err != nil {
 		return
 	}
 	select {
-	case cd := <-h.readFrom:
-		controlResponse := cd.(*ControlResponsePacket)
-		if controlResponse.Content.Response.StatusCode != 200 {
-			err = fmt.Errorf("(%d) %s", controlResponse.Content.Response.StatusCode, controlResponse.Content.Response.StatusText)
+	case d := <-h.readFrom:
+		var resp ControlResponse
+		err = Unmarshal(d.(*Data).Content, &resp, 101)
+		if err != nil {
 			return
 		}
-		this.id = controlResponse.Content.Response.Parameters.FaceId
+		if resp.StatusCode != 200 {
+			err = fmt.Errorf("(%d) %s", resp.StatusCode, resp.StatusText)
+			return
+		}
+		this.id = resp.Parameters.FaceId
 	case err = <-h.error:
 		return
 	}
@@ -225,15 +233,19 @@ func (this *Face) announce(prefix string) (err error) {
 	control.Name.Parameters.Parameters.Name = NewName(prefix)
 	control.Name.Parameters.Parameters.FaceId = this.id
 
-	h, err := this.dial(control, func() readFrom { return new(ControlResponsePacket) })
+	h, err := this.dial(control, func() readFrom { return new(Data) })
 	if err != nil {
 		return
 	}
 	select {
-	case cd := <-h.readFrom:
-		controlResponse := cd.(*ControlResponsePacket)
-		if controlResponse.Content.Response.StatusCode != 200 {
-			err = fmt.Errorf("(%d) %s", controlResponse.Content.Response.StatusCode, controlResponse.Content.Response.StatusText)
+	case d := <-h.readFrom:
+		var resp ControlResponse
+		err = Unmarshal(d.(*Data).Content, &resp, 101)
+		if err != nil {
+			return
+		}
+		if resp.StatusCode != 200 {
+			err = fmt.Errorf("(%d) %s", resp.StatusCode, resp.StatusText)
 			return
 		}
 	case err = <-h.error:

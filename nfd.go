@@ -1,8 +1,6 @@
 package ndn
 
 import (
-	"bytes"
-	"fmt"
 	"github.com/taylorchu/tlv"
 	"time"
 )
@@ -21,11 +19,11 @@ type Command struct {
 	Nfd            string                  `tlv:"8"`
 	Module         string                  `tlv:"8"`
 	Command        string                  `tlv:"8"`
-	Parameters     ParametersComponent     `tlv:"8"`
+	Parameters     parametersComponent     `tlv:"8"`
 	Timestamp      uint64                  `tlv:"8"`
 	Nonce          []byte                  `tlv:"8"`
-	SignatureInfo  SignatureInfoComponent  `tlv:"8"`
-	SignatureValue SignatureValueComponent `tlv:"8*"`
+	SignatureInfo  signatureInfoComponent  `tlv:"8"`
+	SignatureValue signatureValueComponent `tlv:"8*"`
 }
 
 // writeTo writes control interest packet to tlv.Writer after it signs the name automatically
@@ -56,15 +54,15 @@ func (this *ControlPacket) writeTo(w tlv.Writer) (err error) {
 	return
 }
 
-type ParametersComponent struct {
+type parametersComponent struct {
 	Parameters Parameters `tlv:"104"`
 }
 
-type SignatureInfoComponent struct {
+type signatureInfoComponent struct {
 	SignatureInfo SignatureInfo `tlv:"22"`
 }
 
-type SignatureValueComponent struct {
+type signatureValueComponent struct {
 	SignatureValue []byte `tlv:"23"`
 }
 
@@ -90,38 +88,6 @@ type ControlResponse struct {
 	Parameters Parameters `tlv:"104?"`
 }
 
-type Response struct {
-	Response ControlResponse `tlv:"101"`
-}
-
-type ControlResponsePacket struct {
-	Name           Name          `tlv:"7"`
-	MetaInfo       MetaInfo      `tlv:"20"`
-	Content        Response      `tlv:"21"`
-	SignatureInfo  SignatureInfo `tlv:"22"`
-	SignatureValue []byte        `tlv:"23*"`
-}
-
-// see data.readFrom
-func (this *ControlResponsePacket) readFrom(r tlv.PeekReader) (err error) {
-	err = tlv.Unmarshal(r, this, 6)
-	if err != nil {
-		return
-	}
-	digest, err := newSha256(this)
-	if err != nil {
-		return
-	}
-	switch this.SignatureInfo.SignatureType {
-	case SignatureTypeDigestSha256:
-		if !bytes.Equal(this.SignatureValue, digest) {
-			err = fmt.Errorf("cannot verify sha256")
-			return
-		}
-	}
-	return
-}
-
 type NextHopRecord struct {
 	FaceId uint64 `tlv:"105"`
 	Cost   uint64 `tlv:"106"`
@@ -130,10 +96,6 @@ type NextHopRecord struct {
 type FibEntry struct {
 	Name     Name            `tlv:"7"`
 	NextHops []NextHopRecord `tlv:"129"`
-}
-
-type FibEntries struct {
-	FibEntries []FibEntry `tlv:"128"`
 }
 
 type FaceEntry struct {
@@ -145,10 +107,6 @@ type FaceEntry struct {
 	InData      uint64 `tlv:"145"`
 	OutInterest uint64 `tlv:"146"`
 	OutData     uint64 `tlv:"147"`
-}
-
-type FaceEntries struct {
-	FaceEntries []FaceEntry `tlv:"128"`
 }
 
 type ForwarderStatus struct {
@@ -164,32 +122,4 @@ type ForwarderStatus struct {
 	InData           uint64 `tlv:"145"`
 	OutInterest      uint64 `tlv:"146"`
 	OutData          uint64 `tlv:"147"`
-}
-
-type ForwarderStatusPacket struct {
-	Name           Name            `tlv:"7"`
-	MetaInfo       MetaInfo        `tlv:"20"`
-	Content        ForwarderStatus `tlv:"21"`
-	SignatureInfo  SignatureInfo   `tlv:"22"`
-	SignatureValue []byte          `tlv:"23*"`
-}
-
-// see data.readFrom
-func (this *ForwarderStatusPacket) readFrom(r tlv.PeekReader) (err error) {
-	err = tlv.Unmarshal(r, this, 6)
-	if err != nil {
-		return
-	}
-	digest, err := newSha256(this)
-	if err != nil {
-		return
-	}
-	switch this.SignatureInfo.SignatureType {
-	case SignatureTypeDigestSha256:
-		if !bytes.Equal(this.SignatureValue, digest) {
-			err = fmt.Errorf("cannot verify sha256")
-			return
-		}
-	}
-	return
 }

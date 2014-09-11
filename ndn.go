@@ -10,6 +10,7 @@
 package ndn
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
@@ -21,6 +22,10 @@ import (
 // Print dumps interest, data, or any variable in detail for debugging
 func Print(i ...interface{}) {
 	spew.Dump(i...)
+}
+
+func Unmarshal(b []byte, i interface{}, valType uint64) error {
+	return tlv.Unmarshal(bufio.NewReader(bytes.NewBuffer(b)), i, valType)
 }
 
 type Interest struct {
