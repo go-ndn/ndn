@@ -141,7 +141,7 @@ func (this *Face) dial(out writeTo, in func() readFrom) (h *handle, err error) {
 	}
 	h = &handle{
 		readFrom: make(chan readFrom),
-		error:    make(chan error),
+		error:    make(chan error, 1),
 	}
 	go func() {
 		for {
@@ -259,18 +259,18 @@ func (this *Face) Listen(prefix string) (h *Handle, err error) {
 	h = &Handle{
 		Interest: make(chan *Interest),
 		Data:     make(chan *Data),
-		Error:    make(chan error),
+		Error:    make(chan error, 1),
 	}
 	go func() {
 		for d := range h.Data {
 			err := d.writeTo(this.w)
 			if err != nil {
 				h.Error <- err
+				break
 			}
 		}
 	}()
 	go func() {
-
 		for {
 			i := new(Interest)
 			err := i.readFrom(this.r)
