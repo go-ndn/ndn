@@ -72,34 +72,10 @@ func (this *Face) Close() error {
 	return this.c.Close()
 }
 
-type handle struct {
-	readFrom chan readFrom
-	writeTo  chan writeTo
-	error    chan error
-}
-
 type Handle struct {
 	Interest chan *Interest
 	Data     chan *Data
 	Error    chan error
-}
-
-// Dial expresses interest, and return a channel of segmented/sequenced data
-func (this *Face) Dial(i *Interest) (h *Handle, err error) {
-	ih, err := this.dial(i, func() readFrom { return new(Data) })
-	if err != nil {
-		return
-	}
-	h = &Handle{
-		Data:  make(chan *Data),
-		Error: ih.error,
-	}
-	go func() {
-		for p := range ih.readFrom {
-			h.Data <- p.(*Data)
-		}
-	}()
-	return
 }
 
 func (this *Face) verify(d *Data) (err error) {
@@ -134,67 +110,61 @@ func (this *Face) verify(d *Data) (err error) {
 	return
 }
 
-func (this *Face) dial(out writeTo, in func() readFrom) (h *handle, err error) {
+// Dial expresses interest, and return a channel of segmented/sequenced data
+func (this *Face) Dial(out writeTo) (h *Handle, err error) {
 	err = out.writeTo(this.w)
 	if err != nil {
 		return
 	}
-	h = &handle{
-		readFrom: make(chan readFrom),
-		error:    make(chan error, 1),
+	h = &Handle{
+		Data:  make(chan *Data),
+		Error: make(chan error, 1),
 	}
 	go func() {
 		for {
-			p := in()
+			d := new(Data)
 			switch i := out.(type) {
 			case *Interest:
 				this.c.SetDeadline(time.Now().Add(time.Duration(i.LifeTime) * time.Millisecond))
 			case *ControlPacket:
 				this.c.SetDeadline(time.Now().Add(time.Duration(i.LifeTime) * time.Millisecond))
 			}
-			err := p.readFrom(this.r)
+			err := d.readFrom(this.r)
 			this.c.SetDeadline(time.Time{})
 			if err != nil {
-				h.error <- err
-				goto EXIT
+				h.Error <- err
+				return
 			}
-			h.readFrom <- p
-			switch d := p.(type) {
-			case *Data:
-				name := d.Name
-				last := name.Pop()
-				if bytes.Equal(d.MetaInfo.FinalBlockId.Component, last) {
-					goto EXIT
-				}
-				m, err := last.Marker()
-				if err != nil {
-					goto EXIT
-				}
-				n, err := last.Number()
-				if err != nil {
-					goto EXIT
-				}
-				switch m {
-				case Segment:
-					fallthrough
-				case Sequence:
-					name.Push(m, n+1)
-				case Offset:
-					name.Push(m, n+uint64(len(d.Content)))
-				default:
-					goto EXIT
-				}
-				out = &Interest{Name: name}
-				err = out.writeTo(this.w)
-				if err != nil {
-					h.error <- err
-					goto EXIT
-				}
+			h.Data <- d
+			name := d.Name
+			last := name.Pop()
+			if bytes.Equal(d.MetaInfo.FinalBlockId.Component, last) {
+				return
+			}
+			m, err := last.Marker()
+			if err != nil {
+				return
+			}
+			n, err := last.Number()
+			if err != nil {
+				return
+			}
+			switch m {
+			case Segment:
+				fallthrough
+			case Sequence:
+				name.Push(m, n+1)
+			case Offset:
+				name.Push(m, n+uint64(len(d.Content)))
 			default:
-				goto EXIT
+				return
+			}
+			err = (&Interest{Name: name}).writeTo(this.w)
+			if err != nil {
+				h.Error <- err
+				return
 			}
 		}
-	EXIT:
 	}()
 	return
 }
@@ -204,14 +174,14 @@ func (this *Face) create() (err error) {
 	control.Name.Module = "faces"
 	control.Name.Command = "create"
 	control.Name.Parameters.Parameters.Uri = this.c.LocalAddr().Network() + "://" + this.c.LocalAddr().String()
-	h, err := this.dial(control, func() readFrom { return new(Data) })
+	h, err := this.Dial(control)
 	if err != nil {
 		return
 	}
 	select {
-	case d := <-h.readFrom:
+	case d := <-h.Data:
 		var resp ControlResponse
-		err = Unmarshal(d.(*Data).Content, &resp, 101)
+		err = Unmarshal(d.Content, &resp, 101)
 		if err != nil {
 			return
 		}
@@ -220,7 +190,7 @@ func (this *Face) create() (err error) {
 			return
 		}
 		this.id = resp.Parameters.FaceId
-	case err = <-h.error:
+	case err = <-h.Error:
 		return
 	}
 	return
@@ -233,14 +203,14 @@ func (this *Face) announce(prefix string) (err error) {
 	control.Name.Parameters.Parameters.Name = NewName(prefix)
 	control.Name.Parameters.Parameters.FaceId = this.id
 
-	h, err := this.dial(control, func() readFrom { return new(Data) })
+	h, err := this.Dial(control)
 	if err != nil {
 		return
 	}
 	select {
-	case d := <-h.readFrom:
+	case d := <-h.Data:
 		var resp ControlResponse
-		err = Unmarshal(d.(*Data).Content, &resp, 101)
+		err = Unmarshal(d.Content, &resp, 101)
 		if err != nil {
 			return
 		}
@@ -248,7 +218,7 @@ func (this *Face) announce(prefix string) (err error) {
 			err = fmt.Errorf("(%d) %s", resp.StatusCode, resp.StatusText)
 			return
 		}
-	case err = <-h.error:
+	case err = <-h.Error:
 		return
 	}
 	return
