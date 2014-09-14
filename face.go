@@ -58,7 +58,6 @@ func (this *Face) newConn() (nc *conn, err error) {
 	nc = &conn{
 		c: c,
 		r: bufio.NewReader(c),
-		w: c,
 	}
 	return
 }
@@ -93,7 +92,7 @@ func (this *Face) Dial(out writeTo) (dl Dialer, err error) {
 	if err != nil {
 		return
 	}
-	err = out.writeTo(conn.w)
+	err = out.writeTo(conn.c)
 	if err != nil {
 		return
 	}
@@ -140,7 +139,6 @@ type Listener interface {
 type conn struct {
 	c       net.Conn
 	r       tlv.PeekReader
-	w       tlv.Writer
 	timeout time.Duration
 }
 
@@ -155,7 +153,7 @@ func (this *conn) Accept() (i *Interest, err error) {
 }
 
 func (this *conn) Send(d *Data) error {
-	return d.writeTo(this.w)
+	return d.writeTo(this.c)
 }
 
 func (this *conn) Receive() (d *Data, err error) {
@@ -191,12 +189,12 @@ func (this *conn) Receive() (d *Data, err error) {
 	default:
 		return
 	}
-	err = (&Interest{Name: name}).writeTo(this.w)
+	err = (&Interest{Name: name}).writeTo(this.c)
 	return
 }
 
 func (this *conn) getResponse(control *ControlPacket) (resp *ControlResponse, err error) {
-	err = control.writeTo(this.w)
+	err = control.writeTo(this.c)
 	if err != nil {
 		return
 	}
