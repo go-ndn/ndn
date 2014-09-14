@@ -157,8 +157,12 @@ func (this *conn) Send(d *Data) error {
 }
 
 func (this *conn) Receive() (d *Data, err error) {
+	// assume non-segment
+	timeout := this.timeout
+	this.timeout = 0
+
 	d = new(Data)
-	this.c.SetDeadline(time.Now().Add(this.timeout * time.Millisecond))
+	this.c.SetDeadline(time.Now().Add(timeout * time.Millisecond))
 	err = d.readFrom(this.r)
 	this.c.SetDeadline(time.Time{})
 	if err != nil {
@@ -190,6 +194,10 @@ func (this *conn) Receive() (d *Data, err error) {
 		return
 	}
 	err = (&Interest{Name: name}).writeTo(this.c)
+	if err != nil {
+		return
+	}
+	this.timeout = timeout
 	return
 }
 
