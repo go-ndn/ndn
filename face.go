@@ -50,18 +50,6 @@ type Face struct {
 	Network, Address string
 }
 
-type Handle struct {
-	Interest chan *Interest
-	Data     chan *Data
-	Error    chan error
-}
-
-type conn struct {
-	c net.Conn
-	r tlv.PeekReader
-	w tlv.Writer
-}
-
 func (this *Face) newConn() (nc *conn, err error) {
 	c, err := net.Dial(this.Network, this.Address)
 	if err != nil {
@@ -80,28 +68,27 @@ func (this *Face) verify(d *Data) (err error) {
 	if err != nil {
 		return
 	}
-	h, err := this.Dial(&Interest{
+	dl, err := this.Dial(&Interest{
 		Name: d.SignatureInfo.KeyLocator.Name,
 	})
 	if err != nil {
 		return
 	}
-	select {
-	case cd := <-h.Data:
-		var key Key
-		err = key.DecodePublicKey(cd.Content)
-		if err != nil {
-			return
-		}
-		err = key.verify(digest, d.SignatureValue)
-	case err = <-h.Error:
+	cd, err := dl.Receive()
+	if err != nil {
 		return
 	}
+	var key Key
+	err = key.DecodePublicKey(cd.Content)
+	if err != nil {
+		return
+	}
+	err = key.verify(digest, d.SignatureValue)
 	return
 }
 
-// Dial expresses interest, and return a channel of segmented/sequenced data
-func (this *Face) Dial(out writeTo) (h *Handle, err error) {
+// Dial expresses interest, and waits for segmented/sequenced data
+func (this *Face) Dial(out writeTo) (dl Dialer, err error) {
 	conn, err := this.newConn()
 	if err != nil {
 		return
@@ -110,119 +97,18 @@ func (this *Face) Dial(out writeTo) (h *Handle, err error) {
 	if err != nil {
 		return
 	}
-	h = &Handle{
-		Data:  make(chan *Data),
-		Error: make(chan error, 1),
+	switch i := out.(type) {
+	case *Interest:
+		conn.timeout = time.Duration(i.LifeTime)
+	case *ControlPacket:
+		conn.timeout = time.Duration(i.LifeTime)
 	}
-	go func() {
-		defer conn.c.Close()
-		for {
-			d := new(Data)
-			switch i := out.(type) {
-			case *Interest:
-				conn.c.SetDeadline(time.Now().Add(time.Duration(i.LifeTime) * time.Millisecond))
-			case *ControlPacket:
-				conn.c.SetDeadline(time.Now().Add(time.Duration(i.LifeTime) * time.Millisecond))
-			}
-			err := d.readFrom(conn.r)
-			conn.c.SetDeadline(time.Time{})
-			if err != nil {
-				h.Error <- err
-				return
-			}
-			h.Data <- d
-			name := d.Name
-			last := name.Pop()
-			if bytes.Equal(d.MetaInfo.FinalBlockId.Component, last) {
-				return
-			}
-			m, err := last.Marker()
-			if err != nil {
-				return
-			}
-			n, err := last.Number()
-			if err != nil {
-				return
-			}
-			switch m {
-			case Segment:
-				fallthrough
-			case Sequence:
-				name.Push(m, n+1)
-			case Offset:
-				name.Push(m, n+uint64(len(d.Content)))
-			default:
-				return
-			}
-			err = (&Interest{Name: name}).writeTo(conn.w)
-			if err != nil {
-				h.Error <- err
-				return
-			}
-		}
-	}()
-	return
-}
-
-func (this *conn) createFace() (id uint64, err error) {
-	control := new(ControlPacket)
-	control.Name.Module = "faces"
-	control.Name.Command = "create"
-	control.Name.Parameters.Parameters.Uri = this.c.LocalAddr().Network() + "://" + this.c.LocalAddr().String()
-	err = control.writeTo(this.w)
-	if err != nil {
-		return
-	}
-	var d Data
-	err = d.readFrom(this.r)
-	if err != nil {
-		return
-	}
-	var resp ControlResponse
-	err = Unmarshal(d.Content, &resp, 101)
-	if err != nil {
-		return
-	}
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("(%d) %s", resp.StatusCode, resp.StatusText)
-		return
-	}
-	id = resp.Parameters.FaceId
-	return
-}
-
-func (this *conn) announce(id uint64, prefix string) (err error) {
-	control := new(ControlPacket)
-	control.Name.Module = "fib"
-	control.Name.Command = "add-nexthop"
-	control.Name.Parameters.Parameters.Name = NewName(prefix)
-	control.Name.Parameters.Parameters.FaceId = id
-	err = control.writeTo(this.w)
-	if err != nil {
-		return
-	}
-	var d Data
-	err = d.readFrom(this.r)
-	if err != nil {
-		return
-	}
-	var resp ControlResponse
-	err = Unmarshal(d.Content, &resp, 101)
-	if err != nil {
-		return
-	}
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("(%d) %s", resp.StatusCode, resp.StatusText)
-		return
-	}
+	dl = conn
 	return
 }
 
 // Listen registers prefix to nfd, and listens to incoming interests
-//
-// A server should read from interest channel and write to data channel.
-// Data channel must be closed.
-func (this *Face) Listen(prefix string) (h *Handle, err error) {
+func (this *Face) Listen(prefix string) (ln Listener, err error) {
 	conn, err := this.newConn()
 	if err != nil {
 		return
@@ -236,31 +122,120 @@ func (this *Face) Listen(prefix string) (h *Handle, err error) {
 		return
 	}
 	fmt.Printf("Listen(%d) %s %s://%s\n", id, prefix, conn.c.LocalAddr().Network(), conn.c.LocalAddr().String())
-	h = &Handle{
-		Interest: make(chan *Interest),
-		Data:     make(chan *Data),
-		Error:    make(chan error, 1),
+	ln = conn
+	return
+}
+
+type Dialer interface {
+	Receive() (*Data, error)
+	Close() error
+}
+
+type Listener interface {
+	Accept() (*Interest, error)
+	Send(*Data) error
+	Close() error
+}
+
+type conn struct {
+	c       net.Conn
+	r       tlv.PeekReader
+	w       tlv.Writer
+	timeout time.Duration
+}
+
+func (this *conn) Close() error {
+	return this.c.Close()
+}
+
+func (this *conn) Accept() (i *Interest, err error) {
+	i = new(Interest)
+	err = i.readFrom(this.r)
+	return
+}
+
+func (this *conn) Send(d *Data) error {
+	return d.writeTo(this.w)
+}
+
+func (this *conn) Receive() (d *Data, err error) {
+	d = new(Data)
+	this.c.SetDeadline(time.Now().Add(this.timeout * time.Millisecond))
+	err = d.readFrom(this.r)
+	this.c.SetDeadline(time.Time{})
+	if err != nil {
+		return
 	}
-	go func() {
-		defer conn.c.Close()
-		for d := range h.Data {
-			err := d.writeTo(conn.w)
-			if err != nil {
-				h.Error <- err
-				break
-			}
-		}
-	}()
-	go func() {
-		for {
-			i := new(Interest)
-			err := i.readFrom(conn.r)
-			if err != nil {
-				h.Error <- err
-				break
-			}
-			h.Interest <- i
-		}
-	}()
+	name := d.Name
+	last := name.Pop()
+	if bytes.Equal(d.MetaInfo.FinalBlockId.Component, last) {
+		return
+	}
+	m, err := last.Marker()
+	if err != nil {
+		err = nil
+		return
+	}
+	n, err := last.Number()
+	if err != nil {
+		err = nil
+		return
+	}
+	switch m {
+	case Segment:
+		fallthrough
+	case Sequence:
+		name.Push(m, n+1)
+	case Offset:
+		name.Push(m, n+uint64(len(d.Content)))
+	default:
+		return
+	}
+	err = (&Interest{Name: name}).writeTo(this.w)
+	return
+}
+
+func (this *conn) getResponse(control *ControlPacket) (resp *ControlResponse, err error) {
+	err = control.writeTo(this.w)
+	if err != nil {
+		return
+	}
+	var d Data
+	err = d.readFrom(this.r)
+	if err != nil {
+		return
+	}
+	resp = new(ControlResponse)
+	err = Unmarshal(d.Content, resp, 101)
+	if err != nil {
+		return
+	}
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("(%d) %s", resp.StatusCode, resp.StatusText)
+		return
+	}
+	return
+}
+
+func (this *conn) createFace() (id uint64, err error) {
+	control := new(ControlPacket)
+	control.Name.Module = "faces"
+	control.Name.Command = "create"
+	control.Name.Parameters.Parameters.Uri = this.c.LocalAddr().Network() + "://" + this.c.LocalAddr().String()
+	resp, err := this.getResponse(control)
+	if err != nil {
+		return
+	}
+	id = resp.Parameters.FaceId
+	return
+}
+
+func (this *conn) announce(id uint64, prefix string) (err error) {
+	control := new(ControlPacket)
+	control.Name.Module = "fib"
+	control.Name.Command = "add-nexthop"
+	control.Name.Parameters.Parameters.Name = NewName(prefix)
+	control.Name.Parameters.Parameters.FaceId = id
+	_, err = this.getResponse(control)
 	return
 }

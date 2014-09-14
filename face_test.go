@@ -21,18 +21,17 @@ func TestDialRemote(t *testing.T) {
 		Network: "tcp4",
 		Address: "aleph.ndn.ucla.edu:6363",
 	}
-	h, err := face.Dial(&Interest{
+	dl, err := face.Dial(&Interest{
 		Name: NewName("/ndn/edu/ucla"),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	select {
-	case d := <-h.Data:
-		t.Logf("name: %v, sig: %v", d.Name, d.SignatureInfo.KeyLocator.Name)
-	case err := <-h.Error:
+	d, err := dl.Receive()
+	if err != nil {
 		t.Fatal(err)
 	}
+	t.Logf("name: %v, sig: %v", d.Name, d.SignatureInfo.KeyLocator.Name)
 }
 
 func TestDial(t *testing.T) {
@@ -40,7 +39,7 @@ func TestDial(t *testing.T) {
 		Network: "tcp",
 		Address: "localhost:6363",
 	}
-	h, err := face.Dial(&Interest{
+	dl, err := face.Dial(&Interest{
 		Name: NewName("/localhost/nfd/fib/list"),
 		Selectors: Selectors{
 			ChildSelector: 1,
@@ -50,12 +49,11 @@ func TestDial(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	select {
-	case d := <-h.Data:
-		t.Logf("name: %v, final block: %v", d.Name, d.MetaInfo.FinalBlockId.Component)
-	case err := <-h.Error:
+	d, err := dl.Receive()
+	if err != nil {
 		t.Fatal(err)
 	}
+	t.Logf("name: %v, final block: %v", d.Name, d.MetaInfo.FinalBlockId.Component)
 }
 
 func TestListen(t *testing.T) {
@@ -63,39 +61,32 @@ func TestListen(t *testing.T) {
 		Network: "tcp",
 		Address: "localhost:6363",
 	}
-	h, err := face.Listen("/hello/world")
+	ln, err := face.Listen("/hello/world")
 	if err != nil {
 		t.Fatal(err)
 	}
 	go func() {
-		select {
-		case i := <-h.Interest:
-			t.Logf("producer got %v", i.Name)
-			h.Data <- &Data{
-				Name: i.Name,
+		for {
+			i, err := ln.Accept()
+			if err != nil {
+				break
 			}
-			close(h.Data)
-		case err := <-h.Error:
-			t.Fatal(err)
+			t.Logf("producer got %v", i.Name)
+			ln.Send(&Data{Name: i.Name})
 		}
 	}()
-	face2 := &Face{
-		Network: "tcp",
-		Address: "localhost:6363",
-	}
-	h2, err := face2.Dial(&Interest{
+	dl, err := face.Dial(&Interest{
 		Name: NewName("/hello/world"),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	select {
-	case d := <-h2.Data:
-		t.Logf("consumer got %v", d.Name)
-		if d.Name.String() != "/hello/world" {
-			t.Fatal("fail to echo")
-		}
-	case err := <-h2.Error:
+	d, err := dl.Receive()
+	if err != nil {
 		t.Fatal(err)
+	}
+	t.Logf("consumer got %v", d.Name)
+	if d.Name.String() != "/hello/world" {
+		t.Fatal("fail to echo")
 	}
 }
