@@ -20,10 +20,9 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-	ndn.SignKey, err = ndn.NewKey(*identity, rsaKey)
-	if err != nil {
-		fmt.Println(err)
-		return
+	ndn.SignKey = ndn.Key{
+		Name:       ndn.NewName(*identity),
+		PrivateKey: rsaKey,
 	}
 	// private key
 	f, err := os.Create("default.pri")

@@ -17,15 +17,6 @@ type writeTo interface {
 	writeTo(w tlv.Writer) (err error)
 }
 
-type Face struct {
-	id uint64
-	r  tlv.PeekReader
-	w  tlv.Writer
-	c  net.Conn
-}
-
-// NewFace creates PIT-free face to avoid O(N) PIT lookup, but the face is not reusable
-//
 // Common local nfd address: "localhost:6363", "/var/run/nfd.sock"
 //
 // Known networks are "tcp", "tcp4" (IPv4-only), "tcp6" (IPv6-only),
@@ -55,21 +46,8 @@ type Face struct {
 //	NewFace("ip6:ospf", "::1")
 //
 // For Unix networks, the address must be a file system path.
-func NewFace(network, address string) (f *Face, err error) {
-	conn, err := net.Dial(network, address)
-	if err != nil {
-		return
-	}
-	f = &Face{
-		r: bufio.NewReader(conn),
-		w: conn,
-		c: conn,
-	}
-	return
-}
-
-func (this *Face) Close() error {
-	return this.c.Close()
+type Face struct {
+	Network, Address string
 }
 
 type Handle struct {
@@ -78,27 +56,39 @@ type Handle struct {
 	Error    chan error
 }
 
+type conn struct {
+	c net.Conn
+	r tlv.PeekReader
+	w tlv.Writer
+}
+
+func (this *Face) newConn() (nc *conn, err error) {
+	c, err := net.Dial(this.Network, this.Address)
+	if err != nil {
+		return
+	}
+	nc = &conn{
+		c: c,
+		r: bufio.NewReader(c),
+		w: c,
+	}
+	return
+}
+
 func (this *Face) verify(d *Data) (err error) {
 	digest, err := newSha256(d)
 	if err != nil {
 		return
 	}
-	keyName := d.SignatureInfo.KeyLocator.Name
-	var face *Face
-	face, err = NewFace(this.c.RemoteAddr().Network(), this.c.RemoteAddr().String())
-	if err != nil {
-		return
-	}
-	defer face.Close()
-	h, err := face.Dial(&Interest{
-		Name: keyName,
+	h, err := this.Dial(&Interest{
+		Name: d.SignatureInfo.KeyLocator.Name,
 	})
 	if err != nil {
 		return
 	}
 	select {
 	case cd := <-h.Data:
-		key := new(Key)
+		var key Key
 		err = key.DecodePublicKey(cd.Content)
 		if err != nil {
 			return
@@ -112,7 +102,11 @@ func (this *Face) verify(d *Data) (err error) {
 
 // Dial expresses interest, and return a channel of segmented/sequenced data
 func (this *Face) Dial(out writeTo) (h *Handle, err error) {
-	err = out.writeTo(this.w)
+	conn, err := this.newConn()
+	if err != nil {
+		return
+	}
+	err = out.writeTo(conn.w)
 	if err != nil {
 		return
 	}
@@ -121,16 +115,17 @@ func (this *Face) Dial(out writeTo) (h *Handle, err error) {
 		Error: make(chan error, 1),
 	}
 	go func() {
+		defer conn.c.Close()
 		for {
 			d := new(Data)
 			switch i := out.(type) {
 			case *Interest:
-				this.c.SetDeadline(time.Now().Add(time.Duration(i.LifeTime) * time.Millisecond))
+				conn.c.SetDeadline(time.Now().Add(time.Duration(i.LifeTime) * time.Millisecond))
 			case *ControlPacket:
-				this.c.SetDeadline(time.Now().Add(time.Duration(i.LifeTime) * time.Millisecond))
+				conn.c.SetDeadline(time.Now().Add(time.Duration(i.LifeTime) * time.Millisecond))
 			}
-			err := d.readFrom(this.r)
-			this.c.SetDeadline(time.Time{})
+			err := d.readFrom(conn.r)
+			conn.c.SetDeadline(time.Time{})
 			if err != nil {
 				h.Error <- err
 				return
@@ -159,7 +154,7 @@ func (this *Face) Dial(out writeTo) (h *Handle, err error) {
 			default:
 				return
 			}
-			err = (&Interest{Name: name}).writeTo(this.w)
+			err = (&Interest{Name: name}).writeTo(conn.w)
 			if err != nil {
 				h.Error <- err
 				return
@@ -169,56 +164,55 @@ func (this *Face) Dial(out writeTo) (h *Handle, err error) {
 	return
 }
 
-func (this *Face) create() (err error) {
+func (this *conn) createFace() (id uint64, err error) {
 	control := new(ControlPacket)
 	control.Name.Module = "faces"
 	control.Name.Command = "create"
 	control.Name.Parameters.Parameters.Uri = this.c.LocalAddr().Network() + "://" + this.c.LocalAddr().String()
-	h, err := this.Dial(control)
+	err = control.writeTo(this.w)
 	if err != nil {
 		return
 	}
-	select {
-	case d := <-h.Data:
-		var resp ControlResponse
-		err = Unmarshal(d.Content, &resp, 101)
-		if err != nil {
-			return
-		}
-		if resp.StatusCode != 200 {
-			err = fmt.Errorf("(%d) %s", resp.StatusCode, resp.StatusText)
-			return
-		}
-		this.id = resp.Parameters.FaceId
-	case err = <-h.Error:
+	var d Data
+	err = d.readFrom(this.r)
+	if err != nil {
 		return
 	}
+	var resp ControlResponse
+	err = Unmarshal(d.Content, &resp, 101)
+	if err != nil {
+		return
+	}
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("(%d) %s", resp.StatusCode, resp.StatusText)
+		return
+	}
+	id = resp.Parameters.FaceId
 	return
 }
 
-func (this *Face) announce(prefix string) (err error) {
+func (this *conn) announce(id uint64, prefix string) (err error) {
 	control := new(ControlPacket)
 	control.Name.Module = "fib"
 	control.Name.Command = "add-nexthop"
 	control.Name.Parameters.Parameters.Name = NewName(prefix)
-	control.Name.Parameters.Parameters.FaceId = this.id
-
-	h, err := this.Dial(control)
+	control.Name.Parameters.Parameters.FaceId = id
+	err = control.writeTo(this.w)
 	if err != nil {
 		return
 	}
-	select {
-	case d := <-h.Data:
-		var resp ControlResponse
-		err = Unmarshal(d.Content, &resp, 101)
-		if err != nil {
-			return
-		}
-		if resp.StatusCode != 200 {
-			err = fmt.Errorf("(%d) %s", resp.StatusCode, resp.StatusText)
-			return
-		}
-	case err = <-h.Error:
+	var d Data
+	err = d.readFrom(this.r)
+	if err != nil {
+		return
+	}
+	var resp ControlResponse
+	err = Unmarshal(d.Content, &resp, 101)
+	if err != nil {
+		return
+	}
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("(%d) %s", resp.StatusCode, resp.StatusText)
 		return
 	}
 	return
@@ -229,23 +223,28 @@ func (this *Face) announce(prefix string) (err error) {
 // A server should read from interest channel and write to data channel.
 // Data channel must be closed.
 func (this *Face) Listen(prefix string) (h *Handle, err error) {
-	err = this.create()
+	conn, err := this.newConn()
 	if err != nil {
 		return
 	}
-	err = this.announce(prefix)
+	id, err := conn.createFace()
 	if err != nil {
 		return
 	}
-	fmt.Printf("Listen(%d) %s %s://%s\n", this.id, prefix, this.c.LocalAddr().Network(), this.c.LocalAddr().String())
+	err = conn.announce(id, prefix)
+	if err != nil {
+		return
+	}
+	fmt.Printf("Listen(%d) %s %s://%s\n", id, prefix, conn.c.LocalAddr().Network(), conn.c.LocalAddr().String())
 	h = &Handle{
 		Interest: make(chan *Interest),
 		Data:     make(chan *Data),
 		Error:    make(chan error, 1),
 	}
 	go func() {
+		defer conn.c.Close()
 		for d := range h.Data {
-			err := d.writeTo(this.w)
+			err := d.writeTo(conn.w)
 			if err != nil {
 				h.Error <- err
 				break
@@ -255,7 +254,7 @@ func (this *Face) Listen(prefix string) (h *Handle, err error) {
 	go func() {
 		for {
 			i := new(Interest)
-			err := i.readFrom(this.r)
+			err := i.readFrom(conn.r)
 			if err != nil {
 				h.Error <- err
 				break

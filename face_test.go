@@ -17,9 +17,9 @@ func TestSignKey(t *testing.T) {
 }
 
 func TestDialRemote(t *testing.T) {
-	face, err := NewFace("tcp4", "aleph.ndn.ucla.edu:6363")
-	if err != nil {
-		t.Fatal(err)
+	face := &Face{
+		Network: "tcp4",
+		Address: "aleph.ndn.ucla.edu:6363",
 	}
 	h, err := face.Dial(&Interest{
 		Name: NewName("/ndn/edu/ucla"),
@@ -36,9 +36,9 @@ func TestDialRemote(t *testing.T) {
 }
 
 func TestDial(t *testing.T) {
-	face, err := NewFace("tcp", "localhost:6363")
-	if err != nil {
-		t.Fatal(err)
+	face := &Face{
+		Network: "tcp",
+		Address: "localhost:6363",
 	}
 	h, err := face.Dial(&Interest{
 		Name: NewName("/localhost/nfd/fib/list"),
@@ -59,9 +59,9 @@ func TestDial(t *testing.T) {
 }
 
 func TestListen(t *testing.T) {
-	face, err := NewFace("tcp", "localhost:6363")
-	if err != nil {
-		t.Fatal(err)
+	face := &Face{
+		Network: "tcp",
+		Address: "localhost:6363",
 	}
 	h, err := face.Listen("/hello/world")
 	if err != nil {
@@ -79,9 +79,9 @@ func TestListen(t *testing.T) {
 			t.Fatal(err)
 		}
 	}()
-	face2, err := NewFace("tcp", "localhost:6363")
-	if err != nil {
-		t.Fatal(err)
+	face2 := &Face{
+		Network: "tcp",
+		Address: "localhost:6363",
 	}
 	h2, err := face2.Dial(&Interest{
 		Name: NewName("/hello/world"),
