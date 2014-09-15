@@ -162,9 +162,9 @@ func (this *conn) Receive() (d *Data, err error) {
 	this.timeout = 0
 
 	d = new(Data)
-	this.c.SetDeadline(time.Now().Add(timeout * time.Millisecond))
+	this.c.SetReadDeadline(time.Now().Add(timeout * time.Millisecond))
 	err = d.readFrom(this.r)
-	this.c.SetDeadline(time.Time{})
+	this.c.SetReadDeadline(time.Time{})
 	if err != nil {
 		return
 	}
