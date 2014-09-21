@@ -34,28 +34,6 @@ func TestDialRemote(t *testing.T) {
 	t.Logf("name: %v, sig: %v", d.Name, d.SignatureInfo.KeyLocator.Name)
 }
 
-func TestDial(t *testing.T) {
-	face := &Face{
-		Network: "tcp",
-		Address: "localhost:6363",
-	}
-	dl, err := face.Dial(&Interest{
-		Name: NewName("/localhost/nfd/fib/list"),
-		Selectors: Selectors{
-			ChildSelector: 1,
-			MustBeFresh:   true,
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	d, err := dl.Receive()
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Logf("name: %v, final block: %v", d.Name, d.MetaInfo.FinalBlockId.Component)
-}
-
 func TestListen(t *testing.T) {
 	face := &Face{
 		Network: "tcp",

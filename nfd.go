@@ -26,10 +26,10 @@ type Command struct {
 	SignatureValue signatureValueComponent `tlv:"8*"`
 }
 
-// writeTo writes control interest packet to tlv.Writer after it signs the name automatically
+// WriteTo writes control interest packet to tlv.Writer after it signs the name automatically
 //
 // Everything except Module, Command and Parameters will be populated.
-func (this *ControlPacket) writeTo(w tlv.Writer) (err error) {
+func (this *ControlPacket) WriteTo(w tlv.Writer) (err error) {
 	this.Name.Localhost = "localhost"
 	this.Name.Nfd = "nfd"
 	this.Name.Timestamp = uint64(time.Now().UnixNano() / 1000000)
@@ -52,6 +52,10 @@ func (this *ControlPacket) writeTo(w tlv.Writer) (err error) {
 	this.Nonce = newNonce()
 	err = tlv.Marshal(w, this, 5)
 	return
+}
+
+func (this *ControlPacket) ReadFrom(r tlv.PeekReader) error {
+	return tlv.Unmarshal(r, this, 5)
 }
 
 type parametersComponent struct {

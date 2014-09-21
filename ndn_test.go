@@ -28,7 +28,7 @@ func BenchmarkDataEncodeRsa(b *testing.B) {
 	buf := new(bytes.Buffer)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		err := packet.writeTo(buf)
+		err := packet.WriteTo(buf)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -54,7 +54,7 @@ func BenchmarkDataEncodeEcdsa(b *testing.B) {
 	buf := new(bytes.Buffer)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		err := packet.writeTo(buf)
+		err := packet.WriteTo(buf)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -69,7 +69,7 @@ func BenchmarkDataEncode(b *testing.B) {
 	buf := new(bytes.Buffer)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		err := packet.writeTo(buf)
+		err := packet.WriteTo(buf)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -83,9 +83,9 @@ func BenchmarkDataDecode(b *testing.B) {
 	}
 	buf := new(bytes.Buffer)
 	for i := 0; i < b.N; i++ {
-		packet.writeTo(buf)
+		packet.WriteTo(buf)
 		b.StartTimer()
-		err := new(Data).readFrom(bufio.NewReader(buf))
+		err := new(Data).ReadFrom(bufio.NewReader(buf))
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -101,7 +101,7 @@ func BenchmarkInterestEncode(b *testing.B) {
 	buf := new(bytes.Buffer)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		err := packet.writeTo(buf)
+		err := packet.WriteTo(buf)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -115,9 +115,9 @@ func BenchmarkInterestDecode(b *testing.B) {
 	}
 	buf := new(bytes.Buffer)
 	for i := 0; i < b.N; i++ {
-		packet.writeTo(buf)
+		packet.WriteTo(buf)
 		b.StartTimer()
-		err := new(Interest).readFrom(bufio.NewReader(buf))
+		err := new(Interest).ReadFrom(bufio.NewReader(buf))
 		if err != nil {
 			b.Fatal(err)
 		}

@@ -10,8 +10,8 @@ Get started
 ===========
 1. [install and run nfd](http://named-data.net/doc/NFD/current/INSTALL.html)
 2. [set up go work environment](https://golang.org/doc/install)
-3. get this package by running `go get "github.com/taylorchu/ndn"`
-4. read nice and detailed documentation with examples on ___[godoc](https://godoc.org/github.com/taylorchu/ndn)___
+3. get this package by running `go get "github.com/go-ndn/ndn"`
+4. read nice and detailed documentation with examples on ___[godoc](https://godoc.org/github.com/go-ndn/ndn)___
 	(test cases in *_test.go are extra examples.)
 
 

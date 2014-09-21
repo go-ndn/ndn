@@ -24,6 +24,16 @@ func Print(i ...interface{}) {
 	spew.Dump(i...)
 }
 
+func Marshal(i interface{}, valType uint64) (b []byte, err error) {
+	buf := new(bytes.Buffer)
+	err = tlv.Marshal(buf, i, valType)
+	if err != nil {
+		return
+	}
+	b = buf.Bytes()
+	return
+}
+
 func Unmarshal(b []byte, i interface{}, valType uint64) error {
 	return tlv.Unmarshal(bufio.NewReader(bytes.NewBuffer(b)), i, valType)
 }
@@ -85,8 +95,8 @@ func newNonce() []byte {
 	return b
 }
 
-// writeTo writes interest to tlv.Writer after it populates nonce and lifeTime(if not defined) automatically
-func (this *Interest) writeTo(w tlv.Writer) error {
+// WriteTo writes interest to tlv.Writer after it populates nonce and lifeTime(if not defined) automatically
+func (this *Interest) WriteTo(w tlv.Writer) error {
 	this.Nonce = newNonce()
 	if this.LifeTime == 0 {
 		this.LifeTime = 4000
@@ -94,7 +104,7 @@ func (this *Interest) writeTo(w tlv.Writer) error {
 	return tlv.Marshal(w, this, 5)
 }
 
-func (this *Interest) readFrom(r tlv.PeekReader) error {
+func (this *Interest) ReadFrom(r tlv.PeekReader) error {
 	return tlv.Unmarshal(r, this, 5)
 }
 
@@ -108,10 +118,10 @@ func newSha256(v interface{}) (digest []byte, err error) {
 	return
 }
 
-// writeTo writes data to tlv.Writer after it signs data automatically
+// WriteTo writes data to tlv.Writer after it signs data automatically
 //
 // If SignKey is not ready, it will only provide DigestSha256.
-func (this *Data) writeTo(w tlv.Writer) (err error) {
+func (this *Data) WriteTo(w tlv.Writer) (err error) {
 	digest, err := newSha256(this)
 	if err != nil {
 		return
@@ -132,10 +142,10 @@ func (this *Data) writeTo(w tlv.Writer) (err error) {
 	return
 }
 
-// readFrom reads data from tlv.PeekReader but it does not verify the signature
+// ReadFrom reads data from tlv.PeekReader but it does not verify the signature
 //
 // If DigestSha256 is present, the integrity will be verified.
-func (this *Data) readFrom(r tlv.PeekReader) (err error) {
+func (this *Data) ReadFrom(r tlv.PeekReader) (err error) {
 	err = tlv.Unmarshal(r, this, 6)
 	if err != nil {
 		return

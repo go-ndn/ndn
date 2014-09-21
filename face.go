@@ -9,14 +9,6 @@ import (
 	"time"
 )
 
-type readFrom interface {
-	readFrom(r tlv.PeekReader) (err error)
-}
-
-type writeTo interface {
-	writeTo(w tlv.Writer) (err error)
-}
-
 // Common local nfd address: "localhost:6363", "/var/run/nfd.sock"
 //
 // Known networks are "tcp", "tcp4" (IPv4-only), "tcp6" (IPv6-only),
@@ -87,21 +79,16 @@ func (this *Face) verify(d *Data) (err error) {
 }
 
 // Dial expresses interest, and waits for segmented/sequenced data
-func (this *Face) Dial(out writeTo) (dl Dialer, err error) {
+func (this *Face) Dial(i *Interest) (dl Dialer, err error) {
 	conn, err := this.newConn()
 	if err != nil {
 		return
 	}
-	err = out.writeTo(conn.c)
+	err = i.WriteTo(conn.c)
 	if err != nil {
 		return
 	}
-	switch i := out.(type) {
-	case *Interest:
-		conn.timeout = time.Duration(i.LifeTime)
-	case *ControlPacket:
-		conn.timeout = time.Duration(i.LifeTime)
-	}
+	conn.timeout = time.Duration(i.LifeTime)
 	dl = conn
 	return
 }
@@ -148,12 +135,12 @@ func (this *conn) Close() error {
 
 func (this *conn) Accept() (i *Interest, err error) {
 	i = new(Interest)
-	err = i.readFrom(this.r)
+	err = i.ReadFrom(this.r)
 	return
 }
 
 func (this *conn) Send(d *Data) error {
-	return d.writeTo(this.c)
+	return d.WriteTo(this.c)
 }
 
 func (this *conn) Receive() (d *Data, err error) {
@@ -163,7 +150,7 @@ func (this *conn) Receive() (d *Data, err error) {
 
 	d = new(Data)
 	this.c.SetReadDeadline(time.Now().Add(timeout * time.Millisecond))
-	err = d.readFrom(this.r)
+	err = d.ReadFrom(this.r)
 	this.c.SetReadDeadline(time.Time{})
 	if err != nil {
 		return
@@ -193,7 +180,7 @@ func (this *conn) Receive() (d *Data, err error) {
 	default:
 		return
 	}
-	err = (&Interest{Name: name}).writeTo(this.c)
+	err = (&Interest{Name: name}).WriteTo(this.c)
 	if err != nil {
 		return
 	}
@@ -202,12 +189,12 @@ func (this *conn) Receive() (d *Data, err error) {
 }
 
 func (this *conn) getResponse(control *ControlPacket) (resp *ControlResponse, err error) {
-	err = control.writeTo(this.c)
+	err = control.WriteTo(this.c)
 	if err != nil {
 		return
 	}
 	var d Data
-	err = d.readFrom(this.r)
+	err = d.ReadFrom(this.r)
 	if err != nil {
 		return
 	}
