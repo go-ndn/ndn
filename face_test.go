@@ -44,7 +44,7 @@ func TestListen(t *testing.T) {
 	}
 	face := NewFace(conn)
 	defer face.Close()
-	err = face.AddNextHop("/hello/world")
+	err = face.AddNextHop("/hello/world", 1)
 	if err != nil {
 		t.Fatal(err)
 	}

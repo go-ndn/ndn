@@ -154,11 +154,12 @@ func (this *Face) verify(d *Data) (err error) {
 	return
 }
 
-func (this *Face) AddNextHop(prefix string) (err error) {
+func (this *Face) AddNextHop(prefix string, cost uint64) (err error) {
 	control := new(ControlInterest)
 	control.Name.Module = "fib"
 	control.Name.Command = "add-nexthop"
 	control.Name.Parameters.Parameters.Name = NewName(prefix)
+	control.Name.Parameters.Parameters.Cost = cost
 	_, err = this.SendControlInterest(control)
 	return
 }
