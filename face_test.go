@@ -30,7 +30,10 @@ func TestDialRemote(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d := <-dl
+	d, ok := <-dl
+	if !ok {
+		t.Fatal("timeout")
+	}
 	t.Logf("name: %v, sig: %v", d.Name, d.SignatureInfo.KeyLocator.Name)
 }
 
@@ -62,7 +65,10 @@ func TestListen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d := <-dl
+	d, ok := <-dl
+	if !ok {
+		t.Fatal("timeout")
+	}
 	t.Logf("consumer got %v", d.Name)
 	if d.Name.String() != "/hello/world" {
 		t.Fatal("fail to echo")

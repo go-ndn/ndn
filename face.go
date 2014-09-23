@@ -6,6 +6,7 @@ import (
 	"github.com/taylorchu/lpm"
 	"github.com/taylorchu/tlv"
 	"net"
+	"time"
 )
 
 type Face struct {
@@ -77,36 +78,56 @@ func (this *Face) SendInterest(i *Interest) (ch chan *Data, err error) {
 		// found in cache
 		return
 	}
+	err = i.WriteTo(this.w)
+	if err != nil {
+		return
+	}
 	this.Pit.Update(key, func(chs interface{}) interface{} {
 		if chs == nil {
-			return []chan *Data{ch}
+			return map[chan *Data]bool{ch: true}
 		}
-		return append(chs.([]chan *Data), ch)
+		chs.(map[chan *Data]bool)[ch] = true
+		return chs
 	}, false)
-	err = i.WriteTo(this.w)
+
+	go func() {
+		<-time.After(time.Duration(i.LifeTime) * time.Millisecond)
+		close(ch)
+		this.Pit.Update(key, func(chs interface{}) interface{} {
+			if chs == nil {
+				return nil
+			}
+			m := chs.(map[chan *Data]bool)
+			delete(m, ch)
+			if len(m) == 0 {
+				return nil
+			}
+			return chs
+		}, false)
+	}()
+
 	return
 }
 
 func (this *Face) RecvData(d *Data) (err error) {
 	key := newLPMKey(d.Name)
-	e := this.Pit.Match(key)
-	if e == nil {
-		// not in pit
-		err = fmt.Errorf("data dropped; not in pit %s", d.Name)
-		return
-	}
 	this.Pit.Update(key, func(chs interface{}) interface{} {
-		for _, ch := range chs.([]chan *Data) {
+		if chs == nil {
+			return nil
+		}
+		for ch := range chs.(map[chan *Data]bool) {
 			ch <- d
 		}
+		ContentStore.Add(key, d)
 		return nil
 	}, true)
-	ContentStore.Add(key, d)
 	return
 }
 
 func (this *Face) RecvInterest(i *Interest) (err error) {
-	this.InterestIn <- i
+	go func() {
+		this.InterestIn <- i
+	}()
 	return
 }
 
@@ -121,7 +142,11 @@ func (this *Face) verify(d *Data) (err error) {
 	if err != nil {
 		return
 	}
-	cd := <-ch
+	cd, ok := <-ch
+	if !ok {
+		err = fmt.Errorf("verify timeout")
+		return
+	}
 	var key Key
 	err = key.DecodePublicKey(cd.Content)
 	if err != nil {
@@ -159,7 +184,11 @@ func (this *Face) SendControlInterest(control *ControlInterest) (resp *ControlRe
 	if err != nil {
 		return
 	}
-	d := <-ch
+	d, ok := <-ch
+	if !ok {
+		err = fmt.Errorf("control response timeout")
+		return
+	}
 	resp = new(ControlResponse)
 	err = Unmarshal(d.Content, resp, 101)
 	if err != nil {
