@@ -12,8 +12,7 @@ import (
 type Face struct {
 	w          net.Conn
 	r          tlv.PeekReader
-	Pit        *lpm.Matcher
-	Fib        *lpm.Matcher
+	pit        *lpm.Matcher
 	InterestIn chan *Interest
 }
 
@@ -25,8 +24,7 @@ func NewFace(transport net.Conn) (f *Face) {
 	f = &Face{
 		w:          transport,
 		r:          bufio.NewReader(transport),
-		Pit:        lpm.New(),
-		Fib:        lpm.New(),
+		pit:        lpm.New(),
 		InterestIn: make(chan *Interest),
 	}
 	go func() {
@@ -82,7 +80,7 @@ func (this *Face) SendInterest(i *Interest) (ch chan *Data, err error) {
 	if err != nil {
 		return
 	}
-	this.Pit.Update(key, func(chs interface{}) interface{} {
+	this.pit.Update(key, func(chs interface{}) interface{} {
 		if chs == nil {
 			return map[chan *Data]bool{ch: true}
 		}
@@ -93,7 +91,7 @@ func (this *Face) SendInterest(i *Interest) (ch chan *Data, err error) {
 	go func() {
 		<-time.After(time.Duration(i.LifeTime) * time.Millisecond)
 		close(ch)
-		this.Pit.Update(key, func(chs interface{}) interface{} {
+		this.pit.Update(key, func(chs interface{}) interface{} {
 			if chs == nil {
 				return nil
 			}
@@ -111,7 +109,7 @@ func (this *Face) SendInterest(i *Interest) (ch chan *Data, err error) {
 
 func (this *Face) RecvData(d *Data) (err error) {
 	key := newLPMKey(d.Name)
-	this.Pit.Update(key, func(chs interface{}) interface{} {
+	this.pit.Update(key, func(chs interface{}) interface{} {
 		if chs == nil {
 			return nil
 		}
