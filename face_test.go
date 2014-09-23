@@ -49,9 +49,10 @@ func TestListen(t *testing.T) {
 		t.Fatal(err)
 	}
 	go func() {
-		i := <-face.InterestIn
-		t.Logf("producer got %v", i.Name)
-		face.SendData(&Data{Name: i.Name})
+		for i := range face.InterestIn {
+			t.Logf("producer got %v", i.Name)
+			face.SendData(&Data{Name: i.Name})
+		}
 	}()
 	conn2, err := net.Dial("tcp", "localhost:6363")
 	if err != nil {
