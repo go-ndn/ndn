@@ -187,7 +187,7 @@ func (this *Key) sign(digest []byte) (signature []byte, err error) {
 	return
 }
 
-func (this *Key) verify(digest, signature []byte) error {
+func (this *Key) Verify(digest, signature []byte) error {
 	switch key := this.PrivateKey.(type) {
 	case *rsa.PrivateKey:
 		return rsa.VerifyPKCS1v15(&key.PublicKey, crypto.SHA256, digest, signature)

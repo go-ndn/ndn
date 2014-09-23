@@ -150,7 +150,7 @@ func (this *Face) verify(d *Data) (err error) {
 	if err != nil {
 		return
 	}
-	err = key.verify(digest, d.SignatureValue)
+	err = key.Verify(digest, d.SignatureValue)
 	return
 }
 
