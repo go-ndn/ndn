@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type ControlPacket struct {
+type ControlInterest struct {
 	Name      Command   `tlv:"7"`
 	Selectors Selectors `tlv:"9?"`
 	Nonce     []byte    `tlv:"10"`
@@ -29,7 +29,7 @@ type Command struct {
 // WriteTo writes control interest packet to tlv.Writer after it signs the name automatically
 //
 // Everything except Module, Command and Parameters will be populated.
-func (this *ControlPacket) WriteTo(w tlv.Writer) (err error) {
+func (this *ControlInterest) WriteTo(w tlv.Writer) (err error) {
 	this.Name.Localhost = "localhost"
 	this.Name.Nfd = "nfd"
 	this.Name.Timestamp = uint64(time.Now().UnixNano() / 1000000)
@@ -54,7 +54,7 @@ func (this *ControlPacket) WriteTo(w tlv.Writer) (err error) {
 	return
 }
 
-func (this *ControlPacket) ReadFrom(r tlv.PeekReader) error {
+func (this *ControlInterest) ReadFrom(r tlv.PeekReader) error {
 	return tlv.Unmarshal(r, this, 5)
 }
 
@@ -72,7 +72,7 @@ type signatureValueComponent struct {
 
 type Parameters struct {
 	Name                Name     `tlv:"7?"`
-	FaceId              uint64   `tlv:"105?"`
+	FaceId              uint64   `tlv:"105"` // faceId = 0: requesting face
 	Uri                 string   `tlv:"114?"`
 	LocalControlFeature uint64   `tlv:"110?"`
 	Origin              uint64   `tlv:"111?"`

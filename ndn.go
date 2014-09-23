@@ -38,6 +38,24 @@ func Unmarshal(b []byte, i interface{}, valType uint64) error {
 	return tlv.Unmarshal(bufio.NewReader(bytes.NewBuffer(b)), i, valType)
 }
 
+type ReadFrom interface {
+	ReadFrom(tlv.PeekReader) error
+}
+
+type WriteTo interface {
+	WriteTo(tlv.Writer) error
+}
+
+func Copy(from WriteTo, to ReadFrom) (err error) {
+	buf := new(bytes.Buffer)
+	err = from.WriteTo(buf)
+	if err != nil {
+		return
+	}
+	err = to.ReadFrom(bufio.NewReader(buf))
+	return
+}
+
 type Interest struct {
 	Name      Name      `tlv:"7"`
 	Selectors Selectors `tlv:"9?"`

@@ -2,55 +2,111 @@ package ndn
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
+	"github.com/taylorchu/lpm"
 	"github.com/taylorchu/tlv"
 	"net"
-	"time"
 )
 
-// Common local nfd address: "localhost:6363", "/var/run/nfd.sock"
-//
-// Known networks are "tcp", "tcp4" (IPv4-only), "tcp6" (IPv6-only),
-// "udp", "udp4" (IPv4-only), "udp6" (IPv6-only), "ip", "ip4"
-// (IPv4-only), "ip6" (IPv6-only), "unix", "unixgram" and
-// "unixpacket".
-//
-// For TCP and UDP networks, addresses have the form host:port.
-// If host is a literal IPv6 address or host name, it must be enclosed
-// in square brackets as in "[::1]:80", "[ipv6-host]:http" or
-// "[ipv6-host%zone]:80".
-// The functions JoinHostPort and SplitHostPort manipulate addresses
-// in this form.
-//
-// Examples:
-//	NewFace("tcp", "12.34.56.78:80")
-//	NewFace("tcp", "google.com:http")
-//	NewFace("tcp", "[2001:db8::1]:http")
-//	NewFace("tcp", "[fe80::1%lo0]:80")
-//
-// For IP networks, the network must be "ip", "ip4" or "ip6" followed
-// by a colon and a protocol number or name and the addr must be a
-// literal IP address.
-//
-// Examples:
-//	NewFace("ip4:1", "127.0.0.1")
-//	NewFace("ip6:ospf", "::1")
-//
-// For Unix networks, the address must be a file system path.
 type Face struct {
-	Network, Address string
+	w          net.Conn
+	r          tlv.PeekReader
+	Pit        *lpm.Matcher
+	Fib        *lpm.Matcher
+	InterestIn chan *Interest
 }
 
-func (this *Face) newConn() (nc *conn, err error) {
-	c, err := net.Dial(this.Network, this.Address)
-	if err != nil {
+var (
+	ContentStore = lpm.New()
+)
+
+func NewFace(transport net.Conn) (f *Face) {
+	f = &Face{
+		w:          transport,
+		r:          bufio.NewReader(transport),
+		Pit:        lpm.New(),
+		Fib:        lpm.New(),
+		InterestIn: make(chan *Interest),
+	}
+	go func() {
+		for {
+			d := new(Data)
+			err := d.ReadFrom(f.r)
+			if err == nil {
+				f.RecvData(d)
+				continue
+			}
+			i := new(Interest)
+			err = i.ReadFrom(f.r)
+			if err == nil {
+				f.RecvInterest(i)
+				continue
+			}
+			break
+		}
+		close(f.InterestIn)
+	}()
+	return
+}
+
+func (this *Face) RemoteAddr() net.Addr {
+	return this.w.RemoteAddr()
+}
+
+func (this *Face) Close() error {
+	return this.w.Close()
+}
+
+func newLPMKey(n Name) (cs []lpm.Component) {
+	for _, c := range n.Components {
+		cs = append(cs, lpm.Component(c))
+	}
+	return
+}
+
+func (this *Face) SendData(d *Data) error {
+	return d.WriteTo(this.w)
+}
+
+func (this *Face) SendInterest(i *Interest) (ch chan *Data, err error) {
+	key := newLPMKey(i.Name)
+	ch = make(chan *Data, 1)
+	e := ContentStore.RMatch(key)
+	if e != nil {
+		ch <- e.(*Data)
+		// found in cache
 		return
 	}
-	nc = &conn{
-		c: c,
-		r: bufio.NewReader(c),
+	this.Pit.Update(key, func(chs interface{}) interface{} {
+		if chs == nil {
+			return []chan *Data{ch}
+		}
+		return append(chs.([]chan *Data), ch)
+	}, false)
+	err = i.WriteTo(this.w)
+	return
+}
+
+func (this *Face) RecvData(d *Data) (err error) {
+	key := newLPMKey(d.Name)
+	e := this.Pit.Match(key)
+	if e == nil {
+		// not in pit
+		err = fmt.Errorf("data dropped; not in pit %s", d.Name)
+		return
 	}
+	this.Pit.Update(key, func(chs interface{}) interface{} {
+		for _, ch := range chs.([]chan *Data) {
+			ch <- d
+		}
+		return nil
+	}, true)
+	ContentStore.Add(key, d)
+	return
+}
+
+func (this *Face) RecvInterest(i *Interest) (err error) {
+	this.InterestIn <- i
 	return
 }
 
@@ -59,16 +115,13 @@ func (this *Face) verify(d *Data) (err error) {
 	if err != nil {
 		return
 	}
-	dl, err := this.Dial(&Interest{
+	ch, err := this.SendInterest(&Interest{
 		Name: d.SignatureInfo.KeyLocator.Name,
 	})
 	if err != nil {
 		return
 	}
-	cd, err := dl.Receive()
-	if err != nil {
-		return
-	}
+	cd := <-ch
 	var key Key
 	err = key.DecodePublicKey(cd.Content)
 	if err != nil {
@@ -78,126 +131,35 @@ func (this *Face) verify(d *Data) (err error) {
 	return
 }
 
-// Dial expresses interest, and waits for segmented/sequenced data
-func (this *Face) Dial(i *Interest) (dl Dialer, err error) {
-	conn, err := this.newConn()
-	if err != nil {
-		return
-	}
-	err = i.WriteTo(conn.c)
-	if err != nil {
-		return
-	}
-	conn.timeout = time.Duration(i.LifeTime)
-	dl = conn
+func (this *Face) AddNextHop(prefix string) (err error) {
+	control := new(ControlInterest)
+	control.Name.Module = "fib"
+	control.Name.Command = "add-nexthop"
+	control.Name.Parameters.Parameters.Name = NewName(prefix)
+	_, err = this.SendControlInterest(control)
 	return
 }
 
-// Listen registers prefix to nfd, and listens to incoming interests
-func (this *Face) Listen(prefix string) (ln Listener, err error) {
-	conn, err := this.newConn()
-	if err != nil {
-		return
-	}
-	id, err := conn.createFace()
-	if err != nil {
-		return
-	}
-	err = conn.announce(id, prefix)
-	if err != nil {
-		return
-	}
-	fmt.Printf("Listen(%d) %s %s://%s\n", id, prefix, conn.c.LocalAddr().Network(), conn.c.LocalAddr().String())
-	ln = conn
+func (this *Face) RemoveNextHop(prefix string) (err error) {
+	control := new(ControlInterest)
+	control.Name.Module = "fib"
+	control.Name.Command = "remove-nexthop"
+	control.Name.Parameters.Parameters.Name = NewName(prefix)
+	_, err = this.SendControlInterest(control)
 	return
 }
 
-type Dialer interface {
-	Receive() (*Data, error)
-	Close() error
-}
-
-type Listener interface {
-	Accept() (*Interest, error)
-	Send(*Data) error
-	Close() error
-}
-
-type conn struct {
-	c       net.Conn
-	r       tlv.PeekReader
-	timeout time.Duration
-}
-
-func (this *conn) Close() error {
-	return this.c.Close()
-}
-
-func (this *conn) Accept() (i *Interest, err error) {
-	i = new(Interest)
-	err = i.ReadFrom(this.r)
-	return
-}
-
-func (this *conn) Send(d *Data) error {
-	return d.WriteTo(this.c)
-}
-
-func (this *conn) Receive() (d *Data, err error) {
-	// assume non-segment
-	timeout := this.timeout
-	this.timeout = 0
-
-	d = new(Data)
-	this.c.SetReadDeadline(time.Now().Add(timeout * time.Millisecond))
-	err = d.ReadFrom(this.r)
-	this.c.SetReadDeadline(time.Time{})
+func (this *Face) SendControlInterest(control *ControlInterest) (resp *ControlResponse, err error) {
+	i := new(Interest)
+	err = Copy(control, i)
 	if err != nil {
 		return
 	}
-	name := d.Name
-	last := name.Pop()
-	if bytes.Equal(d.MetaInfo.FinalBlockId.Component, last) {
-		return
-	}
-	m, err := last.Marker()
-	if err != nil {
-		err = nil
-		return
-	}
-	n, err := last.Number()
-	if err != nil {
-		err = nil
-		return
-	}
-	switch m {
-	case Segment:
-		fallthrough
-	case Sequence:
-		name.Push(m, n+1)
-	case Offset:
-		name.Push(m, n+uint64(len(d.Content)))
-	default:
-		return
-	}
-	err = (&Interest{Name: name}).WriteTo(this.c)
+	ch, err := this.SendInterest(i)
 	if err != nil {
 		return
 	}
-	this.timeout = timeout
-	return
-}
-
-func (this *conn) getResponse(control *ControlPacket) (resp *ControlResponse, err error) {
-	err = control.WriteTo(this.c)
-	if err != nil {
-		return
-	}
-	var d Data
-	err = d.ReadFrom(this.r)
-	if err != nil {
-		return
-	}
+	d := <-ch
 	resp = new(ControlResponse)
 	err = Unmarshal(d.Content, resp, 101)
 	if err != nil {
@@ -207,28 +169,5 @@ func (this *conn) getResponse(control *ControlPacket) (resp *ControlResponse, er
 		err = fmt.Errorf("(%d) %s", resp.StatusCode, resp.StatusText)
 		return
 	}
-	return
-}
-
-func (this *conn) createFace() (id uint64, err error) {
-	control := new(ControlPacket)
-	control.Name.Module = "faces"
-	control.Name.Command = "create"
-	control.Name.Parameters.Parameters.Uri = this.c.LocalAddr().Network() + "://" + this.c.LocalAddr().String()
-	resp, err := this.getResponse(control)
-	if err != nil {
-		return
-	}
-	id = resp.Parameters.FaceId
-	return
-}
-
-func (this *conn) announce(id uint64, prefix string) (err error) {
-	control := new(ControlPacket)
-	control.Name.Module = "fib"
-	control.Name.Command = "add-nexthop"
-	control.Name.Parameters.Parameters.Name = NewName(prefix)
-	control.Name.Parameters.Parameters.FaceId = id
-	_, err = this.getResponse(control)
 	return
 }

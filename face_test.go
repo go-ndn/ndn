@@ -2,6 +2,7 @@ package ndn
 
 import (
 	"io/ioutil"
+	"net"
 	"testing"
 )
 
@@ -17,52 +18,51 @@ func TestSignKey(t *testing.T) {
 }
 
 func TestDialRemote(t *testing.T) {
-	face := &Face{
-		Network: "tcp4",
-		Address: "aleph.ndn.ucla.edu:6363",
+	conn, err := net.Dial("tcp4", "aleph.ndn.ucla.edu:6363")
+	if err != nil {
+		t.Fatal(err)
 	}
-	dl, err := face.Dial(&Interest{
+	face := NewFace(conn)
+	defer face.Close()
+	dl, err := face.SendInterest(&Interest{
 		Name: NewName("/ndn/edu/ucla"),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	d, err := dl.Receive()
-	if err != nil {
-		t.Fatal(err)
-	}
+	d := <-dl
 	t.Logf("name: %v, sig: %v", d.Name, d.SignatureInfo.KeyLocator.Name)
 }
 
 func TestListen(t *testing.T) {
-	face := &Face{
-		Network: "tcp",
-		Address: "localhost:6363",
+	conn, err := net.Dial("tcp", "localhost:6363")
+	if err != nil {
+		t.Fatal(err)
 	}
-	ln, err := face.Listen("/hello/world")
+	face := NewFace(conn)
+	defer face.Close()
+	err = face.AddNextHop("/hello/world")
 	if err != nil {
 		t.Fatal(err)
 	}
 	go func() {
-		for {
-			i, err := ln.Accept()
-			if err != nil {
-				break
-			}
-			t.Logf("producer got %v", i.Name)
-			ln.Send(&Data{Name: i.Name})
-		}
+		i := <-face.InterestIn
+		t.Logf("producer got %v", i.Name)
+		face.SendData(&Data{Name: i.Name})
 	}()
-	dl, err := face.Dial(&Interest{
+	conn2, err := net.Dial("tcp", "localhost:6363")
+	if err != nil {
+		t.Fatal(err)
+	}
+	face2 := NewFace(conn2)
+	defer face2.Close()
+	dl, err := face2.SendInterest(&Interest{
 		Name: NewName("/hello/world"),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	d, err := dl.Receive()
-	if err != nil {
-		t.Fatal(err)
-	}
+	d := <-dl
 	t.Logf("consumer got %v", d.Name)
 	if d.Name.String() != "/hello/world" {
 		t.Fatal("fail to echo")
