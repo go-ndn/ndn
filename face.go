@@ -56,21 +56,13 @@ func (this *Face) Close() error {
 	return this.w.Close()
 }
 
-func newLPMKey(n Name) (cs []lpm.Component) {
-	for _, c := range n.Components {
-		cs = append(cs, lpm.Component(c))
-	}
-	return
-}
-
 func (this *Face) SendData(d *Data) error {
 	return d.WriteTo(this.w)
 }
 
 func (this *Face) SendInterest(i *Interest) (ch chan *Data, err error) {
-	key := newLPMKey(i.Name)
 	ch = make(chan *Data, 1)
-	e := ContentStore.RMatch(key)
+	e := ContentStore.RMatch(i.Name)
 	if e != nil {
 		ch <- e.(*Data)
 		// found in cache
@@ -80,7 +72,7 @@ func (this *Face) SendInterest(i *Interest) (ch chan *Data, err error) {
 	if err != nil {
 		return
 	}
-	this.pit.Update(key, func(chs interface{}) interface{} {
+	this.pit.Update(i.Name, func(chs interface{}) interface{} {
 		if chs == nil {
 			return map[chan *Data]bool{ch: true}
 		}
@@ -91,7 +83,7 @@ func (this *Face) SendInterest(i *Interest) (ch chan *Data, err error) {
 	go func() {
 		<-time.After(time.Duration(i.LifeTime) * time.Millisecond)
 		close(ch)
-		this.pit.Update(key, func(chs interface{}) interface{} {
+		this.pit.Update(i.Name, func(chs interface{}) interface{} {
 			if chs == nil {
 				return nil
 			}
@@ -108,15 +100,14 @@ func (this *Face) SendInterest(i *Interest) (ch chan *Data, err error) {
 }
 
 func (this *Face) RecvData(d *Data) (err error) {
-	key := newLPMKey(d.Name)
-	this.pit.Update(key, func(chs interface{}) interface{} {
+	this.pit.Update(d.Name, func(chs interface{}) interface{} {
 		if chs == nil {
 			return nil
 		}
 		for ch := range chs.(map[chan *Data]bool) {
 			ch <- d
 		}
-		ContentStore.Add(key, d)
+		ContentStore.Add(d.Name, d)
 		return nil
 	}, true)
 	return
