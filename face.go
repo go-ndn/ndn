@@ -114,9 +114,7 @@ func (this *Face) recvData(d *Data) (err error) {
 }
 
 func (this *Face) recvInterest(i *Interest) (err error) {
-	go func() {
-		this.InterestIn <- i
-	}()
+	this.InterestIn <- i
 	return
 }
 
