@@ -37,11 +37,7 @@ func (this *ControlInterest) WriteTo(w tlv.Writer) (err error) {
 	this.Name.SignatureInfo.SignatureInfo.SignatureType = SignKey.SignatureType()
 	this.Name.SignatureInfo.SignatureInfo.KeyLocator.Name = SignKey.Name.CertificateName()
 
-	digest, err := newSha256(this.Name)
-	if err != nil {
-		return
-	}
-	this.Name.SignatureValue.SignatureValue, err = SignKey.sign(digest)
+	this.Name.SignatureValue.SignatureValue, err = SignKey.sign(this.Name)
 	if err != nil {
 		return
 	}

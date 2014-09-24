@@ -140,18 +140,17 @@ func newSha256(v interface{}) (digest []byte, err error) {
 //
 // If SignKey is not ready, it will only provide DigestSha256.
 func (this *Data) WriteTo(w tlv.Writer) (err error) {
-	digest, err := newSha256(this)
-	if err != nil {
-		return
-	}
 	sigType := SignKey.SignatureType()
 	switch sigType {
 	case SignatureTypeDigestSha256:
-		this.SignatureValue = digest
+		this.SignatureValue, err = newSha256(this)
+		if err != nil {
+			return
+		}
 	default:
 		this.SignatureInfo.SignatureType = sigType
 		this.SignatureInfo.KeyLocator.Name = SignKey.Name.CertificateName()
-		this.SignatureValue, err = SignKey.sign(digest)
+		this.SignatureValue, err = SignKey.sign(this)
 		if err != nil {
 			return
 		}

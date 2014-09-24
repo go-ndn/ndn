@@ -121,10 +121,6 @@ func (this *Face) RecvInterest(i *Interest) (err error) {
 }
 
 func (this *Face) verify(d *Data) (err error) {
-	digest, err := newSha256(d)
-	if err != nil {
-		return
-	}
 	ch, err := this.SendInterest(&Interest{
 		Name: d.SignatureInfo.KeyLocator.Name,
 	})
@@ -141,7 +137,7 @@ func (this *Face) verify(d *Data) (err error) {
 	if err != nil {
 		return
 	}
-	err = key.Verify(digest, d.SignatureValue)
+	err = key.Verify(d, d.SignatureValue)
 	return
 }
 

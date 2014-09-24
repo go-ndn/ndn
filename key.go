@@ -170,7 +170,11 @@ type ecdsaSignature struct {
 	R, S *big.Int
 }
 
-func (this *Key) sign(digest []byte) (signature []byte, err error) {
+func (this *Key) sign(v interface{}) (signature []byte, err error) {
+	digest, err := newSha256(v)
+	if err != nil {
+		return
+	}
 	switch key := this.PrivateKey.(type) {
 	case *rsa.PrivateKey:
 		signature, err = rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA256, digest)
@@ -187,7 +191,11 @@ func (this *Key) sign(digest []byte) (signature []byte, err error) {
 	return
 }
 
-func (this *Key) Verify(digest, signature []byte) error {
+func (this *Key) Verify(v interface{}, signature []byte) error {
+	digest, err := newSha256(v)
+	if err != nil {
+		return err
+	}
 	switch key := this.PrivateKey.(type) {
 	case *rsa.PrivateKey:
 		return rsa.VerifyPKCS1v15(&key.PublicKey, crypto.SHA256, digest, signature)
