@@ -32,13 +32,13 @@ func NewFace(transport net.Conn) (f *Face) {
 			d := new(Data)
 			err := d.ReadFrom(f.r)
 			if err == nil {
-				f.RecvData(d)
+				f.recvData(d)
 				continue
 			}
 			i := new(Interest)
 			err = i.ReadFrom(f.r)
 			if err == nil {
-				f.RecvInterest(i)
+				f.recvInterest(i)
 				continue
 			}
 			break
@@ -82,11 +82,11 @@ func (this *Face) SendInterest(i *Interest) (ch chan *Data, err error) {
 
 	go func() {
 		<-time.After(time.Duration(i.LifeTime) * time.Millisecond)
-		close(ch)
 		this.pit.Update(i.Name, func(chs interface{}) interface{} {
 			if chs == nil {
 				return nil
 			}
+			close(ch)
 			m := chs.(map[chan *Data]bool)
 			delete(m, ch)
 			if len(m) == 0 {
@@ -99,7 +99,7 @@ func (this *Face) SendInterest(i *Interest) (ch chan *Data, err error) {
 	return
 }
 
-func (this *Face) RecvData(d *Data) (err error) {
+func (this *Face) recvData(d *Data) (err error) {
 	this.pit.Update(d.Name, func(chs interface{}) interface{} {
 		if chs == nil {
 			return nil
@@ -113,7 +113,7 @@ func (this *Face) RecvData(d *Data) (err error) {
 	return
 }
 
-func (this *Face) RecvInterest(i *Interest) (err error) {
+func (this *Face) recvInterest(i *Interest) (err error) {
 	go func() {
 		this.InterestIn <- i
 	}()

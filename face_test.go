@@ -38,7 +38,7 @@ func TestDialRemote(t *testing.T) {
 }
 
 func TestListen(t *testing.T) {
-	conn, err := net.Dial("tcp", "localhost:6363")
+	conn, err := net.Dial("tcp", ":6363")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func TestListen(t *testing.T) {
 			face.SendData(&Data{Name: i.Name})
 		}
 	}()
-	conn2, err := net.Dial("tcp", "localhost:6363")
+	conn2, err := net.Dial("tcp", ":6363")
 	if err != nil {
 		t.Fatal(err)
 	}
