@@ -77,17 +77,23 @@ func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 		// found in cache
 		return ch, nil
 	}
-	err := i.WriteTo(this.w)
-	if err != nil {
-		return nil, err
-	}
+	var err error
 	this.pit.Update(i.Name, func(chs interface{}) interface{} {
 		if chs == nil {
+			// send interest only if it is new
+			err = i.WriteTo(this.w)
+			if err != nil {
+				return nil
+			}
 			return map[chan<- *Data]bool{ch: true}
 		}
 		chs.(map[chan<- *Data]bool)[ch] = true
 		return chs
 	}, false)
+
+	if err != nil {
+		return nil, err
+	}
 
 	go func() {
 		<-time.After(time.Duration(i.LifeTime) * time.Millisecond)
