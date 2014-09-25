@@ -74,16 +74,23 @@ const (
 	Sequence         = 0xFE
 )
 
-func (this *Name) Equal(n Name) bool {
-	if len(this.Components) != len(n.Components) {
-		return false
-	}
-	for i := range this.Components {
-		if !bytes.Equal(this.Components[i], n.Components[i]) {
-			return false
+// Compare compares two names according to http://named-data.net/doc/ndn-tlv/name.html#canonical-order
+//
+// -1 if a < b; 0 if a == b; 1 if a > b
+func (this *Name) Compare(n Name) int {
+	for i := 0; i < len(this.Components) && i < len(n.Components); i++ {
+		cmp := bytes.Compare(this.Components[i], n.Components[i])
+		if cmp != 0 {
+			return cmp
 		}
 	}
-	return true
+	if len(this.Components) < len(n.Components) {
+		return -1
+	}
+	if len(this.Components) > len(n.Components) {
+		return 1
+	}
+	return 0
 }
 
 func (this *Name) CertificateName() (name Name) {
