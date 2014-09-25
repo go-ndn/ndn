@@ -39,11 +39,13 @@ func NewFace(transport net.Conn, ch chan<- *Interest) (f *Face) {
 				f.recvData(d)
 				continue
 			}
-			i := new(Interest)
-			err = i.ReadFrom(f.r)
-			if err == nil && f.interestIn != nil {
-				f.recvInterest(i)
-				continue
+			if f.interestIn != nil {
+				i := new(Interest)
+				err = i.ReadFrom(f.r)
+				if err == nil {
+					f.recvInterest(i)
+					continue
+				}
 			}
 			break
 		}
