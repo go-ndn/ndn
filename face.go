@@ -13,19 +13,23 @@ type Face struct {
 	w          net.Conn
 	r          tlv.PeekReader
 	pit        *lpm.Matcher
-	InterestIn chan *Interest
+	interestIn chan<- *Interest
 }
 
 var (
 	ContentStore = lpm.New()
 )
 
-func NewFace(transport net.Conn) (f *Face) {
+// NewFace create a face with transport and interest buffer
+//
+// The interest buffer will be closed.
+// All incoming interests will be ignored if nil interest channel is passed in.
+func NewFace(transport net.Conn, ch chan<- *Interest) (f *Face) {
 	f = &Face{
 		w:          transport,
 		r:          bufio.NewReader(transport),
 		pit:        lpm.New(),
-		InterestIn: make(chan *Interest),
+		interestIn: ch,
 	}
 	go func() {
 		for {
@@ -37,13 +41,15 @@ func NewFace(transport net.Conn) (f *Face) {
 			}
 			i := new(Interest)
 			err = i.ReadFrom(f.r)
-			if err == nil {
+			if err == nil && f.interestIn != nil {
 				f.recvInterest(i)
 				continue
 			}
 			break
 		}
-		close(f.InterestIn)
+		if f.interestIn != nil {
+			close(f.interestIn)
+		}
 	}()
 	return
 }
@@ -60,23 +66,24 @@ func (this *Face) SendData(d *Data) error {
 	return d.WriteTo(this.w)
 }
 
-func (this *Face) SendInterest(i *Interest) (ch chan *Data, err error) {
-	ch = make(chan *Data, 1)
+func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
+	ch := make(chan *Data, 1)
 	e := ContentStore.RMatch(i.Name)
 	if e != nil {
 		ch <- e.(*Data)
+		close(ch)
 		// found in cache
-		return
+		return ch, nil
 	}
-	err = i.WriteTo(this.w)
+	err := i.WriteTo(this.w)
 	if err != nil {
-		return
+		return nil, err
 	}
 	this.pit.Update(i.Name, func(chs interface{}) interface{} {
 		if chs == nil {
-			return map[chan *Data]bool{ch: true}
+			return map[chan<- *Data]bool{ch: true}
 		}
-		chs.(map[chan *Data]bool)[ch] = true
+		chs.(map[chan<- *Data]bool)[ch] = true
 		return chs
 	}, false)
 
@@ -87,7 +94,7 @@ func (this *Face) SendInterest(i *Interest) (ch chan *Data, err error) {
 				return nil
 			}
 			close(ch)
-			m := chs.(map[chan *Data]bool)
+			m := chs.(map[chan<- *Data]bool)
 			delete(m, ch)
 			if len(m) == 0 {
 				return nil
@@ -96,7 +103,7 @@ func (this *Face) SendInterest(i *Interest) (ch chan *Data, err error) {
 		}, false)
 	}()
 
-	return
+	return ch, nil
 }
 
 func (this *Face) recvData(d *Data) (err error) {
@@ -104,8 +111,9 @@ func (this *Face) recvData(d *Data) (err error) {
 		if chs == nil {
 			return nil
 		}
-		for ch := range chs.(map[chan *Data]bool) {
+		for ch := range chs.(map[chan<- *Data]bool) {
 			ch <- d
+			close(ch)
 		}
 		ContentStore.Add(d.Name, d)
 		return nil
@@ -114,7 +122,7 @@ func (this *Face) recvData(d *Data) (err error) {
 }
 
 func (this *Face) recvInterest(i *Interest) (err error) {
-	this.InterestIn <- i
+	this.interestIn <- i
 	return
 }
 

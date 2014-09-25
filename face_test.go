@@ -22,7 +22,7 @@ func TestDialRemote(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	face := NewFace(conn)
+	face := NewFace(conn, nil)
 	defer face.Close()
 	dl, err := face.SendInterest(&Interest{
 		Name: NewName("/ndn/edu/ucla"),
@@ -42,14 +42,15 @@ func TestListen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	face := NewFace(conn)
+	interestIn := make(chan *Interest, 1)
+	face := NewFace(conn, interestIn)
 	defer face.Close()
 	err = face.AddNextHop("/hello/world", 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	go func() {
-		for i := range face.InterestIn {
+		for i := range interestIn {
 			t.Logf("producer got %v", i.Name)
 			face.SendData(&Data{Name: i.Name})
 		}
@@ -58,7 +59,7 @@ func TestListen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	face2 := NewFace(conn2)
+	face2 := NewFace(conn2, nil)
 	defer face2.Close()
 	dl, err := face2.SendInterest(&Interest{
 		Name: NewName("/hello/world"),
