@@ -123,7 +123,13 @@ func (this *Face) recvData(d *Data) (err error) {
 			ch <- d
 			close(ch)
 		}
-		ContentStore.Add(d.Name, d)
+		if d.MetaInfo.FreshnessPeriod > 0 {
+			ContentStore.Add(d.Name, d)
+			go func() {
+				time.Sleep(time.Duration(d.MetaInfo.FreshnessPeriod) * time.Millisecond)
+				ContentStore.Remove(d.Name)
+			}()
+		}
 		return nil
 	}, true)
 	return
