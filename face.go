@@ -56,6 +56,10 @@ func NewFace(transport net.Conn, ch chan<- *Interest) (f *Face) {
 	return
 }
 
+func (this *Face) LocalAddr() net.Addr {
+	return this.w.LocalAddr()
+}
+
 func (this *Face) RemoteAddr() net.Addr {
 	return this.w.RemoteAddr()
 }
@@ -126,8 +130,8 @@ func (this *Face) recvData(d *Data) (err error) {
 			ch <- d
 			close(ch)
 		}
-		ContentStore.Add(d.Name, d)
 		if d.MetaInfo.FreshnessPeriod > 0 {
+			ContentStore.Add(d.Name, d)
 			go func() {
 				time.Sleep(time.Duration(d.MetaInfo.FreshnessPeriod) * time.Millisecond)
 				ContentStore.Remove(d.Name)

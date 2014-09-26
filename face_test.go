@@ -42,12 +42,12 @@ func TestListen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	interestIn := make(chan *Interest, 1)
+	interestIn := make(chan *Interest)
 	face := NewFace(conn, interestIn)
 	defer face.Close()
 	err = face.AddNextHop("/hello/world", 1)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal(err, face.LocalAddr())
 	}
 	go func() {
 		for i := range interestIn {
@@ -65,11 +65,11 @@ func TestListen(t *testing.T) {
 		Name: NewName("/hello/world"),
 	})
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal(err, face2.LocalAddr())
 	}
 	d, ok := <-dl
 	if !ok {
-		t.Fatal("timeout")
+		t.Fatal("timeout", face2.LocalAddr())
 	}
 	t.Logf("consumer got %v", d.Name)
 	if d.Name.String() != "/hello/world" {
