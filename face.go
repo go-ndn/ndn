@@ -101,8 +101,11 @@ func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 			if chs == nil {
 				return nil
 			}
-			close(ch)
 			m := chs.(map[chan<- *Data]bool)
+			if _, ok := m[ch]; !ok {
+				return chs
+			}
+			close(ch)
 			delete(m, ch)
 			if len(m) == 0 {
 				return nil
@@ -123,8 +126,8 @@ func (this *Face) recvData(d *Data) (err error) {
 			ch <- d
 			close(ch)
 		}
+		ContentStore.Add(d.Name, d)
 		if d.MetaInfo.FreshnessPeriod > 0 {
-			ContentStore.Add(d.Name, d)
 			go func() {
 				time.Sleep(time.Duration(d.MetaInfo.FreshnessPeriod) * time.Millisecond)
 				ContentStore.Remove(d.Name)
