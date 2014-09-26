@@ -96,7 +96,7 @@ func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 	}
 
 	go func() {
-		<-time.After(time.Duration(i.LifeTime) * time.Millisecond)
+		time.Sleep(time.Duration(i.LifeTime) * time.Millisecond)
 		this.pit.Update(i.Name, func(chs interface{}) interface{} {
 			if chs == nil {
 				return nil
