@@ -147,27 +147,6 @@ func (this *Face) recvInterest(i *Interest) (err error) {
 	return
 }
 
-func (this *Face) verify(d *Data) (err error) {
-	ch, err := this.SendInterest(&Interest{
-		Name: d.SignatureInfo.KeyLocator.Name,
-	})
-	if err != nil {
-		return
-	}
-	cd, ok := <-ch
-	if !ok {
-		err = fmt.Errorf("verify timeout")
-		return
-	}
-	var key Key
-	err = key.DecodePublicKey(cd.Content)
-	if err != nil {
-		return
-	}
-	err = key.Verify(d, d.SignatureValue)
-	return
-}
-
 func (this *Face) AddNextHop(prefix string, cost uint64) (err error) {
 	control := new(ControlInterest)
 	control.Name.Module = "fib"

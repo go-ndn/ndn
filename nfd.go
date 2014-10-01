@@ -30,22 +30,25 @@ type Command struct {
 //
 // Everything except Module, Command and Parameters will be populated.
 func (this *ControlInterest) WriteTo(w tlv.Writer) (err error) {
-	this.Name.Localhost = "localhost"
-	this.Name.Nfd = "nfd"
-	this.Name.Timestamp = uint64(time.Now().UnixNano() / 1000000)
-	this.Name.Nonce = newNonce()
-	this.Name.SignatureInfo.SignatureInfo.SignatureType = SignKey.SignatureType()
-	this.Name.SignatureInfo.SignatureInfo.KeyLocator.Name = SignKey.Name.CertificateName()
+	if len(this.Name.SignatureValue.SignatureValue) == 0 {
+		this.Name.Localhost = "localhost"
+		this.Name.Nfd = "nfd"
+		this.Name.Timestamp = uint64(time.Now().UnixNano() / 1000000)
+		this.Name.Nonce = newNonce()
+		this.Name.SignatureInfo.SignatureInfo.SignatureType = SignKey.SignatureType()
+		this.Name.SignatureInfo.SignatureInfo.KeyLocator.Name = SignKey.Name.CertificateName()
 
-	this.Name.SignatureValue.SignatureValue, err = SignKey.sign(this.Name)
-	if err != nil {
-		return
+		this.Name.SignatureValue.SignatureValue, err = SignKey.sign(this.Name)
+		if err != nil {
+			return
+		}
 	}
-
-	if this.LifeTime == 0 {
-		this.LifeTime = 4000
+	if len(this.Nonce) == 0 {
+		this.Nonce = newNonce()
+		if this.LifeTime == 0 {
+			this.LifeTime = 4000
+		}
 	}
-	this.Nonce = newNonce()
 	err = tlv.Marshal(w, this, 5)
 	return
 }
