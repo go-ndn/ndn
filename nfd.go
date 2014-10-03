@@ -85,6 +85,11 @@ type Strategy struct {
 	Name Name `tlv:"7"`
 }
 
+type StrategyChoice struct {
+	Name     Name     `tlv:"7"`
+	Strategy Strategy `tlv:"107"`
+}
+
 type ControlResponse struct {
 	StatusCode uint64     `tlv:"102"`
 	StatusText string     `tlv:"103"`
