@@ -71,7 +71,7 @@ type signatureValueComponent struct {
 
 type Parameters struct {
 	Name                Name     `tlv:"7?"`
-	FaceId              uint64   `tlv:"105"` // faceId = 0: requesting face
+	FaceId              uint64   `tlv:"105?"`
 	Uri                 string   `tlv:"114?"`
 	LocalControlFeature uint64   `tlv:"110?"`
 	Origin              uint64   `tlv:"111?"`
@@ -97,23 +97,41 @@ type NextHopRecord struct {
 }
 
 type FibEntry struct {
-	Name     Name            `tlv:"7"`
-	NextHops []NextHopRecord `tlv:"129"`
+	Name    Name            `tlv:"7"`
+	NextHop []NextHopRecord `tlv:"129"`
 }
 
 type FaceEntry struct {
-	FaceId      uint64 `tlv:"105"`
-	Uri         string `tlv:"114"`
-	LocalUri    string `tlv:"129"`
-	FaceFlag    uint64 `tlv:"194"`
-	InInterest  uint64 `tlv:"144"`
-	InData      uint64 `tlv:"145"`
-	OutInterest uint64 `tlv:"146"`
-	OutData     uint64 `tlv:"147"`
+	FaceId           uint64 `tlv:"105"`
+	Uri              string `tlv:"114"`
+	LocalUri         string `tlv:"129"`
+	ExpirationPeriod uint64 `tlv:"109?"`
+	Scope            uint64 `tlv:"132"`
+	Persistency      uint64 `tlv:"133"`
+	LinkType         uint64 `tlv:"134"`
+	InInterest       uint64 `tlv:"144"`
+	InData           uint64 `tlv:"145"`
+	OutInterest      uint64 `tlv:"146"`
+	OutData          uint64 `tlv:"147"`
+	InByte           uint64 `tlv:"148"`
+	OutByte          uint64 `tlv:"149"`
+}
+
+type RibEntry struct {
+	Name  Name    `tlv:"7"`
+	Route []Route `tlv:"129"`
+}
+
+type Route struct {
+	FaceId           uint64 `tlv:"105"`
+	Origin           uint64 `tlv:"111"`
+	Cost             uint64 `tlv:"106"`
+	Flags            uint64 `tlv:"108"`
+	ExpirationPeriod uint64 `tlv:"109?"`
 }
 
 type ForwarderStatus struct {
-	NfdVersion       uint64 `tlv:"128"`
+	NfdVersion       string `tlv:"128"`
 	StartTimestamp   uint64 `tlv:"129"`
 	CurrentTimestamp uint64 `tlv:"130"`
 	NameTreeEntry    uint64 `tlv:"131"`
