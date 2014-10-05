@@ -106,7 +106,7 @@ func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 				return nil
 			}
 			m := chs.(map[chan<- *Data]bool)
-			if _, ok := m[ch]; !ok {
+			if !m[ch] {
 				return chs
 			}
 			close(ch)
