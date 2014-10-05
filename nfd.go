@@ -79,6 +79,7 @@ type Parameters struct {
 	Flags               uint64   `tlv:"108?"`
 	Strategy            Strategy `tlv:"107?"`
 	ExpirationPeriod    uint64   `tlv:"109?"`
+	LSA                 LSA      `tlv:"112?"` // TODO: remove
 }
 
 type Strategy struct {
@@ -148,4 +149,18 @@ type ForwarderStatus struct {
 	InData           uint64 `tlv:"145"`
 	OutInterest      uint64 `tlv:"146"`
 	OutData          uint64 `tlv:"147"`
+}
+
+// TODO: remove
+type LSA struct {
+	Version  uint64     `tlv:"128"`
+	Id       string     `tlv:"105"`
+	Name     []string   `tlv:"7"`
+	Neighbor []Neighbor `tlv:"129"`
+}
+
+// TODO: remove
+type Neighbor struct {
+	Id   string `tlv:"105"`
+	Cost uint64 `tlv:"106"`
 }
