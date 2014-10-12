@@ -45,7 +45,7 @@ func TestListen(t *testing.T) {
 	interestIn := make(chan *Interest)
 	face := NewFace(conn, interestIn)
 	defer face.Close()
-	err = face.AddNextHop("/hello/world", 1)
+	err = face.Register("/hello/world")
 	if err != nil {
 		t.Fatal(err, face.LocalAddr())
 	}

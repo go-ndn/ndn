@@ -147,20 +147,19 @@ func (this *Face) recvInterest(i *Interest) (err error) {
 	return
 }
 
-func (this *Face) AddNextHop(prefix string, cost uint64) (err error) {
+func (this *Face) Register(prefix string) (err error) {
 	control := new(ControlInterest)
-	control.Name.Module = "fib"
-	control.Name.Command = "add-nexthop"
+	control.Name.Module = "rib"
+	control.Name.Command = "register"
 	control.Name.Parameters.Parameters.Name = NewName(prefix)
-	control.Name.Parameters.Parameters.Cost = cost
 	_, err = this.SendControlInterest(control)
 	return
 }
 
-func (this *Face) RemoveNextHop(prefix string) (err error) {
+func (this *Face) Unregister(prefix string) (err error) {
 	control := new(ControlInterest)
-	control.Name.Module = "fib"
-	control.Name.Command = "remove-nexthop"
+	control.Name.Module = "rib"
+	control.Name.Command = "unregister"
 	control.Name.Parameters.Parameters.Name = NewName(prefix)
 	_, err = this.SendControlInterest(control)
 	return
