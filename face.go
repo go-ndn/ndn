@@ -3,6 +3,7 @@ package ndn
 import (
 	"bufio"
 	"fmt"
+	"github.com/taylorchu/exact"
 	"github.com/taylorchu/lpm"
 	"github.com/taylorchu/tlv"
 	"net"
@@ -17,7 +18,7 @@ type Face struct {
 }
 
 var (
-	ContentStore = lpm.New()
+	ContentStore = exact.New()
 )
 
 // NewFace create a face with transport and interest buffer
@@ -74,7 +75,7 @@ func (this *Face) SendData(d *Data) error {
 
 func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 	ch := make(chan *Data, 1)
-	e := ContentStore.RMatch(i.Name)
+	e := ContentStore.Match(i.Name)
 	if e != nil {
 		ch <- e.(*Data)
 		close(ch)
