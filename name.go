@@ -24,7 +24,7 @@ func NewName(s string) (n Name) {
 	}
 	for _, c := range strings.Split(s, "/") {
 		uc, _ := url.QueryUnescape(c)
-		n.Components = append(n.Components, []byte(uc))
+		n.Components = append(n.Components, Component(uc))
 	}
 	return
 }
@@ -94,7 +94,7 @@ func (this *Name) Compare(n Name) int {
 }
 
 func (this *Name) CertificateName() (name Name) {
-	name.Components = append(this.Components, []byte("KEY"), []byte("ID-CERT"))
+	name.Components = append(this.Components, Component("KEY"), Component("ID-CERT"))
 	return
 }
 

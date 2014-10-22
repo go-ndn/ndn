@@ -2,11 +2,13 @@ package ndn
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"github.com/taylorchu/exact"
 	"github.com/taylorchu/lpm"
 	"github.com/taylorchu/tlv"
 	"net"
+	"strings"
 	"time"
 )
 
@@ -90,9 +92,9 @@ func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 			if err != nil {
 				return nil
 			}
-			return map[chan<- *Data]bool{ch: true}
+			return map[chan<- *Data]*Selectors{ch: &i.Selectors}
 		}
-		chs.(map[chan<- *Data]bool)[ch] = true
+		chs.(map[chan<- *Data]*Selectors)[ch] = &i.Selectors
 		return chs
 	}, false)
 
@@ -106,8 +108,8 @@ func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 			if chs == nil {
 				return nil
 			}
-			m := chs.(map[chan<- *Data]bool)
-			if !m[ch] {
+			m := chs.(map[chan<- *Data]*Selectors)
+			if _, ok := m[ch]; !ok {
 				return chs
 			}
 			close(ch)
@@ -123,23 +125,44 @@ func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 }
 
 func (this *Face) recvData(d *Data) (err error) {
-	this.pit.Update(d.Name, func(chs interface{}) interface{} {
-		if chs == nil {
-			return nil
-		}
-		for ch := range chs.(map[chan<- *Data]bool) {
-			ch <- d
-			close(ch)
-		}
-		if d.MetaInfo.FreshnessPeriod > 0 {
+	this.pit.UpdateAll(d.Name, func(name string, chs interface{}) interface{} {
+		if d.MetaInfo.FreshnessPeriod > 0 && ContentStore.Match(d.Name) == nil {
 			ContentStore.Add(d.Name, d)
 			go func() {
 				time.Sleep(time.Duration(d.MetaInfo.FreshnessPeriod) * time.Millisecond)
 				ContentStore.Remove(d.Name)
 			}()
 		}
-		return nil
-	}, true)
+		suffix := len(d.Name.Components) - strings.Count(name, "/") + 1
+		m := chs.(map[chan<- *Data]*Selectors)
+		for ch, sel := range m {
+			if sel.MinSuffixComponents != 0 && sel.MinSuffixComponents > uint64(suffix) {
+				continue
+			}
+			if sel.MaxSuffixComponents != 0 && sel.MaxSuffixComponents < uint64(suffix) {
+				continue
+			}
+			if len(sel.PublisherPublicKeyLocator.Name.Components) != 0 &&
+				sel.PublisherPublicKeyLocator.Name.Compare(d.SignatureInfo.KeyLocator.Name) != 0 {
+				continue
+			}
+			if len(sel.PublisherPublicKeyLocator.Digest) != 0 &&
+				!bytes.Equal(sel.PublisherPublicKeyLocator.Digest, d.SignatureInfo.KeyLocator.Digest) {
+				continue
+			}
+			if suffix > 0 && sel.Exclude.IsExcluded(d.Name.Components[len(d.Name.Components)-suffix]) {
+				continue
+			}
+
+			ch <- d
+			close(ch)
+			delete(m, ch)
+		}
+		if len(m) == 0 {
+			return nil
+		}
+		return chs
+	})
 	return
 }
 

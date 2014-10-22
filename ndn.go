@@ -37,15 +37,7 @@ func Unmarshal(b []byte, i interface{}, valType uint64) error {
 	return tlv.Unmarshal(bufio.NewReader(bytes.NewBuffer(b)), i, valType)
 }
 
-type ReadFrom interface {
-	ReadFrom(tlv.PeekReader) error
-}
-
-type WriteTo interface {
-	WriteTo(tlv.Writer) error
-}
-
-func Copy(from WriteTo, to ReadFrom) (err error) {
+func Copy(from tlv.WriteTo, to tlv.ReadFrom) (err error) {
 	buf := new(bytes.Buffer)
 	err = from.WriteTo(buf)
 	if err != nil {
@@ -67,7 +59,7 @@ type Selectors struct {
 	MinSuffixComponents       uint64     `tlv:"13?"`
 	MaxSuffixComponents       uint64     `tlv:"14?"`
 	PublisherPublicKeyLocator KeyLocator `tlv:"15?"`
-	Exclude                   []byte     `tlv:"16?"`
+	Exclude                   Exclude    `tlv:"16?"`
 	ChildSelector             uint64     `tlv:"17?"`
 	MustBeFresh               bool       `tlv:"18?"`
 }
