@@ -150,7 +150,7 @@ func (this *Face) recvData(d *Data) (err error) {
 				!bytes.Equal(sel.PublisherPublicKeyLocator.Digest, d.SignatureInfo.KeyLocator.Digest) {
 				continue
 			}
-			if suffix > 0 && sel.Exclude.IsExcluded(d.Name.Components[len(d.Name.Components)-suffix]) {
+			if suffix > 0 && sel.Exclude.Match(d.Name.Components[len(d.Name.Components)-suffix]) {
 				continue
 			}
 

@@ -15,22 +15,23 @@ type Exclude struct {
 }
 
 func (this *Exclude) ReadValueFrom(r tlv.PeekReader) error {
-	this.excluded = []excluded{{Component: Component{}}}
+	this.excluded = nil
+	var e excluded
+	if nil == tlv.Unmarshal(r, &e.Any, 19) {
+		this.excluded = append(this.excluded, e)
+	}
 	for {
-		if nil == tlv.Unmarshal(r, &this.excluded[len(this.excluded)-1].Any, 19) {
-			continue
+		var e excluded
+		if nil != tlv.Unmarshal(r, &e.Component, 8) {
+			break
 		}
-		var c Component
-		if nil == tlv.Unmarshal(r, &c, 8) {
-			this.excluded = append(this.excluded, excluded{Component: c})
-			continue
-		}
-		break
+		tlv.Unmarshal(r, &e.Any, 19)
+		this.excluded = append(this.excluded, e)
 	}
 	return nil
 }
 
-func (this *Exclude) IsExcluded(c Component) bool {
+func (this *Exclude) Match(c Component) bool {
 	for i := len(this.excluded) - 1; i >= 0; i-- {
 		cmp := bytes.Compare(this.excluded[i].Component, c)
 		if cmp == 0 {
@@ -41,6 +42,20 @@ func (this *Exclude) IsExcluded(c Component) bool {
 		}
 	}
 	return false
+}
+
+func NewExclude(cs ...Component) (e Exclude) {
+	for _, c := range cs {
+		if c == nil {
+			if e.excluded == nil {
+				e.excluded = []excluded{{}}
+			}
+			e.excluded[len(e.excluded)-1].Any = true
+		} else {
+			e.excluded = append(e.excluded, excluded{Component: c})
+		}
+	}
+	return
 }
 
 func (this *Exclude) WriteValueTo(buf tlv.Writer) (err error) {
