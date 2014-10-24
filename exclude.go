@@ -58,19 +58,17 @@ func NewExclude(cs ...Component) (e Exclude) {
 	return
 }
 
-func (this *Exclude) WriteValueTo(buf tlv.Writer) (err error) {
+func (this *Exclude) WriteValueTo(w tlv.Writer) (err error) {
 	for _, e := range this.excluded {
 		if len(e.Component) != 0 {
-			err = tlv.Marshal(buf, e.Component, 8)
+			err = tlv.Marshal(w, e.Component, 8)
 			if err != nil {
 				return
 			}
 		}
-		if e.Any {
-			err = tlv.Marshal(buf, e.Any, 19)
-			if err != nil {
-				return
-			}
+		err = tlv.Marshal(w, e.Any, 19)
+		if err != nil {
+			return
 		}
 	}
 	return
