@@ -103,7 +103,11 @@ func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 	}
 
 	go func() {
-		time.Sleep(time.Duration(i.LifeTime) * time.Millisecond)
+		lifeTime := 4000 * time.Millisecond
+		if i.LifeTime != 0 {
+			lifeTime = time.Duration(i.LifeTime) * time.Millisecond
+		}
+		time.Sleep(lifeTime)
 		this.pit.Update(i.Name, func(chs interface{}) interface{} {
 			if chs == nil {
 				return nil

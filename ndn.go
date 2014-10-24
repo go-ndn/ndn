@@ -108,9 +108,6 @@ func newNonce() []byte {
 func (this *Interest) WriteTo(w tlv.Writer) error {
 	if len(this.Nonce) == 0 {
 		this.Nonce = newNonce()
-		if this.LifeTime == 0 {
-			this.LifeTime = 4000
-		}
 	}
 	return tlv.Marshal(w, this, 5)
 }
