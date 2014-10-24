@@ -8,11 +8,7 @@ import (
 )
 
 func TestExclude(t *testing.T) {
-	b := bytes.NewBuffer([]byte{
-		19, 0, 8, 2, 'A', 'B',
-	})
-	var e1 Exclude
-	e1.ReadValueFrom(bufio.NewReader(b))
+	e1 := NewExclude(nil, Component("AB"))
 	if len(e1.excluded) != 2 {
 		t.Fatal("should have 2 components")
 	}
@@ -26,12 +22,13 @@ func TestExclude(t *testing.T) {
 		t.Fatal("should not be excluded")
 	}
 
-	err := e1.WriteValueTo(b)
+	buf := new(bytes.Buffer)
+	err := e1.WriteValueTo(buf)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var e2 Exclude
-	e2.ReadValueFrom(bufio.NewReader(b))
+	e2.ReadValueFrom(bufio.NewReader(buf))
 	if !reflect.DeepEqual(e1, e2) {
 		t.Fatal("not equal", e1, e2)
 	}
