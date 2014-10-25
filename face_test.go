@@ -1,23 +1,16 @@
 package ndn
 
 import (
+	"bytes"
+	"encoding/hex"
+	"fmt"
 	"io/ioutil"
 	"net"
+	"sync"
 	"testing"
 )
 
-func TestSignKey(t *testing.T) {
-	b, err := ioutil.ReadFile("key/default.pri")
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = SignKey.DecodePrivateKey(b)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestDialRemote(t *testing.T) {
+func TestConsumer(t *testing.T) {
 	conn, err := net.Dial("tcp4", "aleph.ndn.ucla.edu:6363")
 	if err != nil {
 		t.Fatal(err)
@@ -37,42 +30,121 @@ func TestDialRemote(t *testing.T) {
 	t.Logf("name: %v, sig: %v", d.Name, d.SignatureInfo.KeyLocator.Name)
 }
 
-func TestListen(t *testing.T) {
+func producer() (err error) {
 	conn, err := net.Dial("tcp", ":6363")
 	if err != nil {
-		t.Fatal(err)
+		return
 	}
 	interestIn := make(chan *Interest)
 	face := NewFace(conn, interestIn)
-	defer face.Close()
-	err = face.Register("/hello/world")
+	err = face.Register("/test")
 	if err != nil {
-		t.Fatal(err, face.LocalAddr())
+		face.Close()
+		return
 	}
+	content := bytes.Repeat([]byte("0123456789"), 100)
 	go func() {
 		for i := range interestIn {
-			t.Logf("producer got %v", i.Name)
-			face.SendData(&Data{Name: i.Name})
+			face.SendData(&Data{
+				Name:    i.Name,
+				Content: content,
+			})
 		}
+		face.Close()
 	}()
-	conn2, err := net.Dial("tcp", ":6363")
+	return
+}
+
+func consumer(ch chan<- error) {
+	conn, err := net.Dial("tcp", ":6363")
 	if err != nil {
-		t.Fatal(err)
+		ch <- err
+		return
 	}
-	face2 := NewFace(conn2, nil)
-	defer face2.Close()
-	dl, err := face2.SendInterest(&Interest{
-		Name: NewName("/hello/world"),
+	face := NewFace(conn, nil)
+	defer face.Close()
+	rand := hex.EncodeToString(newNonce())
+	dl, err := face.SendInterest(&Interest{
+		Name: NewName("/test/" + rand),
 	})
 	if err != nil {
-		t.Fatal(err, face2.LocalAddr())
+		ch <- err
+		return
 	}
 	d, ok := <-dl
 	if !ok {
-		t.Fatal("timeout", face2.LocalAddr())
+		ch <- fmt.Errorf("timeout %s", face.LocalAddr())
+		return
 	}
-	t.Logf("consumer got %v", d.Name)
-	if d.Name.String() != "/hello/world" {
-		t.Fatal("fail to echo")
+	if d.Name.String() != "/test/"+rand {
+		ch <- fmt.Errorf("fail to echo %s %s", rand, d.Name)
+		return
+	}
+}
+
+func TestProducer(t *testing.T) {
+	key, err := ioutil.ReadFile("key/default.pri")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = SignKey.DecodePrivateKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = producer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ch := make(chan error)
+	var wg sync.WaitGroup
+	for i := 0; i < 3; i++ {
+		wg.Add(1)
+		go func() {
+			consumer(ch)
+			wg.Done()
+		}()
+	}
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+	for err := range ch {
+		t.Error(err)
+	}
+}
+
+func BenchmarkForward(b *testing.B) {
+	key, err := ioutil.ReadFile("key/default.pri")
+	if err != nil {
+		b.Fatal(err)
+	}
+	err = SignKey.DecodePrivateKey(key)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	err = producer()
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ch := make(chan error)
+		var wg sync.WaitGroup
+		for i := 0; i < 256; i++ {
+			wg.Add(1)
+			go func() {
+				consumer(ch)
+				wg.Done()
+			}()
+		}
+		go func() {
+			wg.Wait()
+			close(ch)
+		}()
+		for err := range ch {
+			b.Error(err)
+		}
 	}
 }
