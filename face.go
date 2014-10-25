@@ -130,12 +130,17 @@ func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 
 func (this *Face) recvData(d *Data) (err error) {
 	this.pit.UpdateAll(d.Name, func(name string, chs interface{}) interface{} {
-		if d.MetaInfo.FreshnessPeriod > 0 && ContentStore.Match(d.Name) == nil {
-			ContentStore.Add(d.Name, d)
-			go func() {
-				time.Sleep(time.Duration(d.MetaInfo.FreshnessPeriod) * time.Millisecond)
-				ContentStore.Remove(d.Name)
-			}()
+		if d.MetaInfo.FreshnessPeriod > 0 {
+			ContentStore.Update(d.Name, func(v interface{}) interface{} {
+				if v != nil {
+					return v
+				}
+				go func() {
+					time.Sleep(time.Duration(d.MetaInfo.FreshnessPeriod) * time.Millisecond)
+					ContentStore.Remove(d.Name)
+				}()
+				return d
+			})
 		}
 		suffix := len(d.Name.Components) - strings.Count(name, "/") + 1
 		m := chs.(map[chan<- *Data]*Selectors)
