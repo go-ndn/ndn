@@ -42,13 +42,12 @@ func NewFace(transport net.Conn, ch chan<- *Interest) (f *Face) {
 				f.recvData(d)
 				continue
 			}
-			if f.interestIn != nil {
-				i := new(Interest)
-				err = i.ReadFrom(f.r)
-				if err == nil {
-					f.recvInterest(i)
-					continue
-				}
+
+			i := new(Interest)
+			err = i.ReadFrom(f.r)
+			if err == nil {
+				f.recvInterest(i)
+				continue
 			}
 			break
 		}
@@ -176,7 +175,9 @@ func (this *Face) recvData(d *Data) (err error) {
 }
 
 func (this *Face) recvInterest(i *Interest) (err error) {
-	this.interestIn <- i
+	if this.interestIn != nil {
+		this.interestIn <- i
+	}
 	return
 }
 

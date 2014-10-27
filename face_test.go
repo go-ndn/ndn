@@ -10,6 +10,10 @@ import (
 	"testing"
 )
 
+var (
+	testContent = bytes.Repeat([]byte("0123456789"), 100)
+)
+
 func TestConsumer(t *testing.T) {
 	conn, err := net.Dial("tcp4", "aleph.ndn.ucla.edu:6363")
 	if err != nil {
@@ -30,24 +34,26 @@ func TestConsumer(t *testing.T) {
 	t.Logf("name: %v, sig: %v", d.Name, d.SignatureInfo.KeyLocator.Name)
 }
 
-func producer() (err error) {
+func producer(id string) (err error) {
 	conn, err := net.Dial("tcp", ":6363")
 	if err != nil {
 		return
 	}
 	interestIn := make(chan *Interest)
 	face := NewFace(conn, interestIn)
-	err = face.Register("/test")
+	err = face.Register("/" + id)
 	if err != nil {
 		face.Close()
 		return
 	}
-	content := bytes.Repeat([]byte("0123456789"), 100)
 	go func() {
 		for i := range interestIn {
 			face.SendData(&Data{
 				Name:    i.Name,
-				Content: content,
+				Content: testContent,
+				//MetaInfo: MetaInfo{
+				//FreshnessPeriod: 3600000,
+				//},
 			})
 		}
 		face.Close()
@@ -55,7 +61,7 @@ func producer() (err error) {
 	return
 }
 
-func consumer(ch chan<- error) {
+func consumer(id string, ch chan<- error) {
 	conn, err := net.Dial("tcp", ":6363")
 	if err != nil {
 		ch <- err
@@ -63,9 +69,11 @@ func consumer(ch chan<- error) {
 	}
 	face := NewFace(conn, nil)
 	defer face.Close()
-	rand := hex.EncodeToString(newNonce())
 	dl, err := face.SendInterest(&Interest{
-		Name: NewName("/test/" + rand),
+		Name: NewName("/" + id),
+		Selectors: Selectors{
+			MustBeFresh: true,
+		},
 	})
 	if err != nil {
 		ch <- err
@@ -76,8 +84,8 @@ func consumer(ch chan<- error) {
 		ch <- fmt.Errorf("timeout %s", face.LocalAddr())
 		return
 	}
-	if d.Name.String() != "/test/"+rand {
-		ch <- fmt.Errorf("fail to echo %s %s", rand, d.Name)
+	if d.Name.String() != "/"+id {
+		ch <- fmt.Errorf("expected %s, got %s", id, d.Name)
 		return
 	}
 }
@@ -91,22 +99,14 @@ func TestProducer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	err = producer()
+	id := hex.EncodeToString(newNonce())
+	err = producer(id)
 	if err != nil {
 		t.Fatal(err)
 	}
 	ch := make(chan error)
-	var wg sync.WaitGroup
-	for i := 0; i < 3; i++ {
-		wg.Add(1)
-		go func() {
-			consumer(ch)
-			wg.Done()
-		}()
-	}
 	go func() {
-		wg.Wait()
+		consumer(id, ch)
 		close(ch)
 	}()
 	for err := range ch {
@@ -123,21 +123,26 @@ func BenchmarkForward(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-
-	err = producer()
-	if err != nil {
-		b.Fatal(err)
+	var ids []string
+	for i := 0; i < 64; i++ {
+		ids = append(ids, hex.EncodeToString(newNonce()))
+	}
+	for _, id := range ids {
+		err = producer(id)
+		if err != nil {
+			b.Fatal(err)
+		}
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		ch := make(chan error)
 		var wg sync.WaitGroup
-		for i := 0; i < 256; i++ {
+		for _, id := range ids {
 			wg.Add(1)
-			go func() {
-				consumer(ch)
+			go func(id string) {
+				consumer(id, ch)
 				wg.Done()
-			}()
+			}(id)
 		}
 		go func() {
 			wg.Wait()
