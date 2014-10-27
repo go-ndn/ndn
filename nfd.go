@@ -76,7 +76,7 @@ type Parameters struct {
 	Flags               uint64   `tlv:"108?"`
 	Strategy            Strategy `tlv:"107?"`
 	ExpirationPeriod    uint64   `tlv:"109?"`
-	LSA                 LSA      `tlv:"112?"` // TODO: remove
+	LSA                 *LSA     `tlv:"112?"` // TODO: remove
 }
 
 type Strategy struct {
