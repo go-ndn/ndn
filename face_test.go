@@ -10,10 +10,6 @@ import (
 	"testing"
 )
 
-var (
-	testContent = bytes.Repeat([]byte("0123456789"), 100)
-)
-
 func TestConsumer(t *testing.T) {
 	conn, err := net.Dial("tcp4", "aleph.ndn.ucla.edu:6363")
 	if err != nil {
@@ -46,15 +42,16 @@ func producer(id string) (err error) {
 		face.Close()
 		return
 	}
+	d := &Data{
+		Name:    NewName("/" + id),
+		Content: bytes.Repeat([]byte("0123456789"), 100),
+		//MetaInfo: MetaInfo{
+		//FreshnessPeriod: 3600000,
+		//},
+	}
 	go func() {
-		for i := range interestIn {
-			face.SendData(&Data{
-				Name:    i.Name,
-				Content: testContent,
-				//MetaInfo: MetaInfo{
-				//FreshnessPeriod: 3600000,
-				//},
-			})
+		for _ = range interestIn {
+			face.SendData(d)
 		}
 		face.Close()
 	}()
