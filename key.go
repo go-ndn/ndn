@@ -141,7 +141,7 @@ type validity struct {
 	NotBefore, NotAfter time.Time
 }
 
-func (this *Key) DecodePublicKey(raw []byte) (err error) {
+func (this *Key) DecodeCertificate(raw []byte) (err error) {
 	var c certificate
 	_, err = asn1.Unmarshal(raw, &c)
 	if err != nil {
