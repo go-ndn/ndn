@@ -33,7 +33,7 @@ func (this *ControlInterest) WriteTo(w tlv.Writer) (err error) {
 	if len(this.Name.SignatureValue.SignatureValue) == 0 {
 		this.Name.Localhost = "localhost"
 		this.Name.Nfd = "nfd"
-		this.Name.Timestamp = uint64(time.Now().UnixNano() / 1000000)
+		this.Name.Timestamp = uint64(time.Now().UTC().UnixNano() / 1000000)
 		this.Name.Nonce = newNonce()
 		this.Name.SignatureInfo.SignatureInfo.SignatureType = SignKey.SignatureType()
 		this.Name.SignatureInfo.SignatureInfo.KeyLocator.Name = SignKey.Name.CertificateName()

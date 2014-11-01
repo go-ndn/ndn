@@ -47,7 +47,13 @@ func (this *Name) Compare(n Name) int {
 }
 
 func (this *Name) CertificateName() (name Name) {
-	name.Components = append(this.Components, Component("KEY"), Component("ID-CERT"))
+	if len(this.Components) < 2 {
+		return
+	}
+	name.Components = append(this.Components[:len(this.Components)-2],
+		Component("KEY"),
+		this.Components[len(this.Components)-2], this.Components[len(this.Components)-1],
+		Component("ID-CERT"))
 	return
 }
 

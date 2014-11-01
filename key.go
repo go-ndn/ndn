@@ -110,7 +110,7 @@ func (this *Key) EncodeCertificate(buf io.Writer) (err error) {
 	}
 	d.Content, err = asn1.Marshal(certificate{
 		Validity: validity{
-			NotBefore: time.Now(),
+			NotBefore: time.Now().UTC(),
 			NotAfter:  time.Date(2049, 12, 31, 23, 59, 59, 0, time.UTC), // end of asn.1
 		},
 		Subject: []pkix.AttributeTypeAndValue{{
