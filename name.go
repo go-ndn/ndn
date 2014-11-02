@@ -2,7 +2,6 @@ package ndn
 
 import (
 	"bytes"
-	"encoding/hex"
 	"net/url"
 	"strings"
 )
@@ -11,7 +10,6 @@ type Component []byte
 
 type Name struct {
 	Components []Component `tlv:"8"`
-	Digest     Component   `tlv:"1!"`
 }
 
 // NewName creates a name from string representation
@@ -43,7 +41,7 @@ func (this *Name) Compare(n Name) int {
 	if len(this.Components) > len(n.Components) {
 		return 1
 	}
-	return bytes.Compare(this.Digest, n.Digest)
+	return 0
 }
 
 func (this *Name) CertificateName() (name Name) {
@@ -63,9 +61,6 @@ func (this Name) String() (name string) {
 	}
 	for _, c := range this.Components {
 		name += "/" + url.QueryEscape(string(c))
-	}
-	if len(this.Digest) != 0 {
-		name += "/sha256digest=" + hex.EncodeToString(this.Digest)
 	}
 	return
 }
