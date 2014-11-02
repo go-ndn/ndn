@@ -115,7 +115,7 @@ func (this *Key) EncodeCertificate(buf io.Writer) (err error) {
 		},
 		Subject: []pkix.AttributeTypeAndValue{{
 			Type:  asn1.ObjectIdentifier{2, 5, 4, 41},
-			Value: this.Name.String(),
+			Value: "go ndn",
 		}},
 		PublicKeyInfo: asn1.RawValue{FullBytes: keyBytes},
 	})
