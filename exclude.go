@@ -1,6 +1,7 @@
 package ndn
 
 import (
+	"bufio"
 	"bytes"
 	"github.com/taylorchu/tlv"
 )
@@ -14,18 +15,19 @@ type Exclude struct {
 	excluded []excluded
 }
 
-func (this *Exclude) ReadValueFrom(r tlv.PeekReader) error {
+func (this *Exclude) UnmarshalBinary(data []byte) error {
+	buf := bufio.NewReader(bytes.NewBuffer(data))
 	this.excluded = nil
 	var e excluded
-	if nil == tlv.Unmarshal(r, &e.Any, 19) {
+	if nil == tlv.Unmarshal(buf, &e.Any, 19) {
 		this.excluded = append(this.excluded, e)
 	}
 	for {
 		var e excluded
-		if nil != tlv.Unmarshal(r, &e.Component, 8) {
+		if nil != tlv.Unmarshal(buf, &e.Component, 8) {
 			break
 		}
-		tlv.Unmarshal(r, &e.Any, 19)
+		tlv.Unmarshal(buf, &e.Any, 19)
 		this.excluded = append(this.excluded, e)
 	}
 	return nil
@@ -58,18 +60,20 @@ func NewExclude(cs ...Component) (e Exclude) {
 	return
 }
 
-func (this *Exclude) WriteValueTo(w tlv.Writer) (err error) {
+func (this *Exclude) MarshalBinary() (data []byte, err error) {
+	buf := new(bytes.Buffer)
 	for _, e := range this.excluded {
 		if len(e.Component) != 0 {
-			err = tlv.Marshal(w, e.Component, 8)
+			err = tlv.Marshal(buf, e.Component, 8)
 			if err != nil {
 				return
 			}
 		}
-		err = tlv.Marshal(w, e.Any, 19)
+		err = tlv.Marshal(buf, e.Any, 19)
 		if err != nil {
 			return
 		}
 	}
+	data = buf.Bytes()
 	return
 }

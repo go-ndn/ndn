@@ -1,8 +1,6 @@
 package ndn
 
 import (
-	"bufio"
-	"bytes"
 	"reflect"
 	"testing"
 )
@@ -22,13 +20,12 @@ func TestExclude(t *testing.T) {
 		t.Fatal("should not be excluded")
 	}
 
-	buf := new(bytes.Buffer)
-	err := e1.WriteValueTo(buf)
+	data, err := e1.MarshalBinary()
 	if err != nil {
 		t.Fatal(err)
 	}
 	var e2 Exclude
-	e2.ReadValueFrom(bufio.NewReader(buf))
+	e2.UnmarshalBinary(data)
 	if !reflect.DeepEqual(e1, e2) {
 		t.Fatal("not equal", e1, e2)
 	}
