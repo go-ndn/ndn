@@ -1,6 +1,7 @@
 package ndn
 
 import (
+	"bufio"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
@@ -21,8 +22,9 @@ var (
 )
 
 type Key struct {
-	Name       Name
-	PrivateKey crypto.PrivateKey
+	Name            Name
+	CertificateName Name
+	PrivateKey      crypto.PrivateKey
 }
 
 // DecodePrivateKey reads key from pem bytes
@@ -87,7 +89,7 @@ func (this *Key) SignatureType() uint64 {
 
 func (this *Key) EncodeCertificate(buf io.Writer) (err error) {
 	d := &Data{
-		Name: this.Name.CertificateName(),
+		Name: this.CertificateName,
 		MetaInfo: MetaInfo{
 			ContentType: 2, //key
 		},
@@ -141,9 +143,15 @@ type validity struct {
 	NotBefore, NotAfter time.Time
 }
 
-func (this *Key) DecodeCertificate(raw []byte) (err error) {
+func (this *Key) DecodeCertificate(buf io.Reader) (err error) {
+	var d Data
+	err = d.ReadFrom(bufio.NewReader(base64.NewDecoder(base64.StdEncoding, buf)))
+	if err != nil {
+		return
+	}
+	this.CertificateName = d.Name
 	var c certificate
-	_, err = asn1.Unmarshal(raw, &c)
+	_, err = asn1.Unmarshal(d.Content, &c)
 	if err != nil {
 		return
 	}

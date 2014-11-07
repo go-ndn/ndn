@@ -49,7 +49,7 @@ func (this *Exclude) Match(c Component) bool {
 func NewExclude(cs ...Component) (e Exclude) {
 	for _, c := range cs {
 		if c == nil {
-			if e.excluded == nil {
+			if len(e.excluded) == 0 {
 				e.excluded = []excluded{{}}
 			}
 			e.excluded[len(e.excluded)-1].Any = true

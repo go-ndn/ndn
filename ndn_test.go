@@ -15,10 +15,7 @@ func BenchmarkDataEncodeRsa(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	SignKey = Key{
-		Name:       NewName("/testing/key"),
-		PrivateKey: rsaKey,
-	}
+	SignKey = Key{PrivateKey: rsaKey}
 
 	packet := &Data{
 		Name: NewName("/testing/ndn"),
@@ -39,11 +36,7 @@ func BenchmarkDataEncodeEcdsa(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-
-	SignKey = Key{
-		Name:       NewName("/testing/key"),
-		PrivateKey: ecdsaKey,
-	}
+	SignKey = Key{PrivateKey: ecdsaKey}
 
 	packet := &Data{
 		Name: NewName("/testing/ndn"),
