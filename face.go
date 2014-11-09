@@ -181,25 +181,19 @@ func (this *Face) recvInterest(i *Interest) (err error) {
 	return
 }
 
-func (this *Face) Register(prefix string) (err error) {
-	control := new(ControlInterest)
-	control.Name.Module = "rib"
-	control.Name.Command = "register"
-	control.Name.Parameters.Parameters.Name = NewName(prefix)
-	_, err = this.SendControlInterest(control)
-	return
+func (this *Face) Register(prefix string) error {
+	return this.SendControl("rib", "register", &Parameters{Name: NewName(prefix)})
 }
 
-func (this *Face) Unregister(prefix string) (err error) {
-	control := new(ControlInterest)
-	control.Name.Module = "rib"
-	control.Name.Command = "unregister"
-	control.Name.Parameters.Parameters.Name = NewName(prefix)
-	_, err = this.SendControlInterest(control)
-	return
+func (this *Face) Unregister(prefix string) error {
+	return this.SendControl("rib", "unregister", &Parameters{Name: NewName(prefix)})
 }
 
-func (this *Face) SendControlInterest(control *ControlInterest) (resp *ControlResponse, err error) {
+func (this *Face) SendControl(module, command string, params *Parameters) (err error) {
+	control := new(ControlInterest)
+	control.Name.Module = module
+	control.Name.Command = command
+	control.Name.Parameters.Parameters = *params
 	i := new(Interest)
 	err = Copy(control, i)
 	if err != nil {
@@ -214,7 +208,7 @@ func (this *Face) SendControlInterest(control *ControlInterest) (resp *ControlRe
 		err = fmt.Errorf("control response timeout")
 		return
 	}
-	resp = new(ControlResponse)
+	resp := new(ControlResponse)
 	err = Unmarshal(d.Content, resp, 101)
 	if err != nil {
 		return

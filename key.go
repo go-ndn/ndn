@@ -150,12 +150,12 @@ func (this *Key) DecodeCertificate(buf io.Reader) (err error) {
 		return
 	}
 	this.CertificateName = d.Name
-	var c certificate
-	_, err = asn1.Unmarshal(d.Content, &c)
+	var cert certificate
+	_, err = asn1.Unmarshal(d.Content, &cert)
 	if err != nil {
 		return
 	}
-	pub, err := x509.ParsePKIXPublicKey(c.PublicKeyInfo.FullBytes)
+	pub, err := x509.ParsePKIXPublicKey(cert.PublicKeyInfo.FullBytes)
 	if err != nil {
 		return
 	}
