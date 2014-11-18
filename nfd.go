@@ -101,7 +101,7 @@ type NextHopRecord struct {
 
 type FibEntry struct {
 	Name    Name            `tlv:"7"`
-	NextHop []NextHopRecord `tlv:"129"`
+	NextHop []NextHopRecord `tlv:"129?"`
 }
 
 type FaceEntry struct {
@@ -122,7 +122,7 @@ type FaceEntry struct {
 
 type RibEntry struct {
 	Name  Name    `tlv:"7"`
-	Route []Route `tlv:"129"`
+	Route []Route `tlv:"129?"`
 }
 
 type Route struct {
@@ -152,8 +152,8 @@ type ForwarderStatus struct {
 type LSA struct {
 	Version  uint64     `tlv:"128"`
 	Id       string     `tlv:"105"`
-	Name     []string   `tlv:"7"`
-	Neighbor []Neighbor `tlv:"129"`
+	Name     []string   `tlv:"7?"`
+	Neighbor []Neighbor `tlv:"129?"`
 }
 
 // TODO: remove
