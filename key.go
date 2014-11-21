@@ -150,6 +150,9 @@ func (this *Key) DecodeCertificate(buf io.Reader) (err error) {
 		return
 	}
 	this.CertificateName = d.Name
+	if this.PrivateKey != nil {
+		return
+	}
 	var cert certificate
 	_, err = asn1.Unmarshal(d.Content, &cert)
 	if err != nil {
