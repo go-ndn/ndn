@@ -22,9 +22,8 @@ var (
 )
 
 type Key struct {
-	Name            Name
-	CertificateName Name
-	PrivateKey      crypto.PrivateKey
+	Name       Name
+	PrivateKey crypto.PrivateKey
 }
 
 // DecodePrivateKey reads key from pem bytes
@@ -89,7 +88,7 @@ func (this *Key) SignatureType() uint64 {
 
 func (this *Key) EncodeCertificate(buf io.Writer) (err error) {
 	d := &Data{
-		Name: this.CertificateName,
+		Name: this.Name,
 		MetaInfo: MetaInfo{
 			ContentType: 2, //key
 		},
@@ -149,7 +148,7 @@ func (this *Key) DecodeCertificate(buf io.Reader) (err error) {
 	if err != nil {
 		return
 	}
-	this.CertificateName = d.Name
+	this.Name = d.Name
 	if this.PrivateKey != nil {
 		return
 	}

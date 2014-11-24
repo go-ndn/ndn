@@ -36,7 +36,7 @@ func (this *ControlInterest) WriteTo(w tlv.Writer) (err error) {
 		this.Name.Timestamp = uint64(time.Now().UTC().UnixNano() / 1000000)
 		this.Name.Nonce = newNonce()
 		this.Name.SignatureInfo.SignatureInfo.SignatureType = SignKey.SignatureType()
-		this.Name.SignatureInfo.SignatureInfo.KeyLocator.Name = SignKey.CertificateName
+		this.Name.SignatureInfo.SignatureInfo.KeyLocator.Name = SignKey.Name
 
 		this.Name.SignatureValue.SignatureValue, err = SignKey.sign(this.Name)
 		if err != nil {
