@@ -2,7 +2,6 @@ package ndn
 
 import (
 	"bytes"
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -37,13 +36,13 @@ func producer(id string) (err error) {
 	}
 	interestIn := make(chan *Interest)
 	face := NewFace(conn, interestIn)
-	err = face.Register("/" + id)
+	err = face.Register(id)
 	if err != nil {
 		face.Close()
 		return
 	}
 	d := &Data{
-		Name:    NewName("/" + id),
+		Name:    NewName(id),
 		Content: bytes.Repeat([]byte("0123456789"), 100),
 		//MetaInfo: MetaInfo{
 		//FreshnessPeriod: 3600000,
@@ -66,7 +65,7 @@ func consumer(id string) (err error) {
 	face := NewFace(conn, nil)
 	defer face.Close()
 	dl, err := face.SendInterest(&Interest{
-		Name: NewName("/" + id),
+		Name: NewName(id),
 		Selectors: Selectors{
 			MustBeFresh: true,
 		},
@@ -79,7 +78,7 @@ func consumer(id string) (err error) {
 		err = fmt.Errorf("timeout %s", face.LocalAddr())
 		return
 	}
-	if d.Name.String() != "/"+id {
+	if d.Name.String() != id {
 		err = fmt.Errorf("expected %s, got %s", id, d.Name)
 		return
 	}
@@ -95,7 +94,7 @@ func TestProducer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	id := hex.EncodeToString(newNonce())
+	id := fmt.Sprintf("/%x", newNonce())
 	err = producer(id)
 	if err != nil {
 		t.Fatal(err)
@@ -115,9 +114,9 @@ func BenchmarkBurstyForward(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	var ids []string
+	ids := make([]string, 64)
 	for i := 0; i < 64; i++ {
-		ids = append(ids, hex.EncodeToString(newNonce()))
+		ids[i] = fmt.Sprintf("/%x", newNonce())
 	}
 	for _, id := range ids {
 		err = producer(id)
@@ -159,7 +158,7 @@ func BenchmarkForwardRTT(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	id := hex.EncodeToString(newNonce())
+	id := fmt.Sprintf("/%x", newNonce())
 	err = producer(id)
 	if err != nil {
 		b.Fatal(err)

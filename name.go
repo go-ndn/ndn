@@ -18,9 +18,11 @@ func NewName(s string) (n Name) {
 	if s == "" {
 		return
 	}
-	for _, c := range strings.Split(s, "/") {
-		uc, _ := url.QueryUnescape(c)
-		n.Components = append(n.Components, Component(uc))
+	cs := strings.Split(s, "/")
+	n.Components = make([]Component, len(cs))
+	for i := range cs {
+		c, _ := url.QueryUnescape(cs[i])
+		n.Components[i] = Component(c)
 	}
 	return
 }
@@ -44,12 +46,14 @@ func (this *Name) Compare(n Name) int {
 	return 0
 }
 
-func (this Name) String() (name string) {
+func (this Name) String() string {
 	if len(this.Components) == 0 {
 		return "/"
 	}
+	buf := new(bytes.Buffer)
 	for _, c := range this.Components {
-		name += "/" + url.QueryEscape(string(c))
+		buf.WriteByte('/')
+		buf.WriteString(url.QueryEscape(string(c)))
 	}
-	return
+	return buf.String()
 }
