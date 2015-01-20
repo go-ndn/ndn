@@ -4,12 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/taylorchu/exact"
-	"github.com/taylorchu/lpm"
-	"github.com/taylorchu/tlv"
 	"net"
 	"strings"
 	"time"
+
+	"github.com/go-ndn/exact"
+	"github.com/go-ndn/lpm"
+	"github.com/go-ndn/tlv"
 )
 
 type Face struct {

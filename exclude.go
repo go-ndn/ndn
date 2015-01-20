@@ -3,7 +3,8 @@ package ndn
 import (
 	"bufio"
 	"bytes"
-	"github.com/taylorchu/tlv"
+
+	"github.com/go-ndn/tlv"
 )
 
 type excluded struct {

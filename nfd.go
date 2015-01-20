@@ -1,8 +1,9 @@
 package ndn
 
 import (
-	"github.com/taylorchu/tlv"
 	"time"
+
+	"github.com/go-ndn/tlv"
 )
 
 type ControlInterest struct {

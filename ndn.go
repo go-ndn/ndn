@@ -5,7 +5,7 @@
 //
 // Examples
 //
-// see https://github.com/taylorchu/ndn/blob/master/face_test.go
+// see https://github.com/go-ndn/ndn/blob/master/face_test.go
 //
 package ndn
 
@@ -14,8 +14,9 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
+
 	"github.com/davecgh/go-spew/spew"
-	"github.com/taylorchu/tlv"
+	"github.com/go-ndn/tlv"
 )
 
 // Print dumps interest, data, or any variable in detail for debugging
