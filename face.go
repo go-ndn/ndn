@@ -14,10 +14,10 @@ import (
 )
 
 type Face struct {
-	w          net.Conn
-	r          tlv.PeekReader
-	pit        *lpm.Matcher
-	interestIn chan<- *Interest
+	w            net.Conn
+	r            tlv.PeekReader
+	pit          *lpm.Matcher
+	interestRecv chan<- *Interest
 }
 
 var (
@@ -30,10 +30,10 @@ var (
 // All incoming interests will be ignored if nil interest channel is passed in.
 func NewFace(transport net.Conn, ch chan<- *Interest) (f *Face) {
 	f = &Face{
-		w:          transport,
-		r:          bufio.NewReader(transport),
-		pit:        lpm.New(),
-		interestIn: ch,
+		w:            transport,
+		r:            bufio.NewReader(transport),
+		pit:          lpm.New(),
+		interestRecv: ch,
 	}
 	go func() {
 		for {
@@ -52,8 +52,8 @@ func NewFace(transport net.Conn, ch chan<- *Interest) (f *Face) {
 			}
 			break
 		}
-		if f.interestIn != nil {
-			close(f.interestIn)
+		if f.interestRecv != nil {
+			close(f.interestRecv)
 		}
 	}()
 	return
@@ -79,9 +79,9 @@ func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 	ch := make(chan *Data, 1)
 	e := ContentStore.Match(i.Name)
 	if e != nil {
+		// found in cache
 		ch <- e.(*Data)
 		close(ch)
-		// found in cache
 		return ch, nil
 	}
 	var err error
@@ -108,6 +108,7 @@ func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 			lifeTime = time.Duration(i.LifeTime) * time.Millisecond
 		}
 		time.Sleep(lifeTime)
+
 		this.pit.Update(i.Name, func(chs interface{}) interface{} {
 			if chs == nil {
 				return nil
@@ -176,8 +177,8 @@ func (this *Face) recvData(d *Data) (err error) {
 }
 
 func (this *Face) recvInterest(i *Interest) (err error) {
-	if this.interestIn != nil {
-		this.interestIn <- i
+	if this.interestRecv != nil {
+		this.interestRecv <- i
 	}
 	return
 }

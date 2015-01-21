@@ -34,8 +34,8 @@ func producer(id string) (err error) {
 	if err != nil {
 		return
 	}
-	interestIn := make(chan *Interest)
-	face := NewFace(conn, interestIn)
+	interestRecv := make(chan *Interest)
+	face := NewFace(conn, interestRecv)
 	err = face.Register(id)
 	if err != nil {
 		face.Close()
@@ -49,7 +49,7 @@ func producer(id string) (err error) {
 		//},
 	}
 	go func() {
-		for _ = range interestIn {
+		for _ = range interestRecv {
 			face.SendData(d)
 		}
 		face.Close()
