@@ -103,7 +103,7 @@ func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 	}
 
 	go func() {
-		lifeTime := 4000 * time.Millisecond
+		lifeTime := 4 * time.Second
 		if i.LifeTime != 0 {
 			lifeTime = time.Duration(i.LifeTime) * time.Millisecond
 		}
