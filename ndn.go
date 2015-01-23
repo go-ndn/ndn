@@ -14,6 +14,8 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
+	"strings"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/go-ndn/tlv"
@@ -63,6 +65,31 @@ type Selectors struct {
 	Exclude                   Exclude    `tlv:"16?"`
 	ChildSelector             uint64     `tlv:"17?"`
 	MustBeFresh               bool       `tlv:"18?"`
+}
+
+func (sel *Selectors) Match(name string, d *Data, t time.Time) bool {
+	suffix := len(d.Name.Components) - strings.Count(name, "/") + 1
+	if sel.MinSuffixComponents != 0 && sel.MinSuffixComponents > uint64(suffix) {
+		return false
+	}
+	if sel.MaxSuffixComponents != 0 && sel.MaxSuffixComponents < uint64(suffix) {
+		return false
+	}
+	if len(sel.PublisherPublicKeyLocator.Name.Components) != 0 &&
+		sel.PublisherPublicKeyLocator.Name.Compare(d.SignatureInfo.KeyLocator.Name) != 0 {
+		return false
+	}
+	if len(sel.PublisherPublicKeyLocator.Digest) != 0 &&
+		!bytes.Equal(sel.PublisherPublicKeyLocator.Digest, d.SignatureInfo.KeyLocator.Digest) {
+		return false
+	}
+	if suffix > 0 && sel.Exclude.Match(d.Name.Components[len(d.Name.Components)-suffix]) {
+		return false
+	}
+	if sel.MustBeFresh && !t.IsZero() && time.Now().Sub(t) > time.Duration(d.MetaInfo.FreshnessPeriod)*time.Millisecond {
+		return false
+	}
+	return true
 }
 
 type Data struct {

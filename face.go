@@ -2,10 +2,9 @@ package ndn
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"net"
-	"strings"
+	"reflect"
 	"time"
 
 	"github.com/go-ndn/exact"
@@ -77,25 +76,49 @@ func (this *Face) SendData(d *Data) error {
 
 func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 	ch := make(chan *Data, 1)
-	e := ContentStore.Match(i.Name)
-	if e != nil {
+	var inCache bool
+	ContentStore.Update(i.Name, func(v interface{}) interface{} {
+		if v == nil {
+			return nil
+		}
+		name := i.Name.String()
+		for d, t := range v.(map[*Data]time.Time) {
+			if i.Selectors.Match(name, d, t) {
+				ch <- d
+				close(ch)
+				inCache = true
+				break
+			}
+		}
+		return v
+	})
+	if inCache {
 		// found in cache
-		ch <- e.(*Data)
-		close(ch)
 		return ch, nil
 	}
 	var err error
 	this.pit.Update(i.Name, func(chs interface{}) interface{} {
+		var m map[chan<- *Data]*Selectors
 		if chs == nil {
-			// send interest only if it is new
+			m = make(map[chan<- *Data]*Selectors)
+		} else {
+			m = chs.(map[chan<- *Data]*Selectors)
+		}
+		var inPit bool
+		for _, sel := range m {
+			if reflect.DeepEqual(sel, &i.Selectors) {
+				inPit = true
+				break
+			}
+		}
+		if !inPit {
 			err = i.WriteTo(this.w)
 			if err != nil {
-				return nil
+				return m
 			}
-			return map[chan<- *Data]*Selectors{ch: &i.Selectors}
 		}
-		chs.(map[chan<- *Data]*Selectors)[ch] = &i.Selectors
-		return chs
+		m[ch] = &i.Selectors
+		return m
 	}, false)
 
 	if err != nil {
@@ -115,14 +138,14 @@ func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 			}
 			m := chs.(map[chan<- *Data]*Selectors)
 			if _, ok := m[ch]; !ok {
-				return chs
+				return m
 			}
 			close(ch)
 			delete(m, ch)
 			if len(m) == 0 {
 				return nil
 			}
-			return chs
+			return m
 		}, false)
 	}()
 
@@ -130,40 +153,22 @@ func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 }
 
 func (this *Face) recvData(d *Data) (err error) {
-	this.pit.UpdateAll(d.Name, func(name string, chs interface{}) interface{} {
-		if d.MetaInfo.FreshnessPeriod > 0 {
-			ContentStore.Update(d.Name, func(v interface{}) interface{} {
-				if v != nil {
-					return v
-				}
-				go func() {
-					time.Sleep(time.Duration(d.MetaInfo.FreshnessPeriod) * time.Millisecond)
-					ContentStore.Remove(d.Name)
-				}()
-				return d
-			})
+	ContentStore.Update(d.Name, func(v interface{}) interface{} {
+		var m map[*Data]time.Time
+		if v == nil {
+			m = make(map[*Data]time.Time)
+		} else {
+			m = v.(map[*Data]time.Time)
 		}
-		suffix := len(d.Name.Components) - strings.Count(name, "/") + 1
+		m[d] = time.Now()
+		return m
+	})
+	this.pit.UpdateAll(d.Name, func(name string, chs interface{}) interface{} {
 		m := chs.(map[chan<- *Data]*Selectors)
 		for ch, sel := range m {
-			if sel.MinSuffixComponents != 0 && sel.MinSuffixComponents > uint64(suffix) {
+			if !sel.Match(name, d, time.Time{}) {
 				continue
 			}
-			if sel.MaxSuffixComponents != 0 && sel.MaxSuffixComponents < uint64(suffix) {
-				continue
-			}
-			if len(sel.PublisherPublicKeyLocator.Name.Components) != 0 &&
-				sel.PublisherPublicKeyLocator.Name.Compare(d.SignatureInfo.KeyLocator.Name) != 0 {
-				continue
-			}
-			if len(sel.PublisherPublicKeyLocator.Digest) != 0 &&
-				!bytes.Equal(sel.PublisherPublicKeyLocator.Digest, d.SignatureInfo.KeyLocator.Digest) {
-				continue
-			}
-			if suffix > 0 && sel.Exclude.Match(d.Name.Components[len(d.Name.Components)-suffix]) {
-				continue
-			}
-
 			ch <- d
 			close(ch)
 			delete(m, ch)
@@ -171,7 +176,7 @@ func (this *Face) recvData(d *Data) (err error) {
 		if len(m) == 0 {
 			return nil
 		}
-		return chs
+		return m
 	})
 	return
 }
