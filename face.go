@@ -197,12 +197,12 @@ func (this *Face) Unregister(prefix string) error {
 }
 
 func (this *Face) SendControl(module, command string, params *Parameters) (err error) {
-	control := new(ControlInterest)
-	control.Name.Module = module
-	control.Name.Command = command
-	control.Name.Parameters.Parameters = *params
+	c := new(Command)
+	c.Module = module
+	c.Command = command
+	c.Parameters.Parameters = *params
 	i := new(Interest)
-	err = Copy(control, i)
+	err = Copy(c, &i.Name)
 	if err != nil {
 		return
 	}

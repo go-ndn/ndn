@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"net/url"
 	"strings"
+
+	"github.com/go-ndn/tlv"
 )
 
 type Component []byte
@@ -44,6 +46,14 @@ func (this *Name) Compare(n Name) int {
 		return 1
 	}
 	return 0
+}
+
+func (this *Name) WriteTo(w tlv.Writer) error {
+	return tlv.Marshal(w, this, 7)
+}
+
+func (this *Name) ReadFrom(r tlv.PeekReader) error {
+	return tlv.Unmarshal(r, this, 7)
 }
 
 func (this Name) String() string {

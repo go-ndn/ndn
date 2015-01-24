@@ -6,14 +6,6 @@ import (
 	"github.com/go-ndn/tlv"
 )
 
-type ControlInterest struct {
-	Name      Command   `tlv:"7"`
-	Selectors Selectors `tlv:"9?"`
-	Nonce     []byte    `tlv:"10"`
-	Scope     uint64    `tlv:"11?"`
-	LifeTime  uint64    `tlv:"12?"`
-}
-
 // see http://redmine.named-data.net/projects/nfd/wiki/Management
 type Command struct {
 	Localhost      string                  `tlv:"8"`
@@ -27,32 +19,26 @@ type Command struct {
 	SignatureValue signatureValueComponent `tlv:"8*"`
 }
 
-// WriteTo writes control interest packet to tlv.Writer after it signs the name automatically
-//
-// Everything except Module, Command and Parameters will be populated.
-func (this *ControlInterest) WriteTo(w tlv.Writer) (err error) {
-	if len(this.Name.SignatureValue.SignatureValue) == 0 {
-		this.Name.Localhost = "localhost"
-		this.Name.Nfd = "nfd"
-		this.Name.Timestamp = uint64(time.Now().UTC().UnixNano() / 1000000)
-		this.Name.Nonce = newNonce()
-		this.Name.SignatureInfo.SignatureInfo.SignatureType = SignKey.SignatureType()
-		this.Name.SignatureInfo.SignatureInfo.KeyLocator.Name = SignKey.Name
+func (this *Command) WriteTo(w tlv.Writer) (err error) {
+	if len(this.SignatureValue.SignatureValue) == 0 {
+		this.Localhost = "localhost"
+		this.Nfd = "nfd"
+		this.Timestamp = uint64(time.Now().UTC().UnixNano() / 1000000)
+		this.Nonce = newNonce()
+		this.SignatureInfo.SignatureInfo.SignatureType = SignKey.SignatureType()
+		this.SignatureInfo.SignatureInfo.KeyLocator.Name = SignKey.Name
 
-		this.Name.SignatureValue.SignatureValue, err = SignKey.sign(this.Name)
+		this.SignatureValue.SignatureValue, err = SignKey.sign(this)
 		if err != nil {
 			return
 		}
 	}
-	if len(this.Nonce) == 0 {
-		this.Nonce = newNonce()
-	}
-	err = tlv.Marshal(w, this, 5)
+	err = tlv.Marshal(w, this, 7)
 	return
 }
 
-func (this *ControlInterest) ReadFrom(r tlv.PeekReader) error {
-	return tlv.Unmarshal(r, this, 5)
+func (this *Command) ReadFrom(r tlv.PeekReader) error {
+	return tlv.Unmarshal(r, this, 7)
 }
 
 type parametersComponent struct {
