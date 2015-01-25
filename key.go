@@ -47,14 +47,14 @@ func (this *Key) DecodePrivateKey(pemData []byte) (err error) {
 
 // EncodePrivateKey writes key to io.Writer
 func (this *Key) EncodePrivateKey(buf io.Writer) (err error) {
-	var b []byte
+	var keyBytes []byte
 	var keyType string
 	switch key := this.PrivateKey.(type) {
 	case *rsa.PrivateKey:
-		b = x509.MarshalPKCS1PrivateKey(key)
+		keyBytes = x509.MarshalPKCS1PrivateKey(key)
 		keyType = "RSA PRIVATE KEY"
 	case *ecdsa.PrivateKey:
-		b, err = x509.MarshalECPrivateKey(key)
+		keyBytes, err = x509.MarshalECPrivateKey(key)
 		if err != nil {
 			return
 		}
@@ -68,7 +68,7 @@ func (this *Key) EncodePrivateKey(buf io.Writer) (err error) {
 		Headers: map[string]string{
 			"NAME": this.Name.String(),
 		},
-		Bytes: b,
+		Bytes: keyBytes,
 	})
 	return
 }
@@ -149,9 +149,6 @@ func (this *Key) DecodeCertificate(buf io.Reader) (err error) {
 		return
 	}
 	this.Name = d.Name
-	if this.PrivateKey != nil {
-		return
-	}
 	var cert certificate
 	_, err = asn1.Unmarshal(d.Content, &cert)
 	if err != nil {
@@ -201,26 +198,28 @@ func (this *Key) sign(v interface{}) (signature []byte, err error) {
 	return
 }
 
-func (this *Key) Verify(v interface{}, signature []byte) error {
+func (this *Key) Verify(v interface{}, signature []byte) (err error) {
 	digest, err := newSha256(v)
 	if err != nil {
-		return err
+		return
 	}
 	switch key := this.PrivateKey.(type) {
 	case *rsa.PrivateKey:
-		return rsa.VerifyPKCS1v15(&key.PublicKey, crypto.SHA256, digest, signature)
+		err = rsa.VerifyPKCS1v15(&key.PublicKey, crypto.SHA256, digest, signature)
+		if err != nil {
+			return
+		}
 	case *ecdsa.PrivateKey:
 		var sig ecdsaSignature
-		_, err := asn1.Unmarshal(signature, &sig)
+		_, err = asn1.Unmarshal(signature, &sig)
 		if err != nil {
-			return err
+			return
 		}
-		if ecdsa.Verify(&key.PublicKey, digest, sig.R, sig.S) {
-			return nil
-		} else {
-			return fmt.Errorf("crypto/ecdsa: verification error")
+		if !ecdsa.Verify(&key.PublicKey, digest, sig.R, sig.S) {
+			err = fmt.Errorf("crypto/ecdsa: verification error")
 		}
 	default:
-		return fmt.Errorf("unsupported key type")
+		err = fmt.Errorf("unsupported key type")
 	}
+	return
 }
