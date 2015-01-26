@@ -70,27 +70,29 @@ type Strategy struct {
 	Name Name `tlv:"7"`
 }
 
-type StrategyChoice struct {
-	Name     Name     `tlv:"7"`
-	Strategy Strategy `tlv:"107"`
-}
-
 type ControlResponse struct {
 	StatusCode uint64     `tlv:"102"`
 	StatusText string     `tlv:"103"`
 	Parameters Parameters `tlv:"104?"`
 }
 
-type NextHopRecord struct {
-	FaceId uint64 `tlv:"105"`
-	Cost   uint64 `tlv:"106"`
+// forwarder dataset
+type ForwarderStatus struct {
+	NfdVersion       string `tlv:"128"`
+	StartTimestamp   uint64 `tlv:"129"`
+	CurrentTimestamp uint64 `tlv:"130"`
+	NameTreeEntry    uint64 `tlv:"131"`
+	FibEntry         uint64 `tlv:"132"`
+	PitEntry         uint64 `tlv:"133"`
+	MeasurementEntry uint64 `tlv:"134"`
+	CsEntry          uint64 `tlv:"135"`
+	InInterest       uint64 `tlv:"144"`
+	InData           uint64 `tlv:"145"`
+	OutInterest      uint64 `tlv:"146"`
+	OutData          uint64 `tlv:"147"`
 }
 
-type FibEntry struct {
-	Name    Name            `tlv:"7"`
-	NextHop []NextHopRecord `tlv:"129?"`
-}
-
+// face dataset
 type FaceEntry struct {
 	FaceId           uint64 `tlv:"105"`
 	Uri              string `tlv:"114"`
@@ -107,6 +109,18 @@ type FaceEntry struct {
 	OutByte          uint64 `tlv:"149"`
 }
 
+// fib dataset
+type FibEntry struct {
+	Name    Name            `tlv:"7"`
+	NextHop []NextHopRecord `tlv:"129?"`
+}
+
+type NextHopRecord struct {
+	FaceId uint64 `tlv:"105"`
+	Cost   uint64 `tlv:"106"`
+}
+
+// rib dataset
 type RibEntry struct {
 	Name  Name    `tlv:"7"`
 	Route []Route `tlv:"129?"`
@@ -120,22 +134,13 @@ type Route struct {
 	ExpirationPeriod uint64 `tlv:"109?"`
 }
 
-type ForwarderStatus struct {
-	NfdVersion       string `tlv:"128"`
-	StartTimestamp   uint64 `tlv:"129"`
-	CurrentTimestamp uint64 `tlv:"130"`
-	NameTreeEntry    uint64 `tlv:"131"`
-	FibEntry         uint64 `tlv:"132"`
-	PitEntry         uint64 `tlv:"133"`
-	MeasurementEntry uint64 `tlv:"134"`
-	CsEntry          uint64 `tlv:"135"`
-	InInterest       uint64 `tlv:"144"`
-	InData           uint64 `tlv:"145"`
-	OutInterest      uint64 `tlv:"146"`
-	OutData          uint64 `tlv:"147"`
+// strategy choice dataset
+type StrategyChoice struct {
+	Name     Name     `tlv:"7"`
+	Strategy Strategy `tlv:"107"`
 }
 
-// TODO: remove
+// TODO: remove lsa
 type LSA struct {
 	Version  uint64     `tlv:"128"`
 	Id       string     `tlv:"105"`
@@ -143,7 +148,6 @@ type LSA struct {
 	Neighbor []Neighbor `tlv:"129?"`
 }
 
-// TODO: remove
 type Neighbor struct {
 	Id   string `tlv:"105"`
 	Cost uint64 `tlv:"106"`
