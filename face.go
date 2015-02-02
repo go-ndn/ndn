@@ -15,7 +15,7 @@ import (
 type Face struct {
 	w            net.Conn
 	r            tlv.PeekReader
-	pit          *lpm.Matcher
+	pit          lpm.Matcher
 	interestRecv chan<- *Interest
 }
 
@@ -31,7 +31,7 @@ func NewFace(transport net.Conn, ch chan<- *Interest) (f *Face) {
 	f = &Face{
 		w:            transport,
 		r:            bufio.NewReader(transport),
-		pit:          lpm.New(),
+		pit:          lpm.NewThreadSafe(),
 		interestRecv: ch,
 	}
 	go func() {
