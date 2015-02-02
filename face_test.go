@@ -26,7 +26,7 @@ func TestConsumer(t *testing.T) {
 	if !ok {
 		t.Fatal("timeout")
 	}
-	t.Logf("name: %v, sig: %v", d.Name, d.SignatureInfo.KeyLocator.Name)
+	t.Logf("name: %s, sig: %s", d.Name, d.SignatureInfo.KeyLocator.Name)
 }
 
 func producer(id string) (err error) {
