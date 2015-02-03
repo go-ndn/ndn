@@ -2,7 +2,7 @@ package ndn
 
 import (
 	"bufio"
-	"fmt"
+	"errors"
 	"net"
 	"reflect"
 	"time"
@@ -10,6 +10,11 @@ import (
 	"github.com/go-ndn/exact"
 	"github.com/go-ndn/lpm"
 	"github.com/go-ndn/tlv"
+)
+
+var (
+	ErrTimeout        = errors.New("timeout")
+	ErrResponseStatus = errors.New("bad command response status")
 )
 
 type Face struct {
@@ -212,7 +217,7 @@ func (this *Face) SendControl(module, command string, params *Parameters) (err e
 	}
 	d, ok := <-ch
 	if !ok {
-		err = fmt.Errorf("control response timeout")
+		err = ErrTimeout
 		return
 	}
 	resp := new(ControlResponse)
@@ -221,7 +226,7 @@ func (this *Face) SendControl(module, command string, params *Parameters) (err e
 		return
 	}
 	if resp.StatusCode != 200 {
-		err = fmt.Errorf("(%d) %s", resp.StatusCode, resp.StatusText)
+		err = ErrResponseStatus
 		return
 	}
 	return

@@ -2,11 +2,16 @@ package ndn
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"sync"
 	"testing"
+)
+
+var (
+	errUnexpectedData = errors.New("unexpected data")
 )
 
 func TestConsumer(t *testing.T) {
@@ -75,11 +80,11 @@ func consumer(id string) (err error) {
 	}
 	d, ok := <-dl
 	if !ok {
-		err = fmt.Errorf("timeout %s", face.LocalAddr())
+		err = ErrTimeout
 		return
 	}
 	if d.Name.String() != id {
-		err = fmt.Errorf("expected %s, got %s", id, d.Name)
+		err = errUnexpectedData
 		return
 	}
 	return

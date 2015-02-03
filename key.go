@@ -11,10 +11,16 @@ import (
 	"encoding/asn1"
 	"encoding/base64"
 	"encoding/pem"
-	"fmt"
+	"errors"
 	"io"
 	"math/big"
 	"time"
+)
+
+var (
+	ErrNotSupported     = errors.New("feature not supported")
+	ErrInvalidSignature = errors.New("invalid signature")
+	ErrInvalidPEM       = errors.New("invalid pem")
 )
 
 var (
@@ -30,7 +36,7 @@ type Key struct {
 func (this *Key) DecodePrivateKey(pemData []byte) (err error) {
 	block, _ := pem.Decode(pemData)
 	if block == nil {
-		err = fmt.Errorf("not pem data")
+		err = ErrInvalidPEM
 		return
 	}
 	this.Name = NewName(block.Headers["NAME"])
@@ -40,7 +46,7 @@ func (this *Key) DecodePrivateKey(pemData []byte) (err error) {
 	case "ECDSA PRIVATE KEY":
 		this.PrivateKey, err = x509.ParseECPrivateKey(block.Bytes)
 	default:
-		err = fmt.Errorf("unsupported key type")
+		err = ErrNotSupported
 	}
 	return
 }
@@ -60,7 +66,7 @@ func (this *Key) EncodePrivateKey(buf io.Writer) (err error) {
 		}
 		keyType = "ECDSA PRIVATE KEY"
 	default:
-		err = fmt.Errorf("unsupported key type")
+		err = ErrNotSupported
 		return
 	}
 	err = pem.Encode(buf, &pem.Block{
@@ -106,7 +112,7 @@ func (this *Key) EncodeCertificate(buf io.Writer) (err error) {
 			return
 		}
 	default:
-		err = fmt.Errorf("unsupported key type")
+		err = ErrNotSupported
 		return
 	}
 	d.Content, err = asn1.Marshal(certificate{
@@ -168,7 +174,7 @@ func (this *Key) DecodeCertificate(buf io.Reader) (err error) {
 			PublicKey: *key,
 		}
 	default:
-		err = fmt.Errorf("unsupported key type")
+		err = ErrNotSupported
 	}
 	return
 }
@@ -193,7 +199,7 @@ func (this *Key) sign(v interface{}) (signature []byte, err error) {
 		}
 		signature, err = asn1.Marshal(sig)
 	default:
-		err = fmt.Errorf("unsupported key type")
+		err = ErrNotSupported
 	}
 	return
 }
@@ -207,6 +213,7 @@ func (this *Key) Verify(v interface{}, signature []byte) (err error) {
 	case *rsa.PrivateKey:
 		err = rsa.VerifyPKCS1v15(&key.PublicKey, crypto.SHA256, digest, signature)
 		if err != nil {
+			err = ErrInvalidSignature
 			return
 		}
 	case *ecdsa.PrivateKey:
@@ -216,10 +223,11 @@ func (this *Key) Verify(v interface{}, signature []byte) (err error) {
 			return
 		}
 		if !ecdsa.Verify(&key.PublicKey, digest, sig.R, sig.S) {
-			err = fmt.Errorf("crypto/ecdsa: verification error")
+			err = ErrInvalidSignature
+			return
 		}
 	default:
-		err = fmt.Errorf("unsupported key type")
+		err = ErrNotSupported
 	}
 	return
 }
