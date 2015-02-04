@@ -37,7 +37,7 @@ func Marshal(i interface{}, valType uint64) (b []byte, err error) {
 }
 
 func Unmarshal(b []byte, i interface{}, valType uint64) error {
-	return tlv.Unmarshal(bufio.NewReader(bytes.NewBuffer(b)), i, valType)
+	return tlv.Unmarshal(bufio.NewReader(bytes.NewReader(b)), i, valType)
 }
 
 func Copy(from tlv.WriteTo, to tlv.ReadFrom) (err error) {

@@ -17,7 +17,7 @@ type Exclude struct {
 }
 
 func (this *Exclude) UnmarshalBinary(data []byte) error {
-	buf := bufio.NewReader(bytes.NewBuffer(data))
+	buf := bufio.NewReader(bytes.NewReader(data))
 	this.excluded = nil
 	var e excluded
 	if nil == tlv.Unmarshal(buf, &e.Any, 19) {
