@@ -52,7 +52,7 @@ func (this *Name) WriteTo(w tlv.Writer) error {
 	return tlv.Marshal(w, this, 7)
 }
 
-func (this *Name) ReadFrom(r tlv.PeekReader) error {
+func (this *Name) ReadFrom(r tlv.Reader) error {
 	return tlv.Unmarshal(r, this, 7)
 }
 

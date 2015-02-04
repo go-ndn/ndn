@@ -1,7 +1,6 @@
 package ndn
 
 import (
-	"bufio"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
@@ -15,6 +14,8 @@ import (
 	"io"
 	"math/big"
 	"time"
+
+	"github.com/go-ndn/tlv"
 )
 
 var (
@@ -150,7 +151,7 @@ type validity struct {
 
 func (this *Key) DecodeCertificate(buf io.Reader) (err error) {
 	var d Data
-	err = d.ReadFrom(bufio.NewReader(base64.NewDecoder(base64.StdEncoding, buf)))
+	err = d.ReadFrom(tlv.NewReader(base64.NewDecoder(base64.StdEncoding, buf)))
 	if err != nil {
 		return
 	}

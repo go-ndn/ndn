@@ -1,13 +1,14 @@
 package ndn
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"testing"
+
+	"github.com/go-ndn/tlv"
 )
 
 func BenchmarkDataEncodeRsa(b *testing.B) {
@@ -74,7 +75,7 @@ func BenchmarkDataDecode(b *testing.B) {
 	packet.WriteTo(buf)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := new(Data).ReadFrom(bufio.NewReader(buf))
+		err := new(Data).ReadFrom(tlv.NewReader(buf))
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -106,7 +107,7 @@ func BenchmarkInterestDecode(b *testing.B) {
 	packet.WriteTo(buf)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := new(Interest).ReadFrom(bufio.NewReader(buf))
+		err := new(Interest).ReadFrom(tlv.NewReader(buf))
 		if err != nil {
 			b.Fatal(err)
 		}

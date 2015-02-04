@@ -1,7 +1,6 @@
 package ndn
 
 import (
-	"bufio"
 	"errors"
 	"net"
 	"reflect"
@@ -19,7 +18,7 @@ var (
 
 type Face struct {
 	w            net.Conn
-	r            tlv.PeekReader
+	r            tlv.Reader
 	pit          lpm.Matcher
 	interestRecv chan<- *Interest
 }
@@ -35,27 +34,32 @@ var (
 func NewFace(transport net.Conn, ch chan<- *Interest) (f *Face) {
 	f = &Face{
 		w:            transport,
-		r:            bufio.NewReader(transport),
+		r:            tlv.NewReader(transport),
 		pit:          lpm.NewThreadSafe(),
 		interestRecv: ch,
 	}
 	go func() {
 		for {
-			d := new(Data)
-			err := d.ReadFrom(f.r)
-			if err == nil {
-				f.recvData(d)
-				continue
-			}
-
-			i := new(Interest)
-			err = i.ReadFrom(f.r)
-			if err == nil {
+			switch f.r.Peek() {
+			case 5:
+				i := new(Interest)
+				err := i.ReadFrom(f.r)
+				if err != nil {
+					goto IDLE
+				}
 				f.recvInterest(i)
-				continue
+			case 6:
+				d := new(Data)
+				err := d.ReadFrom(f.r)
+				if err != nil {
+					goto IDLE
+				}
+				f.recvData(d)
+			default:
+				goto IDLE
 			}
-			break
 		}
+	IDLE:
 		if f.interestRecv != nil {
 			close(f.interestRecv)
 		}
@@ -157,7 +161,7 @@ func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 	return ch, nil
 }
 
-func (this *Face) recvData(d *Data) (err error) {
+func (this *Face) recvData(d *Data) {
 	ContentStore.Update(d.Name, func(v interface{}) interface{} {
 		var m map[*Data]time.Time
 		if v == nil {
@@ -183,14 +187,12 @@ func (this *Face) recvData(d *Data) (err error) {
 		}
 		return m
 	})
-	return
 }
 
-func (this *Face) recvInterest(i *Interest) (err error) {
+func (this *Face) recvInterest(i *Interest) {
 	if this.interestRecv != nil {
 		this.interestRecv <- i
 	}
-	return
 }
 
 func (this *Face) Register(prefix string) error {

@@ -37,7 +37,7 @@ func (this *Command) WriteTo(w tlv.Writer) (err error) {
 	return
 }
 
-func (this *Command) ReadFrom(r tlv.PeekReader) error {
+func (this *Command) ReadFrom(r tlv.Reader) error {
 	return tlv.Unmarshal(r, this, 7)
 }
 

@@ -10,7 +10,6 @@
 package ndn
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
@@ -37,7 +36,7 @@ func Marshal(i interface{}, valType uint64) (b []byte, err error) {
 }
 
 func Unmarshal(b []byte, i interface{}, valType uint64) error {
-	return tlv.Unmarshal(bufio.NewReader(bytes.NewReader(b)), i, valType)
+	return tlv.Unmarshal(tlv.NewReader(bytes.NewReader(b)), i, valType)
 }
 
 func Copy(from tlv.WriteTo, to tlv.ReadFrom) (err error) {
@@ -46,7 +45,7 @@ func Copy(from tlv.WriteTo, to tlv.ReadFrom) (err error) {
 	if err != nil {
 		return
 	}
-	err = to.ReadFrom(bufio.NewReader(buf))
+	err = to.ReadFrom(tlv.NewReader(buf))
 	return
 }
 
@@ -140,7 +139,7 @@ func (this *Interest) WriteTo(w tlv.Writer) error {
 	return tlv.Marshal(w, this, 5)
 }
 
-func (this *Interest) ReadFrom(r tlv.PeekReader) error {
+func (this *Interest) ReadFrom(r tlv.Reader) error {
 	return tlv.Unmarshal(r, this, 5)
 }
 
@@ -178,7 +177,7 @@ func (this *Data) WriteTo(w tlv.Writer) (err error) {
 	return
 }
 
-// ReadFrom reads data from tlv.PeekReader but it does not verify the signature
-func (this *Data) ReadFrom(r tlv.PeekReader) error {
+// ReadFrom reads data from tlv.Reader but it does not verify the signature
+func (this *Data) ReadFrom(r tlv.Reader) error {
 	return tlv.Unmarshal(r, this, 6)
 }

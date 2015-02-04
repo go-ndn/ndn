@@ -1,7 +1,6 @@
 package ndn
 
 import (
-	"bufio"
 	"bytes"
 
 	"github.com/go-ndn/tlv"
@@ -17,7 +16,7 @@ type Exclude struct {
 }
 
 func (this *Exclude) UnmarshalBinary(data []byte) error {
-	buf := bufio.NewReader(bytes.NewReader(data))
+	buf := tlv.NewReader(bytes.NewReader(data))
 	this.excluded = nil
 	var e excluded
 	if nil == tlv.Unmarshal(buf, &e.Any, 19) {
