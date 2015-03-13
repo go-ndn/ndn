@@ -15,7 +15,7 @@ var (
 )
 
 func TestConsumer(t *testing.T) {
-	conn, err := net.Dial("tcp4", "aleph.ndn.ucla.edu:6363")
+	conn, err := net.Dial("tcp4", "spurs.cs.ucla.edu:6363")
 	if err != nil {
 		t.Fatal(err)
 	}
