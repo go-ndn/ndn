@@ -63,7 +63,6 @@ type Parameters struct {
 	Flags               uint64   `tlv:"108?"`
 	Strategy            Strategy `tlv:"107?"`
 	ExpirationPeriod    uint64   `tlv:"109?"`
-	LSA                 *LSA     `tlv:"112?"` // TODO: remove
 }
 
 type Strategy struct {
@@ -138,17 +137,4 @@ type Route struct {
 type StrategyChoice struct {
 	Name     Name     `tlv:"7"`
 	Strategy Strategy `tlv:"107"`
-}
-
-// TODO: remove lsa
-type LSA struct {
-	Version  uint64     `tlv:"128"`
-	Id       string     `tlv:"105"`
-	Name     []string   `tlv:"7?"`
-	Neighbor []Neighbor `tlv:"129?"`
-}
-
-type Neighbor struct {
-	Id   string `tlv:"105"`
-	Cost uint64 `tlv:"106"`
 }
