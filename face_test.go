@@ -14,26 +14,6 @@ var (
 	errUnexpectedData = errors.New("unexpected data")
 )
 
-func TestConsumer(t *testing.T) {
-	conn, err := net.Dial("tcp4", "spurs.cs.ucla.edu:6363")
-	if err != nil {
-		t.Fatal(err)
-	}
-	face := NewFace(conn, nil)
-	defer face.Close()
-	dl, err := face.SendInterest(&Interest{
-		Name: NewName("/ndn/edu/ucla"),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	d, ok := <-dl
-	if !ok {
-		t.Fatal("timeout")
-	}
-	t.Logf("name: %s, sig: %s", d.Name, d.SignatureInfo.KeyLocator.Name)
-}
-
 func producer(id string) (err error) {
 	conn, err := net.Dial("tcp", ":6363")
 	if err != nil {
@@ -49,9 +29,6 @@ func producer(id string) (err error) {
 	d := &Data{
 		Name:    NewName(id),
 		Content: bytes.Repeat([]byte("0123456789"), 100),
-		//MetaInfo: MetaInfo{
-		//FreshnessPeriod: 3600000,
-		//},
 	}
 	go func() {
 		for _ = range interestRecv {
@@ -69,7 +46,7 @@ func consumer(id string) (err error) {
 	}
 	face := NewFace(conn, nil)
 	defer face.Close()
-	dl, err := face.SendInterest(&Interest{
+	ch, err := face.SendInterest(&Interest{
 		Name: NewName(id),
 		Selectors: Selectors{
 			MustBeFresh: true,
@@ -78,7 +55,7 @@ func consumer(id string) (err error) {
 	if err != nil {
 		return
 	}
-	d, ok := <-dl
+	d, ok := <-ch
 	if !ok {
 		err = ErrTimeout
 		return
@@ -88,6 +65,26 @@ func consumer(id string) (err error) {
 		return
 	}
 	return
+}
+
+func TestConsumer(t *testing.T) {
+	conn, err := net.Dial("tcp4", "spurs.cs.ucla.edu:6363")
+	if err != nil {
+		t.Fatal(err)
+	}
+	face := NewFace(conn, nil)
+	defer face.Close()
+	ch, err := face.SendInterest(&Interest{
+		Name: NewName("/ndn/edu/ucla"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, ok := <-ch
+	if !ok {
+		t.Fatal("timeout")
+	}
+	t.Logf("name: %s, sig: %s", d.Name, d.SignatureInfo.KeyLocator.Name)
 }
 
 func TestProducer(t *testing.T) {
