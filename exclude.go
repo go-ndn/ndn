@@ -12,15 +12,15 @@ type excluded struct {
 }
 
 type Exclude struct {
-	excluded []excluded
+	list []excluded
 }
 
-func (this *Exclude) UnmarshalBinary(data []byte) error {
+func (ex *Exclude) UnmarshalBinary(data []byte) error {
 	buf := tlv.NewReader(bytes.NewReader(data))
-	this.excluded = nil
+	ex.list = nil
 	var e excluded
 	if nil == tlv.Unmarshal(buf, &e.Any, 19) {
-		this.excluded = append(this.excluded, e)
+		ex.list = append(ex.list, e)
 	}
 	for {
 		var e excluded
@@ -28,41 +28,41 @@ func (this *Exclude) UnmarshalBinary(data []byte) error {
 			break
 		}
 		tlv.Unmarshal(buf, &e.Any, 19)
-		this.excluded = append(this.excluded, e)
+		ex.list = append(ex.list, e)
 	}
 	return nil
 }
 
-func (this *Exclude) Match(c Component) bool {
-	for i := len(this.excluded) - 1; i >= 0; i-- {
-		cmp := bytes.Compare(this.excluded[i].Component, c)
+func (ex *Exclude) Match(c Component) bool {
+	for i := len(ex.list) - 1; i >= 0; i-- {
+		cmp := bytes.Compare(ex.list[i].Component, c)
 		if cmp == 0 {
 			return true
 		}
 		if cmp < 0 {
-			return this.excluded[i].Any
+			return ex.list[i].Any
 		}
 	}
 	return false
 }
 
-func NewExclude(cs ...Component) (e Exclude) {
+func NewExclude(cs ...Component) (ex Exclude) {
 	for _, c := range cs {
 		if c == nil {
-			if len(e.excluded) == 0 {
-				e.excluded = []excluded{{}}
+			if len(ex.list) == 0 {
+				ex.list = []excluded{{}}
 			}
-			e.excluded[len(e.excluded)-1].Any = true
+			ex.list[len(ex.list)-1].Any = true
 		} else {
-			e.excluded = append(e.excluded, excluded{Component: c})
+			ex.list = append(ex.list, excluded{Component: c})
 		}
 	}
 	return
 }
 
-func (this *Exclude) MarshalBinary() (data []byte, err error) {
+func (ex *Exclude) MarshalBinary() (data []byte, err error) {
 	buf := new(bytes.Buffer)
-	for _, e := range this.excluded {
+	for _, e := range ex.list {
 		if len(e.Component) != 0 {
 			err = tlv.Marshal(buf, e.Component, 8)
 			if err != nil {

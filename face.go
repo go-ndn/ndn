@@ -27,9 +27,9 @@ var (
 	ContentStore = exact.New()
 )
 
-// NewFace create a face with transport and interest buffer
+// NewFace create a face with transport and interest channel
 //
-// The interest buffer will be closed.
+// The interest channel will be closed.
 // All incoming interests will be ignored if nil interest channel is passed in.
 func NewFace(transport net.Conn, ch chan<- *Interest) (f *Face) {
 	f = &Face{
@@ -67,23 +67,23 @@ func NewFace(transport net.Conn, ch chan<- *Interest) (f *Face) {
 	return
 }
 
-func (this *Face) LocalAddr() net.Addr {
-	return this.w.LocalAddr()
+func (f *Face) LocalAddr() net.Addr {
+	return f.w.LocalAddr()
 }
 
-func (this *Face) RemoteAddr() net.Addr {
-	return this.w.RemoteAddr()
+func (f *Face) RemoteAddr() net.Addr {
+	return f.w.RemoteAddr()
 }
 
-func (this *Face) Close() error {
-	return this.w.Close()
+func (f *Face) Close() error {
+	return f.w.Close()
 }
 
-func (this *Face) SendData(d *Data) error {
-	return d.WriteTo(this.w)
+func (f *Face) SendData(d *Data) error {
+	return d.WriteTo(f.w)
 }
 
-func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
+func (f *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 	ch := make(chan *Data, 1)
 	var inCache bool
 	ContentStore.Update(i.Name, func(v interface{}) interface{} {
@@ -106,12 +106,12 @@ func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 		return ch, nil
 	}
 	var err error
-	this.pit.Update(i.Name, func(chs interface{}) interface{} {
+	f.pit.Update(i.Name, func(v interface{}) interface{} {
 		var m map[chan<- *Data]*Selectors
-		if chs == nil {
+		if v == nil {
 			m = make(map[chan<- *Data]*Selectors)
 		} else {
-			m = chs.(map[chan<- *Data]*Selectors)
+			m = v.(map[chan<- *Data]*Selectors)
 		}
 		var inPit bool
 		for _, sel := range m {
@@ -121,7 +121,7 @@ func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 			}
 		}
 		if !inPit {
-			err = i.WriteTo(this.w)
+			err = i.WriteTo(f.w)
 			if err != nil {
 				return m
 			}
@@ -141,11 +141,11 @@ func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 		}
 		time.Sleep(lifeTime)
 
-		this.pit.Update(i.Name, func(chs interface{}) interface{} {
-			if chs == nil {
+		f.pit.Update(i.Name, func(v interface{}) interface{} {
+			if v == nil {
 				return nil
 			}
-			m := chs.(map[chan<- *Data]*Selectors)
+			m := v.(map[chan<- *Data]*Selectors)
 			if _, ok := m[ch]; !ok {
 				return m
 			}
@@ -161,7 +161,7 @@ func (this *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 	return ch, nil
 }
 
-func (this *Face) recvData(d *Data) {
+func (f *Face) recvData(d *Data) {
 	ContentStore.Update(d.Name, func(v interface{}) interface{} {
 		var m map[*Data]time.Time
 		if v == nil {
@@ -172,8 +172,8 @@ func (this *Face) recvData(d *Data) {
 		m[d] = time.Now()
 		return m
 	})
-	this.pit.UpdateAll(d.Name, func(name string, chs interface{}) interface{} {
-		m := chs.(map[chan<- *Data]*Selectors)
+	f.pit.UpdateAll(d.Name, func(name string, v interface{}) interface{} {
+		m := v.(map[chan<- *Data]*Selectors)
 		for ch, sel := range m {
 			if !sel.Match(name, d, time.Time{}) {
 				continue
@@ -189,31 +189,31 @@ func (this *Face) recvData(d *Data) {
 	})
 }
 
-func (this *Face) recvInterest(i *Interest) {
-	if this.interestRecv != nil {
-		this.interestRecv <- i
+func (f *Face) recvInterest(i *Interest) {
+	if f.interestRecv != nil {
+		f.interestRecv <- i
 	}
 }
 
-func (this *Face) Register(prefix string) error {
-	return this.SendControl("rib", "register", &Parameters{Name: NewName(prefix)})
+func (f *Face) Register(prefix string) error {
+	return f.SendControl("rib", "register", &Parameters{Name: NewName(prefix)})
 }
 
-func (this *Face) Unregister(prefix string) error {
-	return this.SendControl("rib", "unregister", &Parameters{Name: NewName(prefix)})
+func (f *Face) Unregister(prefix string) error {
+	return f.SendControl("rib", "unregister", &Parameters{Name: NewName(prefix)})
 }
 
-func (this *Face) SendControl(module, command string, params *Parameters) (err error) {
-	c := new(Command)
-	c.Module = module
-	c.Command = command
-	c.Parameters.Parameters = *params
+func (f *Face) SendControl(module, command string, params *Parameters) (err error) {
+	cmd := new(Command)
+	cmd.Module = module
+	cmd.Command = command
+	cmd.Parameters.Parameters = *params
 	i := new(Interest)
-	err = Copy(c, &i.Name)
+	err = Copy(cmd, &i.Name)
 	if err != nil {
 		return
 	}
-	ch, err := this.SendInterest(i)
+	ch, err := f.SendInterest(i)
 	if err != nil {
 		return
 	}

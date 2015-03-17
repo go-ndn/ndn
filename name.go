@@ -20,11 +20,11 @@ func NewName(s string) (n Name) {
 	if s == "" {
 		return
 	}
-	cs := strings.Split(s, "/")
-	n.Components = make([]Component, len(cs))
-	for i := range cs {
-		c, _ := url.QueryUnescape(cs[i])
-		n.Components[i] = Component(c)
+	parts := strings.Split(s, "/")
+	n.Components = make([]Component, len(parts))
+	for i := range parts {
+		parts[i], _ = url.QueryUnescape(parts[i])
+		n.Components[i] = Component(parts[i])
 	}
 	return
 }
@@ -32,36 +32,36 @@ func NewName(s string) (n Name) {
 // Compare compares two names according to http://named-data.net/doc/ndn-tlv/name.html#canonical-order
 //
 // -1 if a < b; 0 if a == b; 1 if a > b
-func (this *Name) Compare(n Name) int {
-	for i := 0; i < len(this.Components) && i < len(n.Components); i++ {
-		cmp := bytes.Compare(this.Components[i], n.Components[i])
+func (n *Name) Compare(n2 Name) int {
+	for i := 0; i < len(n.Components) && i < len(n2.Components); i++ {
+		cmp := bytes.Compare(n.Components[i], n2.Components[i])
 		if cmp != 0 {
 			return cmp
 		}
 	}
-	if len(this.Components) < len(n.Components) {
+	if len(n.Components) < len(n2.Components) {
 		return -1
 	}
-	if len(this.Components) > len(n.Components) {
+	if len(n.Components) > len(n2.Components) {
 		return 1
 	}
 	return 0
 }
 
-func (this *Name) WriteTo(w tlv.Writer) error {
-	return tlv.Marshal(w, this, 7)
+func (n *Name) WriteTo(w tlv.Writer) error {
+	return tlv.Marshal(w, n, 7)
 }
 
-func (this *Name) ReadFrom(r tlv.Reader) error {
-	return tlv.Unmarshal(r, this, 7)
+func (n *Name) ReadFrom(r tlv.Reader) error {
+	return tlv.Unmarshal(r, n, 7)
 }
 
-func (this Name) String() string {
-	if len(this.Components) == 0 {
+func (n Name) String() string {
+	if len(n.Components) == 0 {
 		return "/"
 	}
 	buf := new(bytes.Buffer)
-	for _, c := range this.Components {
+	for _, c := range n.Components {
 		buf.WriteByte('/')
 		buf.WriteString(url.QueryEscape(string(c)))
 	}

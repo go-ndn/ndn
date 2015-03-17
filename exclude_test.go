@@ -7,7 +7,7 @@ import (
 
 func TestExclude(t *testing.T) {
 	e1 := NewExclude(nil, Component("AB"))
-	if len(e1.excluded) != 2 {
+	if len(e1.list) != 2 {
 		t.Fatal("should have 2 components")
 	}
 	if !e1.Match(Component("AB")) {

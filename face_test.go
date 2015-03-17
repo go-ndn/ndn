@@ -127,6 +127,7 @@ func BenchmarkBurstyForward(b *testing.B) {
 		}
 	}
 	SignKey = Key{}
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		ch := make(chan error)
@@ -166,6 +167,7 @@ func BenchmarkForwardRTT(b *testing.B) {
 		b.Fatal(err)
 	}
 	SignKey = Key{}
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		err := consumer(id)

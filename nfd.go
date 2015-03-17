@@ -19,26 +19,26 @@ type Command struct {
 	SignatureValue signatureValueComponent `tlv:"8*"`
 }
 
-func (this *Command) WriteTo(w tlv.Writer) (err error) {
-	if len(this.SignatureValue.SignatureValue) == 0 {
-		this.Localhost = "localhost"
-		this.Nfd = "nfd"
-		this.Timestamp = uint64(time.Now().UTC().UnixNano() / 1000000)
-		this.Nonce = newNonce()
-		this.SignatureInfo.SignatureInfo.SignatureType = SignKey.SignatureType()
-		this.SignatureInfo.SignatureInfo.KeyLocator.Name = SignKey.Name
+func (cmd *Command) WriteTo(w tlv.Writer) (err error) {
+	if len(cmd.SignatureValue.SignatureValue) == 0 {
+		cmd.Localhost = "localhost"
+		cmd.Nfd = "nfd"
+		cmd.Timestamp = uint64(time.Now().UTC().UnixNano() / 1000000)
+		cmd.Nonce = newNonce()
+		cmd.SignatureInfo.SignatureInfo.SignatureType = SignKey.SignatureType()
+		cmd.SignatureInfo.SignatureInfo.KeyLocator.Name = SignKey.Name
 
-		this.SignatureValue.SignatureValue, err = SignKey.sign(this)
+		cmd.SignatureValue.SignatureValue, err = SignKey.sign(cmd)
 		if err != nil {
 			return
 		}
 	}
-	err = tlv.Marshal(w, this, 7)
+	err = tlv.Marshal(w, cmd, 7)
 	return
 }
 
-func (this *Command) ReadFrom(r tlv.Reader) error {
-	return tlv.Unmarshal(r, this, 7)
+func (cmd *Command) ReadFrom(r tlv.Reader) error {
+	return tlv.Unmarshal(r, cmd, 7)
 }
 
 type parametersComponent struct {
@@ -55,8 +55,8 @@ type signatureValueComponent struct {
 
 type Parameters struct {
 	Name                Name     `tlv:"7?"`
-	FaceId              uint64   `tlv:"105?"`
-	Uri                 string   `tlv:"114?"`
+	FaceID              uint64   `tlv:"105?"`
+	URI                 string   `tlv:"114?"`
 	LocalControlFeature uint64   `tlv:"110?"`
 	Origin              uint64   `tlv:"111?"`
 	Cost                uint64   `tlv:"106?"`
@@ -93,9 +93,9 @@ type ForwarderStatus struct {
 
 // face dataset
 type FaceEntry struct {
-	FaceId           uint64 `tlv:"105"`
-	Uri              string `tlv:"114"`
-	LocalUri         string `tlv:"129"`
+	FaceID           uint64 `tlv:"105"`
+	URI              string `tlv:"114"`
+	LocalURI         string `tlv:"129"`
 	ExpirationPeriod uint64 `tlv:"109?"`
 	Scope            uint64 `tlv:"132"`
 	Persistency      uint64 `tlv:"133"`
@@ -115,7 +115,7 @@ type FibEntry struct {
 }
 
 type NextHopRecord struct {
-	FaceId uint64 `tlv:"105"`
+	FaceID uint64 `tlv:"105"`
 	Cost   uint64 `tlv:"106"`
 }
 
@@ -126,7 +126,7 @@ type RibEntry struct {
 }
 
 type Route struct {
-	FaceId           uint64 `tlv:"105"`
+	FaceID           uint64 `tlv:"105"`
 	Origin           uint64 `tlv:"111"`
 	Cost             uint64 `tlv:"106"`
 	Flags            uint64 `tlv:"108"`

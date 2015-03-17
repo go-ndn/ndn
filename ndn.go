@@ -102,10 +102,10 @@ type Data struct {
 type MetaInfo struct {
 	ContentType     uint64       `tlv:"24?"`
 	FreshnessPeriod uint64       `tlv:"25?"`
-	FinalBlockId    FinalBlockId `tlv:"26?"`
+	FinalBlockID    FinalBlockID `tlv:"26?"`
 }
 
-type FinalBlockId struct {
+type FinalBlockID struct {
 	Component Component `tlv:"8"`
 }
 
@@ -132,15 +132,15 @@ func newNonce() []byte {
 }
 
 // WriteTo writes interest to tlv.Writer after it populates nonce and lifeTime(if not defined) automatically
-func (this *Interest) WriteTo(w tlv.Writer) error {
-	if len(this.Nonce) == 0 {
-		this.Nonce = newNonce()
+func (i *Interest) WriteTo(w tlv.Writer) error {
+	if len(i.Nonce) == 0 {
+		i.Nonce = newNonce()
 	}
-	return tlv.Marshal(w, this, 5)
+	return tlv.Marshal(w, i, 5)
 }
 
-func (this *Interest) ReadFrom(r tlv.Reader) error {
-	return tlv.Unmarshal(r, this, 5)
+func (i *Interest) ReadFrom(r tlv.Reader) error {
+	return tlv.Unmarshal(r, i, 5)
 }
 
 func newSha256(v interface{}) (digest []byte, err error) {
@@ -156,28 +156,28 @@ func newSha256(v interface{}) (digest []byte, err error) {
 // WriteTo writes data to tlv.Writer after it signs data automatically
 //
 // If SignKey is not ready, it will only provide DigestSha256.
-func (this *Data) WriteTo(w tlv.Writer) (err error) {
-	if len(this.SignatureValue) == 0 {
-		this.SignatureInfo.SignatureType = SignKey.SignatureType()
-		switch this.SignatureInfo.SignatureType {
+func (d *Data) WriteTo(w tlv.Writer) (err error) {
+	if len(d.SignatureValue) == 0 {
+		d.SignatureInfo.SignatureType = SignKey.SignatureType()
+		switch d.SignatureInfo.SignatureType {
 		case SignatureTypeDigestSha256:
-			this.SignatureValue, err = newSha256(this)
+			d.SignatureValue, err = newSha256(d)
 			if err != nil {
 				return
 			}
 		default:
-			this.SignatureInfo.KeyLocator.Name = SignKey.Name
-			this.SignatureValue, err = SignKey.sign(this)
+			d.SignatureInfo.KeyLocator.Name = SignKey.Name
+			d.SignatureValue, err = SignKey.sign(d)
 			if err != nil {
 				return
 			}
 		}
 	}
-	err = tlv.Marshal(w, this, 6)
+	err = tlv.Marshal(w, d, 6)
 	return
 }
 
 // ReadFrom reads data from tlv.Reader but it does not verify the signature
-func (this *Data) ReadFrom(r tlv.Reader) error {
-	return tlv.Unmarshal(r, this, 6)
+func (d *Data) ReadFrom(r tlv.Reader) error {
+	return tlv.Unmarshal(r, d, 6)
 }

@@ -34,18 +34,18 @@ type Key struct {
 }
 
 // DecodePrivateKey reads key from pem bytes
-func (this *Key) DecodePrivateKey(pemData []byte) (err error) {
+func (key *Key) DecodePrivateKey(pemData []byte) (err error) {
 	block, _ := pem.Decode(pemData)
 	if block == nil {
 		err = ErrInvalidPEM
 		return
 	}
-	this.Name = NewName(block.Headers["NAME"])
+	key.Name = NewName(block.Headers["NAME"])
 	switch block.Type {
 	case "RSA PRIVATE KEY":
-		this.PrivateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+		key.PrivateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
 	case "ECDSA PRIVATE KEY":
-		this.PrivateKey, err = x509.ParseECPrivateKey(block.Bytes)
+		key.PrivateKey, err = x509.ParseECPrivateKey(block.Bytes)
 	default:
 		err = ErrNotSupported
 	}
@@ -53,15 +53,15 @@ func (this *Key) DecodePrivateKey(pemData []byte) (err error) {
 }
 
 // EncodePrivateKey writes key to io.Writer
-func (this *Key) EncodePrivateKey(buf io.Writer) (err error) {
+func (key *Key) EncodePrivateKey(w io.Writer) (err error) {
 	var keyBytes []byte
 	var keyType string
-	switch key := this.PrivateKey.(type) {
+	switch pri := key.PrivateKey.(type) {
 	case *rsa.PrivateKey:
-		keyBytes = x509.MarshalPKCS1PrivateKey(key)
+		keyBytes = x509.MarshalPKCS1PrivateKey(pri)
 		keyType = "RSA PRIVATE KEY"
 	case *ecdsa.PrivateKey:
-		keyBytes, err = x509.MarshalECPrivateKey(key)
+		keyBytes, err = x509.MarshalECPrivateKey(pri)
 		if err != nil {
 			return
 		}
@@ -70,10 +70,10 @@ func (this *Key) EncodePrivateKey(buf io.Writer) (err error) {
 		err = ErrNotSupported
 		return
 	}
-	err = pem.Encode(buf, &pem.Block{
+	err = pem.Encode(w, &pem.Block{
 		Type: keyType,
 		Headers: map[string]string{
-			"NAME": this.Name.String(),
+			"NAME": key.Name.String(),
 		},
 		Bytes: keyBytes,
 	})
@@ -83,8 +83,8 @@ func (this *Key) EncodePrivateKey(buf io.Writer) (err error) {
 // SignatureType shows key type in ndn signature type
 //
 // If the key is not initialized, it will return SignatureTypeDigestSha256.
-func (this *Key) SignatureType() uint64 {
-	switch this.PrivateKey.(type) {
+func (key *Key) SignatureType() uint64 {
+	switch key.PrivateKey.(type) {
 	case *rsa.PrivateKey:
 		return SignatureTypeSha256WithRsa
 	case *ecdsa.PrivateKey:
@@ -93,22 +93,22 @@ func (this *Key) SignatureType() uint64 {
 	return SignatureTypeDigestSha256
 }
 
-func (this *Key) EncodeCertificate(buf io.Writer) (err error) {
+func (key *Key) EncodeCertificate(w io.Writer) (err error) {
 	d := &Data{
-		Name: this.Name,
+		Name: key.Name,
 		MetaInfo: MetaInfo{
 			ContentType: 2, //key
 		},
 	}
 	var keyBytes []byte
-	switch key := this.PrivateKey.(type) {
+	switch pri := key.PrivateKey.(type) {
 	case *rsa.PrivateKey:
-		keyBytes, err = x509.MarshalPKIXPublicKey(&key.PublicKey)
+		keyBytes, err = x509.MarshalPKIXPublicKey(&pri.PublicKey)
 		if err != nil {
 			return
 		}
 	case *ecdsa.PrivateKey:
-		keyBytes, err = x509.MarshalPKIXPublicKey(&key.PublicKey)
+		keyBytes, err = x509.MarshalPKIXPublicKey(&pri.PublicKey)
 		if err != nil {
 			return
 		}
@@ -130,7 +130,7 @@ func (this *Key) EncodeCertificate(buf io.Writer) (err error) {
 	if err != nil {
 		return
 	}
-	enc := base64.NewEncoder(base64.StdEncoding, buf)
+	enc := base64.NewEncoder(base64.StdEncoding, w)
 	err = d.WriteTo(enc)
 	if err != nil {
 		return
@@ -149,13 +149,13 @@ type validity struct {
 	NotBefore, NotAfter time.Time
 }
 
-func (this *Key) DecodeCertificate(buf io.Reader) (err error) {
+func (key *Key) DecodeCertificate(r io.Reader) (err error) {
 	var d Data
-	err = d.ReadFrom(tlv.NewReader(base64.NewDecoder(base64.StdEncoding, buf)))
+	err = d.ReadFrom(tlv.NewReader(base64.NewDecoder(base64.StdEncoding, r)))
 	if err != nil {
 		return
 	}
-	this.Name = d.Name
+	key.Name = d.Name
 	var cert certificate
 	_, err = asn1.Unmarshal(d.Content, &cert)
 	if err != nil {
@@ -165,14 +165,14 @@ func (this *Key) DecodeCertificate(buf io.Reader) (err error) {
 	if err != nil {
 		return
 	}
-	switch key := pub.(type) {
+	switch pub := pub.(type) {
 	case *rsa.PublicKey:
-		this.PrivateKey = &rsa.PrivateKey{
-			PublicKey: *key,
+		key.PrivateKey = &rsa.PrivateKey{
+			PublicKey: *pub,
 		}
 	case *ecdsa.PublicKey:
-		this.PrivateKey = &ecdsa.PrivateKey{
-			PublicKey: *key,
+		key.PrivateKey = &ecdsa.PrivateKey{
+			PublicKey: *pub,
 		}
 	default:
 		err = ErrNotSupported
@@ -184,17 +184,17 @@ type ecdsaSignature struct {
 	R, S *big.Int
 }
 
-func (this *Key) sign(v interface{}) (signature []byte, err error) {
+func (key *Key) sign(v interface{}) (signature []byte, err error) {
 	digest, err := newSha256(v)
 	if err != nil {
 		return
 	}
-	switch key := this.PrivateKey.(type) {
+	switch pri := key.PrivateKey.(type) {
 	case *rsa.PrivateKey:
-		signature, err = rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA256, digest)
+		signature, err = rsa.SignPKCS1v15(rand.Reader, pri, crypto.SHA256, digest)
 	case *ecdsa.PrivateKey:
 		var sig ecdsaSignature
-		sig.R, sig.S, err = ecdsa.Sign(rand.Reader, key, digest)
+		sig.R, sig.S, err = ecdsa.Sign(rand.Reader, pri, digest)
 		if err != nil {
 			return
 		}
@@ -205,14 +205,14 @@ func (this *Key) sign(v interface{}) (signature []byte, err error) {
 	return
 }
 
-func (this *Key) Verify(v interface{}, signature []byte) (err error) {
+func (key *Key) Verify(v interface{}, signature []byte) (err error) {
 	digest, err := newSha256(v)
 	if err != nil {
 		return
 	}
-	switch key := this.PrivateKey.(type) {
+	switch pri := key.PrivateKey.(type) {
 	case *rsa.PrivateKey:
-		err = rsa.VerifyPKCS1v15(&key.PublicKey, crypto.SHA256, digest, signature)
+		err = rsa.VerifyPKCS1v15(&pri.PublicKey, crypto.SHA256, digest, signature)
 		if err != nil {
 			err = ErrInvalidSignature
 			return
@@ -223,7 +223,7 @@ func (this *Key) Verify(v interface{}, signature []byte) (err error) {
 		if err != nil {
 			return
 		}
-		if !ecdsa.Verify(&key.PublicKey, digest, sig.R, sig.S) {
+		if !ecdsa.Verify(&pri.PublicKey, digest, sig.R, sig.S) {
 			err = ErrInvalidSignature
 			return
 		}
