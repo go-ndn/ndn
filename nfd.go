@@ -111,7 +111,7 @@ type FaceEntry struct {
 // fib dataset
 type FibEntry struct {
 	Name    Name            `tlv:"7"`
-	NextHop []NextHopRecord `tlv:"129?"`
+	NextHop []NextHopRecord `tlv:"129"`
 }
 
 type NextHopRecord struct {
@@ -122,7 +122,7 @@ type NextHopRecord struct {
 // rib dataset
 type RibEntry struct {
 	Name  Name    `tlv:"7"`
-	Route []Route `tlv:"129?"`
+	Route []Route `tlv:"129"`
 }
 
 type Route struct {
