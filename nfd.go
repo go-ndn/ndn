@@ -9,7 +9,7 @@ import (
 // see http://redmine.named-data.net/projects/nfd/wiki/Management
 type Command struct {
 	Localhost      string                  `tlv:"8"`
-	Nfd            string                  `tlv:"8"`
+	NFD            string                  `tlv:"8"`
 	Module         string                  `tlv:"8"`
 	Command        string                  `tlv:"8"`
 	Parameters     parametersComponent     `tlv:"8"`
@@ -22,7 +22,7 @@ type Command struct {
 func (cmd *Command) WriteTo(w tlv.Writer) (err error) {
 	if len(cmd.SignatureValue.SignatureValue) == 0 {
 		cmd.Localhost = "localhost"
-		cmd.Nfd = "nfd"
+		cmd.NFD = "nfd"
 		cmd.Timestamp = uint64(time.Now().UTC().UnixNano() / 1000000)
 		cmd.Nonce = newNonce()
 		cmd.SignatureInfo.SignatureInfo.SignatureType = SignKey.SignatureType()
@@ -77,14 +77,14 @@ type ControlResponse struct {
 
 // forwarder dataset
 type ForwarderStatus struct {
-	NfdVersion       string `tlv:"128"`
+	NFDVersion       string `tlv:"128"`
 	StartTimestamp   uint64 `tlv:"129"`
 	CurrentTimestamp uint64 `tlv:"130"`
 	NameTreeEntry    uint64 `tlv:"131"`
-	FibEntry         uint64 `tlv:"132"`
-	PitEntry         uint64 `tlv:"133"`
+	FIBEntry         uint64 `tlv:"132"`
+	PITEntry         uint64 `tlv:"133"`
 	MeasurementEntry uint64 `tlv:"134"`
-	CsEntry          uint64 `tlv:"135"`
+	CSEntry          uint64 `tlv:"135"`
 	InInterest       uint64 `tlv:"144"`
 	InData           uint64 `tlv:"145"`
 	OutInterest      uint64 `tlv:"146"`
@@ -109,7 +109,7 @@ type FaceEntry struct {
 }
 
 // fib dataset
-type FibEntry struct {
+type FIBEntry struct {
 	Name    Name            `tlv:"7"`
 	NextHop []NextHopRecord `tlv:"129"`
 }
@@ -120,7 +120,7 @@ type NextHopRecord struct {
 }
 
 // rib dataset
-type RibEntry struct {
+type RIBEntry struct {
 	Name  Name    `tlv:"7"`
 	Route []Route `tlv:"129"`
 }

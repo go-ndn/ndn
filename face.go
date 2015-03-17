@@ -113,14 +113,14 @@ func (f *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 		} else {
 			m = v.(map[chan<- *Data]*Selectors)
 		}
-		var inPit bool
+		var inPIT bool
 		for _, sel := range m {
 			if reflect.DeepEqual(sel, &i.Selectors) {
-				inPit = true
+				inPIT = true
 				break
 			}
 		}
-		if !inPit {
+		if !inPIT {
 			err = i.WriteTo(f.w)
 			if err != nil {
 				return m
