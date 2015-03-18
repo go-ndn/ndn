@@ -15,8 +15,8 @@ type Exclude struct {
 	list []excluded
 }
 
-func (ex *Exclude) UnmarshalBinary(data []byte) error {
-	buf := tlv.NewReader(bytes.NewReader(data))
+func (ex *Exclude) UnmarshalBinary(b []byte) error {
+	buf := tlv.NewReader(bytes.NewReader(b))
 	ex.list = nil
 	var e excluded
 	if nil == tlv.Unmarshal(buf, &e.Any, 19) {
@@ -60,7 +60,7 @@ func NewExclude(cs ...Component) (ex Exclude) {
 	return
 }
 
-func (ex *Exclude) MarshalBinary() (data []byte, err error) {
+func (ex *Exclude) MarshalBinary() (b []byte, err error) {
 	buf := new(bytes.Buffer)
 	for _, e := range ex.list {
 		if len(e.Component) != 0 {
@@ -74,6 +74,6 @@ func (ex *Exclude) MarshalBinary() (data []byte, err error) {
 			return
 		}
 	}
-	data = buf.Bytes()
+	b = buf.Bytes()
 	return
 }
