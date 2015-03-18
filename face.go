@@ -85,7 +85,6 @@ func (f *Face) SendData(d *Data) error {
 
 func (f *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 	ch := make(chan *Data, 1)
-	var inCache bool
 	ContentStore.Update(i.Name, func(v interface{}) interface{} {
 		if v == nil {
 			return nil
@@ -95,13 +94,12 @@ func (f *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 			if i.Selectors.Match(name, d, t) {
 				ch <- d
 				close(ch)
-				inCache = true
 				break
 			}
 		}
 		return v
 	})
-	if inCache {
+	if len(ch) > 0 {
 		// found in cache
 		return ch, nil
 	}
@@ -113,19 +111,16 @@ func (f *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 		} else {
 			m = v.(map[chan<- *Data]*Selectors)
 		}
-		var inPIT bool
 		for _, sel := range m {
 			if reflect.DeepEqual(sel, &i.Selectors) {
-				inPIT = true
-				break
+				goto PIT_DONE
 			}
 		}
-		if !inPIT {
-			err = i.WriteTo(f.w)
-			if err != nil {
-				return m
-			}
+		err = i.WriteTo(f.w)
+		if err != nil {
+			return m
 		}
+	PIT_DONE:
 		m[ch] = &i.Selectors
 		return m
 	}, false)
