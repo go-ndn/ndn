@@ -118,7 +118,7 @@ func (f *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 		}
 		err = i.WriteTo(f.w)
 		if err != nil {
-			return m
+			return v
 		}
 	PIT_DONE:
 		m[ch] = &i.Selectors
