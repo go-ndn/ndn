@@ -8,29 +8,37 @@ import (
 
 type excluded struct {
 	Component Component
-	Any       bool //right
+	Any       bool // Component..?
 }
 
 type Exclude struct {
 	list []excluded
 }
 
-func (ex *Exclude) UnmarshalBinary(b []byte) error {
-	buf := tlv.NewReader(bytes.NewReader(b))
+func (ex *Exclude) UnmarshalBinary(b []byte) (err error) {
 	ex.list = nil
-	var e excluded
-	if nil == tlv.Unmarshal(buf, &e.Any, 19) {
-		ex.list = append(ex.list, e)
-	}
+	buf := tlv.NewReader(bytes.NewReader(b))
 	for {
-		var e excluded
-		if nil != tlv.Unmarshal(buf, &e.Component, 8) {
-			break
+		switch buf.Peek() {
+		case 19:
+			if len(ex.list) == 0 {
+				ex.list = []excluded{{}}
+			}
+			err = tlv.Unmarshal(buf, &ex.list[len(ex.list)-1].Any, 19)
+			if err != nil {
+				return
+			}
+		case 8:
+			var e excluded
+			err = tlv.Unmarshal(buf, &e.Component, 8)
+			if err != nil {
+				return
+			}
+			ex.list = append(ex.list, e)
+		default:
+			return
 		}
-		tlv.Unmarshal(buf, &e.Any, 19)
-		ex.list = append(ex.list, e)
 	}
-	return nil
 }
 
 func (ex *Exclude) Match(c Component) bool {
