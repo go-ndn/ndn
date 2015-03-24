@@ -18,13 +18,13 @@ func BenchmarkDataEncodeRsa(b *testing.B) {
 	}
 	SignKey = Key{PrivateKey: rsaKey}
 
-	packet := &Data{
-		Name: NewName("/testing/ndn"),
-	}
-	packet.SignatureInfo.SignatureType = SignatureTypeSha256WithRsa
 	buf := new(bytes.Buffer)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
+		packet := &Data{
+			Name: NewName("/testing/ndn"),
+		}
+		packet.SignatureInfo.SignatureType = SignatureTypeSha256WithRsa
 		err := packet.WriteTo(buf)
 		if err != nil {
 			b.Fatal(err)
@@ -39,13 +39,13 @@ func BenchmarkDataEncodeEcdsa(b *testing.B) {
 	}
 	SignKey = Key{PrivateKey: ecdsaKey}
 
-	packet := &Data{
-		Name: NewName("/testing/ndn"),
-	}
-	packet.SignatureInfo.SignatureType = SignatureTypeSha256WithEcdsa
 	buf := new(bytes.Buffer)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
+		packet := &Data{
+			Name: NewName("/testing/ndn"),
+		}
+		packet.SignatureInfo.SignatureType = SignatureTypeSha256WithEcdsa
 		err := packet.WriteTo(buf)
 		if err != nil {
 			b.Fatal(err)

@@ -88,11 +88,11 @@ func TestConsumer(t *testing.T) {
 }
 
 func TestProducer(t *testing.T) {
-	key, err := ioutil.ReadFile("key/default.pri")
+	pem, err := ioutil.ReadFile("key/default.pri")
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = SignKey.DecodePrivateKey(key)
+	err = SignKey.DecodePrivateKey(pem)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,11 +108,11 @@ func TestProducer(t *testing.T) {
 }
 
 func BenchmarkBurstyForward(b *testing.B) {
-	key, err := ioutil.ReadFile("key/default.pri")
+	pem, err := ioutil.ReadFile("key/default.pri")
 	if err != nil {
 		b.Fatal(err)
 	}
-	err = SignKey.DecodePrivateKey(key)
+	err = SignKey.DecodePrivateKey(pem)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -153,11 +153,11 @@ func BenchmarkBurstyForward(b *testing.B) {
 }
 
 func BenchmarkForwardRTT(b *testing.B) {
-	key, err := ioutil.ReadFile("key/default.pri")
+	pem, err := ioutil.ReadFile("key/default.pri")
 	if err != nil {
 		b.Fatal(err)
 	}
-	err = SignKey.DecodePrivateKey(key)
+	err = SignKey.DecodePrivateKey(pem)
 	if err != nil {
 		b.Fatal(err)
 	}

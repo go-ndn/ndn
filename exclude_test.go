@@ -9,13 +9,13 @@ func TestExclude(t *testing.T) {
 	e1 := NewExclude(nil, Component("AB"))
 
 	if !e1.Match(Component("AB")) {
-		t.Fatal("should be excluded")
+		t.Fatal("want AB excluded")
 	}
 	if !e1.Match(Component("AA")) {
-		t.Fatal("should be excluded")
+		t.Fatal("want AA excluded")
 	}
 	if e1.Match(Component("ABC")) {
-		t.Fatal("should not be excluded")
+		t.Fatal("want ABC not excluded")
 	}
 
 	b, err := e1.MarshalBinary()
