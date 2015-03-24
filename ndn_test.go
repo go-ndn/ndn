@@ -75,13 +75,10 @@ func BenchmarkDataDecode(b *testing.B) {
 	packet.WriteTo(buf)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := new(Data).ReadFrom(tlv.NewReader(buf))
+		err := new(Data).ReadFrom(tlv.NewReader(bytes.NewReader(buf.Bytes())))
 		if err != nil {
 			b.Fatal(err)
 		}
-		b.StopTimer()
-		packet.WriteTo(buf)
-		b.StartTimer()
 	}
 }
 
@@ -107,12 +104,9 @@ func BenchmarkInterestDecode(b *testing.B) {
 	packet.WriteTo(buf)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := new(Interest).ReadFrom(tlv.NewReader(buf))
+		err := new(Interest).ReadFrom(tlv.NewReader(bytes.NewReader(buf.Bytes())))
 		if err != nil {
 			b.Fatal(err)
 		}
-		b.StopTimer()
-		packet.WriteTo(buf)
-		b.StartTimer()
 	}
 }
