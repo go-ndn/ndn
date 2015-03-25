@@ -190,19 +190,31 @@ func (f *Face) recvInterest(i *Interest) {
 	}
 }
 
-func (f *Face) Register(prefix string) error {
-	return f.SendControl("rib", "register", &Parameters{Name: NewName(prefix)})
+func (f *Face) Register(prefix string, key *Key) error {
+	return f.SendControl("rib", "register", &Parameters{Name: NewName(prefix)}, key)
 }
 
-func (f *Face) Unregister(prefix string) error {
-	return f.SendControl("rib", "unregister", &Parameters{Name: NewName(prefix)})
+func (f *Face) Unregister(prefix string, key *Key) error {
+	return f.SendControl("rib", "unregister", &Parameters{Name: NewName(prefix)}, key)
 }
 
-func (f *Face) SendControl(module, command string, params *Parameters) (err error) {
-	cmd := new(Command)
-	cmd.Module = module
-	cmd.Command = command
+func (f *Face) SendControl(module, command string, params *Parameters, key *Key) (err error) {
+	cmd := &Command{
+		Localhost: "localhost",
+		NFD:       "nfd",
+		Module:    module,
+		Command:   command,
+		Timestamp: uint64(time.Now().UTC().UnixNano() / 1000000),
+		Nonce:     newNonce(),
+	}
 	cmd.Parameters.Parameters = *params
+	cmd.SignatureInfo.SignatureInfo.SignatureType = key.SignatureType()
+	cmd.SignatureInfo.SignatureInfo.KeyLocator.Name = key.Name
+	cmd.SignatureValue.SignatureValue, err = key.sign(cmd)
+	if err != nil {
+		return
+	}
+
 	i := new(Interest)
 	err = Copy(cmd, &i.Name)
 	if err != nil {

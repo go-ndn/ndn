@@ -1,10 +1,6 @@
 package ndn
 
-import (
-	"time"
-
-	"github.com/go-ndn/tlv"
-)
+import "github.com/go-ndn/tlv"
 
 // see http://redmine.named-data.net/projects/nfd/wiki/Management
 type Command struct {
@@ -19,22 +15,8 @@ type Command struct {
 	SignatureValue signatureValueComponent `tlv:"8*"`
 }
 
-func (cmd *Command) WriteTo(w tlv.Writer) (err error) {
-	if len(cmd.SignatureValue.SignatureValue) == 0 {
-		cmd.Localhost = "localhost"
-		cmd.NFD = "nfd"
-		cmd.Timestamp = uint64(time.Now().UTC().UnixNano() / 1000000)
-		cmd.Nonce = newNonce()
-		cmd.SignatureInfo.SignatureInfo.SignatureType = SignKey.SignatureType()
-		cmd.SignatureInfo.SignatureInfo.KeyLocator.Name = SignKey.Name
-
-		cmd.SignatureValue.SignatureValue, err = SignKey.sign(cmd)
-		if err != nil {
-			return
-		}
-	}
-	err = tlv.Marshal(w, cmd, 7)
-	return
+func (cmd *Command) WriteTo(w tlv.Writer) error {
+	return tlv.Marshal(w, cmd, 7)
 }
 
 func (cmd *Command) ReadFrom(r tlv.Reader) error {

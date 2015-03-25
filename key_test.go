@@ -60,22 +60,22 @@ func TestCertificate(t *testing.T) {
 	}
 }
 
-func TestVerify(t *testing.T) {
+func TestSignVerify(t *testing.T) {
 	ecdsaKey, err := ecdsa.GenerateKey(elliptic.P224(), rand.Reader)
 	if err != nil {
 		t.Fatal(err)
 	}
-	key1 := Key{
+	key := Key{
 		Name:       NewName("/testing/key"),
 		PrivateKey: ecdsaKey,
 	}
 
 	d := new(Data)
-	sig, err := key1.sign(d)
+	err = key.Sign(d)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = key1.Verify(d, sig)
+	err = key.Verify(d, d.SignatureValue)
 	if err != nil {
 		t.Fatal(err)
 	}

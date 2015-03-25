@@ -131,7 +131,7 @@ func newNonce() []byte {
 	return b
 }
 
-// WriteTo writes interest to tlv.Writer after it populates nonce and lifeTime(if not defined) automatically
+// WriteTo writes interest to tlv.Writer after it populates nonce
 func (i *Interest) WriteTo(w tlv.Writer) error {
 	if len(i.Nonce) == 0 {
 		i.Nonce = newNonce()
@@ -153,24 +153,13 @@ func newSha256(v interface{}) (digest []byte, err error) {
 	return
 }
 
-// WriteTo writes data to tlv.Writer after it signs data automatically
-//
-// If SignKey is not ready, it will only provide DigestSha256.
+// WriteTo writes data to tlv.Writer after it populates sha256 digest
 func (d *Data) WriteTo(w tlv.Writer) (err error) {
 	if len(d.SignatureValue) == 0 {
-		d.SignatureInfo.SignatureType = SignKey.SignatureType()
-		switch d.SignatureInfo.SignatureType {
-		case SignatureTypeDigestSha256:
-			d.SignatureValue, err = newSha256(d)
-			if err != nil {
-				return
-			}
-		default:
-			d.SignatureInfo.KeyLocator.Name = SignKey.Name
-			d.SignatureValue, err = SignKey.sign(d)
-			if err != nil {
-				return
-			}
+		d.SignatureInfo.SignatureType = SignatureTypeDigestSha256
+		d.SignatureValue, err = newSha256(d)
+		if err != nil {
+			return
 		}
 	}
 	err = tlv.Marshal(w, d, 6)

@@ -24,10 +24,6 @@ var (
 	ErrInvalidPEM       = errors.New("invalid pem")
 )
 
-var (
-	SignKey Key
-)
-
 type Key struct {
 	Name       Name
 	PrivateKey crypto.PrivateKey
@@ -93,6 +89,16 @@ func (key *Key) SignatureType() uint64 {
 	return SignatureTypeDigestSha256
 }
 
+type certificate struct {
+	Validity      validity
+	Subject       []pkix.AttributeTypeAndValue
+	PublicKeyInfo asn1.RawValue
+}
+
+type validity struct {
+	NotBefore, NotAfter time.Time
+}
+
 func (key *Key) EncodeCertificate(w io.Writer) (err error) {
 	d := &Data{
 		Name: key.Name,
@@ -130,6 +136,10 @@ func (key *Key) EncodeCertificate(w io.Writer) (err error) {
 	if err != nil {
 		return
 	}
+	err = key.Sign(d)
+	if err != nil {
+		return
+	}
 	enc := base64.NewEncoder(base64.StdEncoding, w)
 	err = d.WriteTo(enc)
 	if err != nil {
@@ -137,16 +147,6 @@ func (key *Key) EncodeCertificate(w io.Writer) (err error) {
 	}
 	enc.Close()
 	return
-}
-
-type certificate struct {
-	Validity      validity
-	Subject       []pkix.AttributeTypeAndValue
-	PublicKeyInfo asn1.RawValue
-}
-
-type validity struct {
-	NotBefore, NotAfter time.Time
 }
 
 func (key *Key) DecodeCertificate(r io.Reader) (err error) {
@@ -182,6 +182,13 @@ func (key *Key) DecodeCertificate(r io.Reader) (err error) {
 
 type ecdsaSignature struct {
 	R, S *big.Int
+}
+
+func (key *Key) Sign(d *Data) (err error) {
+	d.SignatureInfo.SignatureType = key.SignatureType()
+	d.SignatureInfo.KeyLocator.Name = key.Name
+	d.SignatureValue, err = key.sign(d)
+	return
 }
 
 func (key *Key) sign(v interface{}) (signature []byte, err error) {

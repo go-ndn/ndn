@@ -14,6 +14,22 @@ var (
 	errUnexpectedData = errors.New("unexpected data")
 )
 
+var (
+	key Key
+)
+
+func TestLoadKey(t *testing.T) {
+	pem, err := ioutil.ReadFile("key/default.pri")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = key.DecodePrivateKey(pem)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("key loaded")
+}
+
 func producer(id string) (err error) {
 	conn, err := net.Dial("tcp", ":6363")
 	if err != nil {
@@ -21,7 +37,7 @@ func producer(id string) (err error) {
 	}
 	interestRecv := make(chan *Interest)
 	face := NewFace(conn, interestRecv)
-	err = face.Register(id)
+	err = face.Register(id, &key)
 	if err != nil {
 		face.Close()
 		return
@@ -88,16 +104,8 @@ func TestConsumer(t *testing.T) {
 }
 
 func TestProducer(t *testing.T) {
-	pem, err := ioutil.ReadFile("key/default.pri")
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = SignKey.DecodePrivateKey(pem)
-	if err != nil {
-		t.Fatal(err)
-	}
 	id := fmt.Sprintf("/%x", newNonce())
-	err = producer(id)
+	err := producer(id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,25 +116,16 @@ func TestProducer(t *testing.T) {
 }
 
 func BenchmarkBurstyForward(b *testing.B) {
-	pem, err := ioutil.ReadFile("key/default.pri")
-	if err != nil {
-		b.Fatal(err)
-	}
-	err = SignKey.DecodePrivateKey(pem)
-	if err != nil {
-		b.Fatal(err)
-	}
 	ids := make([]string, 64)
 	for i := 0; i < 64; i++ {
 		ids[i] = fmt.Sprintf("/%x", newNonce())
 	}
 	for _, id := range ids {
-		err = producer(id)
+		err := producer(id)
 		if err != nil {
 			b.Fatal(err)
 		}
 	}
-	SignKey = Key{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -153,20 +152,11 @@ func BenchmarkBurstyForward(b *testing.B) {
 }
 
 func BenchmarkForwardRTT(b *testing.B) {
-	pem, err := ioutil.ReadFile("key/default.pri")
-	if err != nil {
-		b.Fatal(err)
-	}
-	err = SignKey.DecodePrivateKey(pem)
-	if err != nil {
-		b.Fatal(err)
-	}
 	id := fmt.Sprintf("/%x", newNonce())
-	err = producer(id)
+	err := producer(id)
 	if err != nil {
 		b.Fatal(err)
 	}
-	SignKey = Key{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
