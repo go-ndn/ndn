@@ -61,7 +61,7 @@ type Selectors struct {
 	MinSuffixComponents       uint64     `tlv:"13?"`
 	MaxSuffixComponents       uint64     `tlv:"14?"`
 	PublisherPublicKeyLocator KeyLocator `tlv:"15?"`
-	Exclude                   *Exclude   `tlv:"16?"`
+	Exclude                   Exclude    `tlv:"16?"`
 	ChildSelector             uint64     `tlv:"17?"`
 	MustBeFresh               bool       `tlv:"18?"`
 }
@@ -82,7 +82,7 @@ func (sel *Selectors) Match(name string, d *Data, t time.Time) bool {
 		!bytes.Equal(sel.PublisherPublicKeyLocator.Digest, d.SignatureInfo.KeyLocator.Digest) {
 		return false
 	}
-	if sel.Exclude != nil && suffix > 0 && sel.Exclude.Match(d.Name.Components[len(d.Name.Components)-suffix]) {
+	if suffix > 0 && sel.Exclude.Match(d.Name.Components[len(d.Name.Components)-suffix]) {
 		return false
 	}
 	if sel.MustBeFresh && !t.IsZero() && time.Now().Sub(t) > time.Duration(d.MetaInfo.FreshnessPeriod)*time.Millisecond {
