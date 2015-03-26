@@ -5,17 +5,23 @@ import (
 	"testing"
 )
 
+type excludeTest struct {
+	in   string
+	want bool
+}
+
 func TestExclude(t *testing.T) {
 	e1 := NewExclude(nil, Component("AB"))
 
-	if !e1.Match(Component("AB")) {
-		t.Fatal("want AB excluded")
-	}
-	if !e1.Match(Component("AA")) {
-		t.Fatal("want AA excluded")
-	}
-	if e1.Match(Component("ABC")) {
-		t.Fatal("want ABC not excluded")
+	for _, test := range []excludeTest{
+		{"AB", true},
+		{"AA", true},
+		{"ABC", false},
+	} {
+		got := e1.Match(Component(test.in))
+		if got != test.want {
+			t.Fatalf("..AB Match(%s) == %v, got %v", test.in, test.want, got)
+		}
 	}
 
 	b, err := e1.MarshalBinary()

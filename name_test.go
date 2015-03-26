@@ -2,25 +2,24 @@ package ndn
 
 import "testing"
 
+type nameTest struct {
+	in   string
+	want int
+}
+
 func TestName(t *testing.T) {
 	name := NewName("/A/B")
-	if 0 != name.Compare(NewName("/A/B")) {
-		t.Fatal("want /A/B = /A/B")
-	}
 
-	if -1 != name.Compare(NewName("/A/C")) {
-		t.Fatal("want /A/B < /A/C")
-	}
-
-	if 1 != name.Compare(NewName("/A/A")) {
-		t.Fatal("want /A/B > /A/A")
-	}
-
-	if -1 != name.Compare(NewName("/A/B/C")) {
-		t.Fatal("want /A/B < /A/B/C")
-	}
-
-	if 1 != name.Compare(NewName("/A")) {
-		t.Fatal("want /A/B > /A")
+	for _, test := range []nameTest{
+		{"/A/B", 0},
+		{"/A/C", -1},
+		{"/A/A", 1},
+		{"/A/B/C", -1},
+		{"/A", 1},
+	} {
+		got := name.Compare(NewName(test.in))
+		if got != test.want {
+			t.Fatalf("/A/B Compare(%s) == %v, got %v", test.in, test.want, got)
+		}
 	}
 }

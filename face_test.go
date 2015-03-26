@@ -11,23 +11,17 @@ import (
 )
 
 var (
-	errUnexpectedData = errors.New("unexpected data")
+	defaultKey = readKey("key/default.pri")
 )
 
-var (
-	key Key
-)
-
-func TestLoadKey(t *testing.T) {
-	pem, err := ioutil.ReadFile("key/default.pri")
+func readKey(file string) (key *Key) {
+	key = new(Key)
+	pem, err := ioutil.ReadFile(file)
 	if err != nil {
-		t.Fatal(err)
+		return
 	}
-	err = key.DecodePrivateKey(pem)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log("key loaded")
+	key.DecodePrivateKey(pem)
+	return
 }
 
 func producer(id string) (err error) {
@@ -37,7 +31,7 @@ func producer(id string) (err error) {
 	}
 	interestRecv := make(chan *Interest)
 	face := NewFace(conn, interestRecv)
-	err = face.Register(id, &key)
+	err = face.Register(id, defaultKey)
 	if err != nil {
 		face.Close()
 		return
@@ -77,7 +71,7 @@ func consumer(id string) (err error) {
 		return
 	}
 	if d.Name.String() != id {
-		err = errUnexpectedData
+		err = errors.New("wrong name")
 		return
 	}
 	return
@@ -100,7 +94,7 @@ func TestConsumer(t *testing.T) {
 	if !ok {
 		t.Fatal("timeout")
 	}
-	t.Logf("name: %s, sig: %s", d.Name, d.SignatureInfo.KeyLocator.Name)
+	t.Logf("name: %s, key: %s", d.Name, d.SignatureInfo.KeyLocator.Name)
 }
 
 func TestProducer(t *testing.T) {
@@ -117,7 +111,7 @@ func TestProducer(t *testing.T) {
 
 func BenchmarkBurstyForward(b *testing.B) {
 	ids := make([]string, 64)
-	for i := 0; i < 64; i++ {
+	for i := 0; i < len(ids); i++ {
 		ids[i] = fmt.Sprintf("/%x", newNonce())
 	}
 	for _, id := range ids {
@@ -126,13 +120,13 @@ func BenchmarkBurstyForward(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
-
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
 		ch := make(chan error)
 		var wg sync.WaitGroup
+		wg.Add(len(ids))
 		for _, id := range ids {
-			wg.Add(1)
 			go func(id string) {
 				err := consumer(id)
 				if err != nil {
@@ -157,8 +151,8 @@ func BenchmarkForwardRTT(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
 		err := consumer(id)
 		if err != nil {

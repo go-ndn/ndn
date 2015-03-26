@@ -6,6 +6,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"io/ioutil"
 	"testing"
 
 	"github.com/go-ndn/tlv"
@@ -17,18 +18,17 @@ func BenchmarkDataEncodeRsa(b *testing.B) {
 		b.Fatal(err)
 	}
 	key := Key{PrivateKey: rsaKey}
-
-	buf := new(bytes.Buffer)
+	packet := &Data{
+		Name: NewName("/testing/ndn"),
+	}
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
-		packet := &Data{
-			Name: NewName("/testing/ndn"),
-		}
 		err := key.Sign(packet)
 		if err != nil {
 			b.Fatal(err)
 		}
-		err = packet.WriteTo(buf)
+		err = packet.WriteTo(ioutil.Discard)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -41,18 +41,17 @@ func BenchmarkDataEncodeEcdsa(b *testing.B) {
 		b.Fatal(err)
 	}
 	key := Key{PrivateKey: ecdsaKey}
-
-	buf := new(bytes.Buffer)
+	packet := &Data{
+		Name: NewName("/testing/ndn"),
+	}
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
-		packet := &Data{
-			Name: NewName("/testing/ndn"),
-		}
 		err := key.Sign(packet)
 		if err != nil {
 			b.Fatal(err)
 		}
-		err = packet.WriteTo(buf)
+		err = packet.WriteTo(ioutil.Discard)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -63,10 +62,10 @@ func BenchmarkDataEncode(b *testing.B) {
 	packet := &Data{
 		Name: NewName("/testing/ndn"),
 	}
-	buf := new(bytes.Buffer)
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
-		err := packet.WriteTo(buf)
+		err := packet.WriteTo(ioutil.Discard)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -80,6 +79,7 @@ func BenchmarkDataDecode(b *testing.B) {
 	buf := new(bytes.Buffer)
 	packet.WriteTo(buf)
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
 		err := new(Data).ReadFrom(tlv.NewReader(bytes.NewReader(buf.Bytes())))
 		if err != nil {
@@ -92,10 +92,10 @@ func BenchmarkInterestEncode(b *testing.B) {
 	packet := &Interest{
 		Name: NewName("/testing/ndn"),
 	}
-	buf := new(bytes.Buffer)
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
-		err := packet.WriteTo(buf)
+		err := packet.WriteTo(ioutil.Discard)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -109,6 +109,7 @@ func BenchmarkInterestDecode(b *testing.B) {
 	buf := new(bytes.Buffer)
 	packet.WriteTo(buf)
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
 		err := new(Interest).ReadFrom(tlv.NewReader(bytes.NewReader(buf.Bytes())))
 		if err != nil {
