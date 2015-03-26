@@ -14,8 +14,7 @@ var (
 	defaultKey = readKey("key/default.pri")
 )
 
-func readKey(file string) (key *Key) {
-	key = new(Key)
+func readKey(file string) (key Key) {
 	pem, err := ioutil.ReadFile(file)
 	if err != nil {
 		return
@@ -31,7 +30,7 @@ func producer(id string) (err error) {
 	}
 	interestRecv := make(chan *Interest)
 	face := NewFace(conn, interestRecv)
-	err = face.Register(id, defaultKey)
+	err = face.Register(id, &defaultKey)
 	if err != nil {
 		face.Close()
 		return
