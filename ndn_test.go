@@ -2,10 +2,6 @@ package ndn
 
 import (
 	"bytes"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/rsa"
 	"io/ioutil"
 	"testing"
 
@@ -13,18 +9,9 @@ import (
 )
 
 func BenchmarkDataEncodeRsa(b *testing.B) {
-	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		b.Fatal(err)
-	}
-	key := Key{PrivateKey: rsaKey}
-	packet := &Data{
-		Name: NewName("/testing/ndn"),
-	}
-	b.ResetTimer()
-
+	packet := new(Data)
 	for i := 0; i < b.N; i++ {
-		err := key.Sign(packet)
+		err := rsaKey.Sign(packet)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -36,18 +23,9 @@ func BenchmarkDataEncodeRsa(b *testing.B) {
 }
 
 func BenchmarkDataEncodeEcdsa(b *testing.B) {
-	ecdsaKey, err := ecdsa.GenerateKey(elliptic.P224(), rand.Reader)
-	if err != nil {
-		b.Fatal(err)
-	}
-	key := Key{PrivateKey: ecdsaKey}
-	packet := &Data{
-		Name: NewName("/testing/ndn"),
-	}
-	b.ResetTimer()
-
+	packet := new(Data)
 	for i := 0; i < b.N; i++ {
-		err := key.Sign(packet)
+		err := ecdsaKey.Sign(packet)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -59,11 +37,7 @@ func BenchmarkDataEncodeEcdsa(b *testing.B) {
 }
 
 func BenchmarkDataEncode(b *testing.B) {
-	packet := &Data{
-		Name: NewName("/testing/ndn"),
-	}
-	b.ResetTimer()
-
+	packet := new(Data)
 	for i := 0; i < b.N; i++ {
 		err := packet.WriteTo(ioutil.Discard)
 		if err != nil {
@@ -73,9 +47,7 @@ func BenchmarkDataEncode(b *testing.B) {
 }
 
 func BenchmarkDataDecode(b *testing.B) {
-	packet := &Data{
-		Name: NewName("/testing/ndn"),
-	}
+	packet := new(Data)
 	buf := new(bytes.Buffer)
 	packet.WriteTo(buf)
 	b.ResetTimer()
@@ -89,11 +61,7 @@ func BenchmarkDataDecode(b *testing.B) {
 }
 
 func BenchmarkInterestEncode(b *testing.B) {
-	packet := &Interest{
-		Name: NewName("/testing/ndn"),
-	}
-	b.ResetTimer()
-
+	packet := new(Interest)
 	for i := 0; i < b.N; i++ {
 		err := packet.WriteTo(ioutil.Discard)
 		if err != nil {
@@ -103,9 +71,7 @@ func BenchmarkInterestEncode(b *testing.B) {
 }
 
 func BenchmarkInterestDecode(b *testing.B) {
-	packet := &Interest{
-		Name: NewName("/testing/ndn"),
-	}
+	packet := new(Interest)
 	buf := new(bytes.Buffer)
 	packet.WriteTo(buf)
 	b.ResetTimer()

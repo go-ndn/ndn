@@ -4,24 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"sync"
 	"testing"
 )
-
-var (
-	defaultKey = readKey("key/default.pri")
-)
-
-func readKey(file string) (key Key) {
-	pem, err := ioutil.ReadFile(file)
-	if err != nil {
-		return
-	}
-	key.DecodePrivateKey(pem)
-	return
-}
 
 func producer(id string) (err error) {
 	conn, err := net.Dial("tcp", ":6363")
@@ -30,7 +16,7 @@ func producer(id string) (err error) {
 	}
 	interestRecv := make(chan *Interest)
 	face := NewFace(conn, interestRecv)
-	err = face.Register(id, &defaultKey)
+	err = face.Register(id, &rsaKey)
 	if err != nil {
 		face.Close()
 		return
