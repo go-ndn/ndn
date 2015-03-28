@@ -216,7 +216,7 @@ func (f *Face) SendControl(module, command string, params *Parameters, key *Key)
 	}
 
 	i := new(Interest)
-	err = Copy(cmd, &i.Name)
+	err = tlv.Copy(cmd, &i.Name)
 	if err != nil {
 		return
 	}
@@ -230,7 +230,7 @@ func (f *Face) SendControl(module, command string, params *Parameters, key *Key)
 		return
 	}
 	resp := new(ControlResponse)
-	err = Unmarshal(d.Content, resp, 101)
+	err = tlv.UnmarshalByte(d.Content, resp, 101)
 	if err != nil {
 		return
 	}

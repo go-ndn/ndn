@@ -16,38 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/go-ndn/tlv"
 )
-
-// Print dumps interest, data, or any variable in detail for debugging
-func Print(i ...interface{}) {
-	spew.Dump(i...)
-}
-
-func Marshal(i interface{}, valType uint64) (b []byte, err error) {
-	buf := new(bytes.Buffer)
-	err = tlv.Marshal(buf, i, valType)
-	if err != nil {
-		return
-	}
-	b = buf.Bytes()
-	return
-}
-
-func Unmarshal(b []byte, i interface{}, valType uint64) error {
-	return tlv.Unmarshal(tlv.NewReader(bytes.NewReader(b)), i, valType)
-}
-
-func Copy(from tlv.WriteTo, to tlv.ReadFrom) (err error) {
-	buf := new(bytes.Buffer)
-	err = from.WriteTo(buf)
-	if err != nil {
-		return
-	}
-	err = to.ReadFrom(tlv.NewReader(buf))
-	return
-}
 
 type Interest struct {
 	Name      Name      `tlv:"7"`
