@@ -1,12 +1,7 @@
 // Copyright 2014 Tai-Lin Chu. All rights reserved.
 // Use of this source code is governed by GPL2 license.
 
-// Package ndn implements ndn(named-data networking) client library. It is intended to work with nfd.
-//
-// Examples
-//
-// see https://github.com/go-ndn/ndn/blob/master/face_test.go
-//
+// Package ndn implements ndn(named-data networking) client library.
 package ndn
 
 import (
