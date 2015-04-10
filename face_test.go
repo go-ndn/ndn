@@ -16,7 +16,7 @@ func producer(id string) (err error) {
 	}
 	interestRecv := make(chan *Interest)
 	face := NewFace(conn, interestRecv)
-	err = face.Register(id, &rsaKey)
+	err = Register(face, id, &rsaKey)
 	if err != nil {
 		face.Close()
 		return

@@ -1,7 +1,6 @@
 package ndn
 
 import (
-	"errors"
 	"net"
 	"reflect"
 	"time"
@@ -9,11 +8,6 @@ import (
 	"github.com/go-ndn/exact"
 	"github.com/go-ndn/lpm"
 	"github.com/go-ndn/tlv"
-)
-
-var (
-	ErrTimeout        = errors.New("timeout")
-	ErrResponseStatus = errors.New("bad command response status")
 )
 
 type Face struct {
@@ -188,55 +182,4 @@ func (f *Face) recvInterest(i *Interest) {
 	if f.interestRecv != nil {
 		f.interestRecv <- i
 	}
-}
-
-func (f *Face) Register(prefix string, key *Key) error {
-	return f.SendControl("rib", "register", &Parameters{Name: NewName(prefix)}, key)
-}
-
-func (f *Face) Unregister(prefix string, key *Key) error {
-	return f.SendControl("rib", "unregister", &Parameters{Name: NewName(prefix)}, key)
-}
-
-func (f *Face) SendControl(module, command string, params *Parameters, key *Key) (err error) {
-	cmd := &Command{
-		Localhost: "localhost",
-		NFD:       "nfd",
-		Module:    module,
-		Command:   command,
-		Timestamp: uint64(time.Now().UTC().UnixNano() / 1000000),
-		Nonce:     newNonce(),
-	}
-	cmd.Parameters.Parameters = *params
-	cmd.SignatureInfo.SignatureInfo.SignatureType = key.SignatureType()
-	cmd.SignatureInfo.SignatureInfo.KeyLocator.Name = key.Name
-	cmd.SignatureValue.SignatureValue, err = key.sign(cmd)
-	if err != nil {
-		return
-	}
-
-	i := new(Interest)
-	err = tlv.Copy(cmd, &i.Name)
-	if err != nil {
-		return
-	}
-	ch, err := f.SendInterest(i)
-	if err != nil {
-		return
-	}
-	d, ok := <-ch
-	if !ok {
-		err = ErrTimeout
-		return
-	}
-	resp := new(ControlResponse)
-	err = tlv.UnmarshalByte(d.Content, resp, 101)
-	if err != nil {
-		return
-	}
-	if resp.StatusCode != 200 {
-		err = ErrResponseStatus
-		return
-	}
-	return
 }

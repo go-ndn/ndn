@@ -1,6 +1,16 @@
 package ndn
 
-import "github.com/go-ndn/tlv"
+import (
+	"errors"
+	"time"
+
+	"github.com/go-ndn/tlv"
+)
+
+var (
+	ErrTimeout        = errors.New("timeout")
+	ErrResponseStatus = errors.New("bad command response status")
+)
 
 // see http://redmine.named-data.net/projects/nfd/wiki/Management
 type Command struct {
@@ -119,4 +129,55 @@ type Route struct {
 type StrategyChoice struct {
 	Name     Name     `tlv:"7"`
 	Strategy Strategy `tlv:"107"`
+}
+
+func Register(face *Face, prefix string, key *Key) error {
+	return SendControl(face, "rib", "register", &Parameters{Name: NewName(prefix)}, key)
+}
+
+func Unregister(face *Face, prefix string, key *Key) error {
+	return SendControl(face, "rib", "unregister", &Parameters{Name: NewName(prefix)}, key)
+}
+
+func SendControl(face *Face, module, command string, params *Parameters, key *Key) (err error) {
+	cmd := &Command{
+		Localhost: "localhost",
+		NFD:       "nfd",
+		Module:    module,
+		Command:   command,
+		Timestamp: uint64(time.Now().UTC().UnixNano() / 1000000),
+		Nonce:     newNonce(),
+	}
+	cmd.Parameters.Parameters = *params
+	cmd.SignatureInfo.SignatureInfo.SignatureType = key.SignatureType()
+	cmd.SignatureInfo.SignatureInfo.KeyLocator.Name = key.Name
+	cmd.SignatureValue.SignatureValue, err = key.sign(cmd)
+	if err != nil {
+		return
+	}
+
+	i := new(Interest)
+	err = tlv.Copy(cmd, &i.Name)
+	if err != nil {
+		return
+	}
+	ch, err := face.SendInterest(i)
+	if err != nil {
+		return
+	}
+	d, ok := <-ch
+	if !ok {
+		err = ErrTimeout
+		return
+	}
+	resp := new(ControlResponse)
+	err = tlv.UnmarshalByte(d.Content, resp, 101)
+	if err != nil {
+		return
+	}
+	if resp.StatusCode != 200 {
+		err = ErrResponseStatus
+		return
+	}
+	return
 }
