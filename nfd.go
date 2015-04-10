@@ -161,11 +161,7 @@ func SendControl(face *Face, module, command string, params *Parameters, key *Ke
 	if err != nil {
 		return
 	}
-	ch, err := face.SendInterest(i)
-	if err != nil {
-		return
-	}
-	d, ok := <-ch
+	d, ok := <-face.SendInterest(i)
 	if !ok {
 		err = ErrTimeout
 		return

@@ -9,24 +9,24 @@ import (
 	"testing"
 )
 
-func producer(id string) (err error) {
+func producer(name string) (err error) {
 	conn, err := net.Dial("tcp", ":6363")
 	if err != nil {
 		return
 	}
-	interestRecv := make(chan *Interest)
-	face := NewFace(conn, interestRecv)
-	err = Register(face, id, &rsaKey)
+	recv := make(chan *Interest)
+	face := NewFace(conn, recv)
+	err = Register(face, name, &rsaKey)
 	if err != nil {
 		face.Close()
 		return
 	}
 	d := &Data{
-		Name:    NewName(id),
+		Name:    NewName(name),
 		Content: bytes.Repeat([]byte("0123456789"), 100),
 	}
 	go func() {
-		for _ = range interestRecv {
+		for _ = range recv {
 			face.SendData(d)
 		}
 		face.Close()
@@ -34,28 +34,24 @@ func producer(id string) (err error) {
 	return
 }
 
-func consumer(id string) (err error) {
+func consumer(name string) (err error) {
 	conn, err := net.Dial("tcp", ":6363")
 	if err != nil {
 		return
 	}
 	face := NewFace(conn, nil)
 	defer face.Close()
-	ch, err := face.SendInterest(&Interest{
-		Name: NewName(id),
+	d, ok := <-face.SendInterest(&Interest{
+		Name: NewName(name),
 		Selectors: Selectors{
 			MustBeFresh: true,
 		},
 	})
-	if err != nil {
-		return
-	}
-	d, ok := <-ch
 	if !ok {
 		err = ErrTimeout
 		return
 	}
-	if d.Name.String() != id {
+	if d.Name.String() != name {
 		err = errors.New("wrong name")
 		return
 	}
@@ -69,13 +65,9 @@ func TestConsumer(t *testing.T) {
 	}
 	face := NewFace(conn, nil)
 	defer face.Close()
-	ch, err := face.SendInterest(&Interest{
+	d, ok := <-face.SendInterest(&Interest{
 		Name: NewName("/ndn/edu/ucla"),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	d, ok := <-ch
 	if !ok {
 		t.Fatal("timeout")
 	}
@@ -83,24 +75,24 @@ func TestConsumer(t *testing.T) {
 }
 
 func TestProducer(t *testing.T) {
-	id := fmt.Sprintf("/%x", newNonce())
-	err := producer(id)
+	name := fmt.Sprintf("/%x", newNonce())
+	err := producer(name)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = consumer(id)
+	err = consumer(name)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
 func BenchmarkBurstyForward(b *testing.B) {
-	ids := make([]string, 64)
-	for i := 0; i < len(ids); i++ {
-		ids[i] = fmt.Sprintf("/%x", newNonce())
+	names := make([]string, 64)
+	for i := 0; i < len(names); i++ {
+		names[i] = fmt.Sprintf("/%x", newNonce())
 	}
-	for _, id := range ids {
-		err := producer(id)
+	for _, name := range names {
+		err := producer(name)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -110,15 +102,15 @@ func BenchmarkBurstyForward(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		ch := make(chan error)
 		var wg sync.WaitGroup
-		wg.Add(len(ids))
-		for _, id := range ids {
-			go func(id string) {
-				err := consumer(id)
+		wg.Add(len(names))
+		for _, name := range names {
+			go func(name string) {
+				err := consumer(name)
 				if err != nil {
 					ch <- err
 				}
 				wg.Done()
-			}(id)
+			}(name)
 		}
 		go func() {
 			wg.Wait()
@@ -131,15 +123,15 @@ func BenchmarkBurstyForward(b *testing.B) {
 }
 
 func BenchmarkForwardRTT(b *testing.B) {
-	id := fmt.Sprintf("/%x", newNonce())
-	err := producer(id)
+	name := fmt.Sprintf("/%x", newNonce())
+	err := producer(name)
 	if err != nil {
 		b.Fatal(err)
 	}
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		err := consumer(id)
+		err := consumer(name)
 		if err != nil {
 			b.Fatal(err)
 		}

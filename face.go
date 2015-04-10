@@ -11,26 +11,22 @@ import (
 )
 
 type Face struct {
-	w            net.Conn
-	r            tlv.Reader
-	pit          lpm.Matcher
-	interestRecv chan<- *Interest
+	w    net.Conn
+	r    tlv.Reader
+	pit  lpm.Matcher
+	recv chan<- *Interest
 }
 
 var (
 	ContentStore = exact.New()
 )
 
-// NewFace create a face with transport and interest channel
-//
-// The interest channel will be closed.
-// All incoming interests will be ignored if nil interest channel is passed in.
 func NewFace(transport net.Conn, ch chan<- *Interest) (f *Face) {
 	f = &Face{
-		w:            transport,
-		r:            tlv.NewReader(transport),
-		pit:          lpm.NewThreadSafe(),
-		interestRecv: ch,
+		w:    transport,
+		r:    tlv.NewReader(transport),
+		pit:  lpm.NewThreadSafe(),
+		recv: ch,
 	}
 	go func() {
 		for {
@@ -54,8 +50,8 @@ func NewFace(transport net.Conn, ch chan<- *Interest) (f *Face) {
 			}
 		}
 	IDLE:
-		if f.interestRecv != nil {
-			close(f.interestRecv)
+		if f.recv != nil {
+			close(f.recv)
 		}
 	}()
 	return
@@ -73,15 +69,15 @@ func (f *Face) Close() error {
 	return f.w.Close()
 }
 
-func (f *Face) SendData(d *Data) error {
-	return d.WriteTo(f.w)
+func (f *Face) SendData(d *Data) {
+	d.WriteTo(f.w)
 }
 
-func (f *Face) SendInterest(i *Interest) (<-chan *Data, error) {
+func (f *Face) SendInterest(i *Interest) <-chan *Data {
 	ch := make(chan *Data, 1)
-	ContentStore.Update(i.Name, func(v interface{}) interface{} {
+	ContentStore.Match(i.Name.String(), func(v interface{}) {
 		if v == nil {
-			return nil
+			return
 		}
 		name := i.Name.String()
 		for d, t := range v.(map[*Data]time.Time) {
@@ -91,14 +87,12 @@ func (f *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 				break
 			}
 		}
-		return v
 	})
 	if len(ch) > 0 {
 		// found in cache
-		return ch, nil
+		return ch
 	}
-	var err error
-	f.pit.Update(i.Name, func(v interface{}) interface{} {
+	f.pit.Update(i.Name.String(), func(v interface{}) interface{} {
 		var m map[chan<- *Data]*Selectors
 		if v == nil {
 			m = make(map[chan<- *Data]*Selectors)
@@ -110,18 +104,11 @@ func (f *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 				goto PIT_DONE
 			}
 		}
-		err = i.WriteTo(f.w)
-		if err != nil {
-			return v
-		}
+		i.WriteTo(f.w)
 	PIT_DONE:
 		m[ch] = &i.Selectors
 		return m
 	}, false)
-
-	if err != nil {
-		return nil, err
-	}
 
 	go func() {
 		lifeTime := 4 * time.Second
@@ -130,7 +117,7 @@ func (f *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 		}
 		time.Sleep(lifeTime)
 
-		f.pit.Update(i.Name, func(v interface{}) interface{} {
+		f.pit.Update(i.Name.String(), func(v interface{}) interface{} {
 			if v == nil {
 				return nil
 			}
@@ -147,11 +134,11 @@ func (f *Face) SendInterest(i *Interest) (<-chan *Data, error) {
 		}, false)
 	}()
 
-	return ch, nil
+	return ch
 }
 
 func (f *Face) recvData(d *Data) {
-	ContentStore.Update(d.Name, func(v interface{}) interface{} {
+	ContentStore.Update(d.Name.String(), func(v interface{}) interface{} {
 		var m map[*Data]time.Time
 		if v == nil {
 			m = make(map[*Data]time.Time)
@@ -161,7 +148,7 @@ func (f *Face) recvData(d *Data) {
 		m[d] = time.Now()
 		return m
 	})
-	f.pit.UpdateAll(d.Name, func(name string, v interface{}) interface{} {
+	f.pit.UpdateAll(d.Name.String(), func(name string, v interface{}) interface{} {
 		m := v.(map[chan<- *Data]*Selectors)
 		for ch, sel := range m {
 			if !sel.Match(name, d, time.Time{}) {
@@ -179,7 +166,7 @@ func (f *Face) recvData(d *Data) {
 }
 
 func (f *Face) recvInterest(i *Interest) {
-	if f.interestRecv != nil {
-		f.interestRecv <- i
+	if f.recv != nil {
+		f.recv <- i
 	}
 }
