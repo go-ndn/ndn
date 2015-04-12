@@ -79,23 +79,6 @@ func (f *Face) SendData(d *Data) {
 
 func (f *Face) SendInterest(i *Interest) <-chan *Data {
 	ch := make(chan *Data, 1)
-	ContentStore.Match(i.Name.String(), func(v interface{}) {
-		if v == nil {
-			return
-		}
-		name := i.Name.String()
-		for d, t := range v.(map[*Data]time.Time) {
-			if i.Selectors.Match(name, d, t) {
-				ch <- d
-				close(ch)
-				break
-			}
-		}
-	})
-	if len(ch) > 0 {
-		// found in cache
-		return ch
-	}
 	f.pit.Update(i.Name.String(), func(v interface{}) interface{} {
 		var m map[chan<- *Data]*Selectors
 		if v == nil {
@@ -144,16 +127,6 @@ func (f *Face) SendInterest(i *Interest) <-chan *Data {
 }
 
 func (f *Face) recvData(d *Data) {
-	ContentStore.Update(d.Name.String(), func(v interface{}) interface{} {
-		var m map[*Data]time.Time
-		if v == nil {
-			m = make(map[*Data]time.Time)
-		} else {
-			m = v.(map[*Data]time.Time)
-		}
-		m[d] = time.Now()
-		return m
-	})
 	f.pit.UpdateAll(d.Name.String(), func(name string, v interface{}) interface{} {
 		m := v.(map[chan<- *Data]*Selectors)
 		for ch, sel := range m {
