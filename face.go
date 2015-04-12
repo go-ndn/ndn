@@ -3,6 +3,7 @@ package ndn
 import (
 	"net"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/go-ndn/exact"
@@ -15,6 +16,7 @@ type Face struct {
 	r    tlv.Reader
 	pit  lpm.Matcher
 	recv chan<- *Interest
+	mu   sync.Mutex
 }
 
 var (
@@ -70,7 +72,9 @@ func (f *Face) Close() error {
 }
 
 func (f *Face) SendData(d *Data) {
+	f.mu.Lock()
 	d.WriteTo(f.w)
+	f.mu.Unlock()
 }
 
 func (f *Face) SendInterest(i *Interest) <-chan *Data {
@@ -104,7 +108,9 @@ func (f *Face) SendInterest(i *Interest) <-chan *Data {
 				goto PIT_DONE
 			}
 		}
+		f.mu.Lock()
 		i.WriteTo(f.w)
+		f.mu.Unlock()
 	PIT_DONE:
 		m[ch] = &i.Selectors
 		return m
