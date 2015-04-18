@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-ndn/exact"
 	"github.com/go-ndn/lpm"
 	"github.com/go-ndn/tlv"
 )
@@ -18,10 +17,6 @@ type Face struct {
 	recv chan<- *Interest
 	mu   sync.Mutex
 }
-
-var (
-	ContentStore = exact.New()
-)
 
 func NewFace(transport net.Conn, ch chan<- *Interest) (f *Face) {
 	f = &Face{
