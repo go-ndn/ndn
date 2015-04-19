@@ -74,7 +74,8 @@ func (f *Face) SendData(d *Data) {
 
 func (f *Face) SendInterest(i *Interest) <-chan *Data {
 	ch := make(chan *Data, 1)
-	f.pit.Update(i.Name.String(), func(v interface{}) interface{} {
+	name := i.Name.String()
+	f.pit.Update(name, func(v interface{}) interface{} {
 		var m map[chan<- *Data]*Selectors
 		if v == nil {
 			m = make(map[chan<- *Data]*Selectors)
@@ -101,7 +102,7 @@ func (f *Face) SendInterest(i *Interest) <-chan *Data {
 		}
 		time.Sleep(lifeTime)
 
-		f.pit.Update(i.Name.String(), func(v interface{}) interface{} {
+		f.pit.Update(name, func(v interface{}) interface{} {
 			if v == nil {
 				return nil
 			}

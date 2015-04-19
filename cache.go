@@ -18,30 +18,29 @@ func NewCache() *Cache {
 	return &Cache{Matcher: exact.New()}
 }
 
+type record struct {
+	data *Data
+	time time.Time
+}
+
 func (c *Cache) Add(d *Data) {
-	c.Update(d.Name.String(), func(v interface{}) interface{} {
-		var m map[*Data]time.Time
-		if v == nil {
-			m = make(map[*Data]time.Time)
-		} else {
-			m = v.(map[*Data]time.Time)
+	c.Update(d.Name.String(), func(_ interface{}) interface{} {
+		return record{
+			data: d,
+			time: time.Now(),
 		}
-		m[d] = time.Now()
-		return m
 	})
 }
 
 func (c *Cache) Get(i *Interest) (cache *Data) {
-	c.Match(i.Name.String(), func(v interface{}) {
+	name := i.Name.String()
+	c.Match(name, func(v interface{}) {
 		if v == nil {
 			return
 		}
-		name := i.Name.String()
-		for d, t := range v.(map[*Data]time.Time) {
-			if i.Selectors.Match(name, d, t) {
-				cache = d
-				break
-			}
+		r := v.(record)
+		if i.Selectors.Match(name, r.data, r.time) {
+			cache = r.data
 		}
 	})
 	return
