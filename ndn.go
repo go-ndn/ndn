@@ -108,7 +108,7 @@ func (i *Interest) ReadFrom(r tlv.Reader) error {
 	return tlv.Unmarshal(r, i, 5)
 }
 
-func newSha256(v interface{}) (digest []byte, err error) {
+func NewSha256(v interface{}) (digest []byte, err error) {
 	h := sha256.New()
 	err = tlv.Data(h, v)
 	if err != nil {
@@ -122,7 +122,7 @@ func newSha256(v interface{}) (digest []byte, err error) {
 func (d *Data) WriteTo(w tlv.Writer) (err error) {
 	if len(d.SignatureValue) == 0 {
 		d.SignatureInfo.SignatureType = SignatureTypeDigestSha256
-		d.SignatureValue, err = newSha256(d)
+		d.SignatureValue, err = NewSha256(d)
 		if err != nil {
 			return
 		}

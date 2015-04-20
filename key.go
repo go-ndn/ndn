@@ -192,7 +192,7 @@ func (key *Key) Sign(d *Data) (err error) {
 }
 
 func (key *Key) sign(v interface{}) (signature []byte, err error) {
-	digest, err := newSha256(v)
+	digest, err := NewSha256(v)
 	if err != nil {
 		return
 	}
@@ -213,7 +213,7 @@ func (key *Key) sign(v interface{}) (signature []byte, err error) {
 }
 
 func (key *Key) Verify(v interface{}, signature []byte) (err error) {
-	digest, err := newSha256(v)
+	digest, err := NewSha256(v)
 	if err != nil {
 		return
 	}
