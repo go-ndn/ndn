@@ -52,7 +52,7 @@ func consumer(name string) (err error) {
 		return
 	}
 	if d.Name.String() != name {
-		err = errors.New("wrong name")
+		err = errors.New(name)
 		return
 	}
 	return
