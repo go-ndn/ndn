@@ -57,9 +57,6 @@ func (n *Name) ReadFrom(r tlv.Reader) error {
 }
 
 func (n Name) String() string {
-	if len(n.Components) == 0 {
-		return "/"
-	}
 	buf := new(bytes.Buffer)
 	for _, c := range n.Components {
 		buf.WriteByte('/')
