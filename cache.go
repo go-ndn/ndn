@@ -24,7 +24,10 @@ type record struct {
 }
 
 func (c *Cache) Add(d *Data) {
-	c.Update(d.Name.String(), func(_ interface{}) interface{} {
+	c.Update(d.Name.String(), func(v interface{}) interface{} {
+		if v != nil {
+			return v
+		}
 		return record{
 			data: d,
 			time: time.Now(),
