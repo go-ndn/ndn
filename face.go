@@ -124,9 +124,10 @@ func (f *Face) SendInterest(i *Interest) <-chan *Data {
 
 func (f *Face) recvData(d *Data) {
 	f.pit.UpdateAll(d.Name.String(), func(name string, v interface{}) interface{} {
+		t := time.Now()
 		m := v.(map[chan<- *Data]*Selectors)
 		for ch, sel := range m {
-			if !sel.Match(name, d, time.Time{}) {
+			if !sel.Match(name, d, t) {
 				continue
 			}
 			ch <- d

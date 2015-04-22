@@ -22,7 +22,10 @@ func producer(name string) (err error) {
 		return
 	}
 	d := &Data{
-		Name:    NewName(name),
+		Name: NewName(name),
+		MetaInfo: MetaInfo{
+			FreshnessPeriod: 4000,
+		},
 		Content: bytes.Repeat([]byte("0123456789"), 100),
 	}
 	go func() {
