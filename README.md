@@ -19,8 +19,8 @@ The author is taylorchu (Tai-Lin Chu). This package is released under GPL2 licen
 
 2015-03
 ```
-BenchmarkDataEncodeRsa	     100	  11268142 ns/op
-BenchmarkDataEncodeEcdsa	    1000	   2305271 ns/op
+BenchmarkDataEncodeRSA	     100	  11268142 ns/op
+BenchmarkDataEncodeECDSA	    1000	   2305271 ns/op
 BenchmarkDataEncode	  100000	     13603 ns/op
 BenchmarkDataDecode	  100000	     18023 ns/op
 BenchmarkInterestEncode	  200000	      8303 ns/op
@@ -29,8 +29,8 @@ BenchmarkInterestDecode	  200000	     11306 ns/op
 
 2014-08
 ```
-BenchmarkDataEncodeRsa	     100	  10602984 ns/op
-BenchmarkDataEncodeEcdsa	    1000	   2331976 ns/op
+BenchmarkDataEncodeRSA	     100	  10602984 ns/op
+BenchmarkDataEncodeECDSA	    1000	   2331976 ns/op
 BenchmarkDataEncode	   50000	     34764 ns/op
 BenchmarkDataDecode	   50000	     71636 ns/op
 BenchmarkInterestEncode	  200000	     11575 ns/op

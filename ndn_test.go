@@ -8,7 +8,7 @@ import (
 	"github.com/go-ndn/tlv"
 )
 
-func BenchmarkDataEncodeRsa(b *testing.B) {
+func BenchmarkDataEncodeRSA(b *testing.B) {
 	packet := new(Data)
 	for i := 0; i < b.N; i++ {
 		err := rsaKey.Sign(packet)
@@ -22,7 +22,7 @@ func BenchmarkDataEncodeRsa(b *testing.B) {
 	}
 }
 
-func BenchmarkDataEncodeEcdsa(b *testing.B) {
+func BenchmarkDataEncodeECDSA(b *testing.B) {
 	packet := new(Data)
 	for i := 0; i < b.N; i++ {
 		err := ecdsaKey.Sign(packet)

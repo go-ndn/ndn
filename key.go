@@ -78,15 +78,15 @@ func (key *Key) EncodePrivateKey(w io.Writer) (err error) {
 
 // SignatureType shows key type in ndn signature type
 //
-// If the key is not initialized, it will return SignatureTypeDigestSha256.
+// If the key is not initialized, it will return SignatureTypeDigestSHA256.
 func (key *Key) SignatureType() uint64 {
 	switch key.PrivateKey.(type) {
 	case *rsa.PrivateKey:
-		return SignatureTypeSha256WithRsa
+		return SignatureTypeSHA256WithRSA
 	case *ecdsa.PrivateKey:
-		return SignatureTypeSha256WithEcdsa
+		return SignatureTypeSHA256WithECDSA
 	}
-	return SignatureTypeDigestSha256
+	return SignatureTypeDigestSHA256
 }
 
 type certificate struct {
@@ -192,7 +192,7 @@ func (key *Key) Sign(d *Data) (err error) {
 }
 
 func (key *Key) sign(v interface{}) (signature []byte, err error) {
-	digest, err := NewSha256(v)
+	digest, err := NewSHA256(v)
 	if err != nil {
 		return
 	}
@@ -213,7 +213,7 @@ func (key *Key) sign(v interface{}) (signature []byte, err error) {
 }
 
 func (key *Key) Verify(v interface{}, signature []byte) (err error) {
-	digest, err := NewSha256(v)
+	digest, err := NewSHA256(v)
 	if err != nil {
 		return
 	}

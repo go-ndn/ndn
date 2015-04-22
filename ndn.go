@@ -80,9 +80,9 @@ type SignatureInfo struct {
 }
 
 const (
-	SignatureTypeDigestSha256    uint64 = 0
-	SignatureTypeSha256WithRsa          = 1
-	SignatureTypeSha256WithEcdsa        = 3 // 2 is already used
+	SignatureTypeDigestSHA256    uint64 = 0
+	SignatureTypeSHA256WithRSA          = 1
+	SignatureTypeSHA256WithECDSA        = 3 // 2 is already used
 )
 
 type KeyLocator struct {
@@ -108,7 +108,7 @@ func (i *Interest) ReadFrom(r tlv.Reader) error {
 	return tlv.Unmarshal(r, i, 5)
 }
 
-func NewSha256(v interface{}) (digest []byte, err error) {
+func NewSHA256(v interface{}) (digest []byte, err error) {
 	h := sha256.New()
 	err = tlv.Data(h, v)
 	if err != nil {
@@ -121,8 +121,8 @@ func NewSha256(v interface{}) (digest []byte, err error) {
 // WriteTo writes data to tlv.Writer after it populates sha256 digest
 func (d *Data) WriteTo(w tlv.Writer) (err error) {
 	if len(d.SignatureValue) == 0 {
-		d.SignatureInfo.SignatureType = SignatureTypeDigestSha256
-		d.SignatureValue, err = NewSha256(d)
+		d.SignatureInfo.SignatureType = SignatureTypeDigestSHA256
+		d.SignatureValue, err = NewSHA256(d)
 		if err != nil {
 			return
 		}
