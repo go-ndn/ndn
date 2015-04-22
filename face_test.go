@@ -7,6 +7,7 @@ import (
 	"net"
 	"sync"
 	"testing"
+	"time"
 )
 
 func producer(name string) (err error) {
@@ -83,6 +84,7 @@ func TestProducer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	time.Sleep(time.Second)
 	err = consumer(name)
 	if err != nil {
 		t.Fatal(err)
@@ -100,6 +102,7 @@ func BenchmarkBurstyForward(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+	time.Sleep(time.Second)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -131,6 +134,7 @@ func BenchmarkForwardRTT(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
+	time.Sleep(time.Second)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
