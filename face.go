@@ -137,7 +137,7 @@ func (f *Face) recvData(d *Data) {
 			return nil
 		}
 		return m
-	})
+	}, true)
 }
 
 func (f *Face) recvInterest(i *Interest) {
