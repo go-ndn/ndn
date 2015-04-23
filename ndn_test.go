@@ -8,14 +8,18 @@ import (
 	"github.com/go-ndn/tlv"
 )
 
+var (
+	interest = &Interest{Name: NewName("/hello")}
+	data     = &Data{Name: NewName("/hello")}
+)
+
 func BenchmarkDataEncodeRSA(b *testing.B) {
-	packet := new(Data)
 	for i := 0; i < b.N; i++ {
-		err := rsaKey.Sign(packet)
+		err := rsaKey.Sign(data)
 		if err != nil {
 			b.Fatal(err)
 		}
-		err = packet.WriteTo(ioutil.Discard)
+		err = data.WriteTo(ioutil.Discard)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -23,13 +27,12 @@ func BenchmarkDataEncodeRSA(b *testing.B) {
 }
 
 func BenchmarkDataEncodeECDSA(b *testing.B) {
-	packet := new(Data)
 	for i := 0; i < b.N; i++ {
-		err := ecdsaKey.Sign(packet)
+		err := ecdsaKey.Sign(data)
 		if err != nil {
 			b.Fatal(err)
 		}
-		err = packet.WriteTo(ioutil.Discard)
+		err = data.WriteTo(ioutil.Discard)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -37,9 +40,8 @@ func BenchmarkDataEncodeECDSA(b *testing.B) {
 }
 
 func BenchmarkDataEncode(b *testing.B) {
-	packet := new(Data)
 	for i := 0; i < b.N; i++ {
-		err := packet.WriteTo(ioutil.Discard)
+		err := data.WriteTo(ioutil.Discard)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -47,9 +49,8 @@ func BenchmarkDataEncode(b *testing.B) {
 }
 
 func BenchmarkDataDecode(b *testing.B) {
-	packet := new(Data)
 	buf := new(bytes.Buffer)
-	packet.WriteTo(buf)
+	data.WriteTo(buf)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -61,9 +62,8 @@ func BenchmarkDataDecode(b *testing.B) {
 }
 
 func BenchmarkInterestEncode(b *testing.B) {
-	packet := new(Interest)
 	for i := 0; i < b.N; i++ {
-		err := packet.WriteTo(ioutil.Discard)
+		err := interest.WriteTo(ioutil.Discard)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -71,9 +71,8 @@ func BenchmarkInterestEncode(b *testing.B) {
 }
 
 func BenchmarkInterestDecode(b *testing.B) {
-	packet := new(Interest)
 	buf := new(bytes.Buffer)
-	packet.WriteTo(buf)
+	interest.WriteTo(buf)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
