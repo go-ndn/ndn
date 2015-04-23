@@ -17,7 +17,9 @@ func producer(name string) (err error) {
 	}
 	recv := make(chan *Interest)
 	face := NewFace(conn, recv)
-	err = Register(face, name, &rsaKey)
+	err = SendControl(face, "rib", "register", &Parameters{
+		Name: NewName(name),
+	}, &rsaKey)
 	if err != nil {
 		face.Close()
 		return

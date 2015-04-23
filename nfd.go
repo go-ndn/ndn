@@ -57,6 +57,11 @@ type Parameters struct {
 	ExpirationPeriod    uint64   `tlv:"109?"`
 }
 
+const (
+	FlagChildInherit uint64 = 1 << iota
+	FlagCapture
+)
+
 type Strategy struct {
 	Name Name `tlv:"7"`
 }
@@ -129,14 +134,6 @@ type Route struct {
 type StrategyChoice struct {
 	Name     Name     `tlv:"7"`
 	Strategy Strategy `tlv:"107"`
-}
-
-func Register(face *Face, prefix string, key *Key) error {
-	return SendControl(face, "rib", "register", &Parameters{Name: NewName(prefix)}, key)
-}
-
-func Unregister(face *Face, prefix string, key *Key) error {
-	return SendControl(face, "rib", "unregister", &Parameters{Name: NewName(prefix)}, key)
 }
 
 func SendControl(face *Face, module, command string, params *Parameters, key *Key) (err error) {
