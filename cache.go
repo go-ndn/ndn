@@ -43,7 +43,9 @@ func (c *Cache) Get(i *Interest) (cache *Data) {
 		}
 		for d, t := range m {
 			if i.Selectors.Match(name, d, t) {
-				if cache == nil || d.Name.Compare(cache.Name) < 0 {
+				if cache == nil ||
+					i.Selectors.ChildSelector == 0 && d.Name.Compare(cache.Name) < 0 ||
+					i.Selectors.ChildSelector == 1 && d.Name.Compare(cache.Name) > 0 {
 					cache = d
 				}
 			}
