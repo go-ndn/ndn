@@ -3,7 +3,7 @@ package ndn
 import (
 	"time"
 
-	"github.com/go-ndn/exact"
+	"github.com/go-ndn/lpm"
 )
 
 var (
@@ -11,40 +11,43 @@ var (
 )
 
 type Cache struct {
-	*exact.Matcher
+	lpm.Matcher
 }
 
 func NewCache() *Cache {
-	return &Cache{Matcher: exact.New()}
-}
-
-type record struct {
-	data *Data
-	time time.Time
+	return &Cache{Matcher: lpm.NewThreadSafe()}
 }
 
 func (c *Cache) Add(d *Data) {
-	c.Update(d.Name.String(), func(v interface{}) interface{} {
-		if v != nil {
-			return v
+	t := time.Now()
+	c.UpdateAll(d.Name.String(), func(_ string, v interface{}) interface{} {
+		var m map[*Data]time.Time
+		if v == nil {
+			m = make(map[*Data]time.Time)
+		} else {
+			m = v.(map[*Data]time.Time)
 		}
-		return record{
-			data: d,
-			time: time.Now(),
-		}
-	})
+		m[d] = t
+		return m
+	}, false)
 }
 
 func (c *Cache) Get(i *Interest) (cache *Data) {
 	name := i.Name.String()
 	c.Match(name, func(v interface{}) {
+		var m map[*Data]time.Time
 		if v == nil {
-			return
+			m = make(map[*Data]time.Time)
+		} else {
+			m = v.(map[*Data]time.Time)
 		}
-		r := v.(record)
-		if i.Selectors.Match(name, r.data, r.time) {
-			cache = r.data
+		for d, t := range m {
+			if i.Selectors.Match(name, d, t) {
+				if cache == nil || d.Name.Compare(cache.Name) < 0 {
+					cache = d
+				}
+			}
 		}
-	})
+	}, false)
 	return
 }
