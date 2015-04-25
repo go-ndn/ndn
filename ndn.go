@@ -32,8 +32,8 @@ type Selectors struct {
 }
 
 func (sel *Selectors) Match(name string, d *Data, t time.Time) bool {
-	suffix := len(d.Name.Components) - strings.Count(name, "/") + 1
-	if sel.MinSuffixComponents != 0 && sel.MinSuffixComponents > uint64(suffix) {
+	suffix := len(d.Name.Components) - strings.Count(name, "/")
+	if sel.MinSuffixComponents > uint64(suffix) {
 		return false
 	}
 	if sel.MaxSuffixComponents != 0 && sel.MaxSuffixComponents < uint64(suffix) {

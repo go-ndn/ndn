@@ -72,7 +72,7 @@ func TestConsumer(t *testing.T) {
 	face := NewFace(conn, nil)
 	defer face.Close()
 	d, ok := <-face.SendInterest(&Interest{
-		Name: NewName("/ndn/edu/ucla"),
+		Name: NewName("/ndn/edu/ucla/ping"),
 	})
 	if !ok {
 		t.Fatal("timeout")
