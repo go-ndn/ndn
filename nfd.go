@@ -163,8 +163,8 @@ func SendControl(face *Face, module, command string, params *Parameters, key *Ke
 		err = ErrTimeout
 		return
 	}
-	resp := new(ControlResponse)
-	err = tlv.UnmarshalByte(d.Content, resp, 101)
+	var resp ControlResponse
+	err = tlv.UnmarshalByte(d.Content, &resp, 101)
 	if err != nil {
 		return
 	}

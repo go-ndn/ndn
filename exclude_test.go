@@ -5,15 +5,13 @@ import (
 	"testing"
 )
 
-type excludeTest struct {
-	in   string
-	want bool
-}
-
 func TestExclude(t *testing.T) {
 	e1 := NewExclude(nil, Component("AB"))
 
-	for _, test := range []excludeTest{
+	for _, test := range []struct {
+		in   string
+		want bool
+	}{
 		{"AB", true},
 		{"AA", true},
 		{"ABC", false},

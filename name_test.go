@@ -2,15 +2,13 @@ package ndn
 
 import "testing"
 
-type nameTest struct {
-	in   string
-	want int
-}
-
 func TestName(t *testing.T) {
 	name := NewName("/A/B")
 
-	for _, test := range []nameTest{
+	for _, test := range []struct {
+		in   string
+		want int
+	}{
 		{"/A/B", 0},
 		{"/A/C", -1},
 		{"/A/A", 1},
