@@ -136,7 +136,7 @@ type StrategyChoice struct {
 	Strategy Strategy `tlv:"107"`
 }
 
-func SendControl(face *Face, module, command string, params *Parameters, key *Key) (err error) {
+func SendControl(w Sender, module, command string, params *Parameters, key *Key) (err error) {
 	cmd := &Command{
 		Localhost: "localhost",
 		NFD:       "nfd",
@@ -158,7 +158,7 @@ func SendControl(face *Face, module, command string, params *Parameters, key *Ke
 	if err != nil {
 		return
 	}
-	d, ok := <-face.SendInterest(i)
+	d, ok := <-w.SendInterest(i)
 	if !ok {
 		err = ErrTimeout
 		return

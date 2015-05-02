@@ -10,17 +10,29 @@ import (
 	"github.com/go-ndn/tlv"
 )
 
-type Face struct {
-	w    net.Conn
+type Sender interface {
+	SendInterest(*Interest) <-chan *Data
+	SendData(*Data)
+}
+
+type Face interface {
+	Sender
+	LocalAddr() net.Addr
+	RemoteAddr() net.Addr
+	Close() error
+}
+
+type face struct {
+	net.Conn
 	r    tlv.Reader
 	pit  lpm.Matcher
 	recv chan<- *Interest
 	mu   sync.Mutex
 }
 
-func NewFace(transport net.Conn, ch chan<- *Interest) (f *Face) {
-	f = &Face{
-		w:    transport,
+func NewFace(transport net.Conn, ch chan<- *Interest) Face {
+	f := &face{
+		Conn: transport,
 		r:    tlv.NewReader(transport),
 		pit:  lpm.NewThreadSafe(),
 		recv: ch,
@@ -51,28 +63,16 @@ func NewFace(transport net.Conn, ch chan<- *Interest) (f *Face) {
 			close(f.recv)
 		}
 	}()
-	return
+	return f
 }
 
-func (f *Face) LocalAddr() net.Addr {
-	return f.w.LocalAddr()
-}
-
-func (f *Face) RemoteAddr() net.Addr {
-	return f.w.RemoteAddr()
-}
-
-func (f *Face) Close() error {
-	return f.w.Close()
-}
-
-func (f *Face) SendData(d *Data) {
+func (f *face) SendData(d *Data) {
 	f.mu.Lock()
-	d.WriteTo(f.w)
+	d.WriteTo(f.Conn)
 	f.mu.Unlock()
 }
 
-func (f *Face) SendInterest(i *Interest) <-chan *Data {
+func (f *face) SendInterest(i *Interest) <-chan *Data {
 	ch := make(chan *Data, 1)
 	name := i.Name.String()
 	f.pit.Update(name, func(v interface{}) interface{} {
@@ -88,7 +88,7 @@ func (f *Face) SendInterest(i *Interest) <-chan *Data {
 			}
 		}
 		f.mu.Lock()
-		i.WriteTo(f.w)
+		i.WriteTo(f.Conn)
 		f.mu.Unlock()
 	PIT_DONE:
 		m[ch] = &i.Selectors
@@ -122,7 +122,7 @@ func (f *Face) SendInterest(i *Interest) <-chan *Data {
 	return ch
 }
 
-func (f *Face) recvData(d *Data) {
+func (f *face) recvData(d *Data) {
 	f.pit.UpdateAll(d.Name.String(), func(name string, v interface{}) interface{} {
 		t := time.Now()
 		m := v.(map[chan<- *Data]*Selectors)
@@ -141,7 +141,7 @@ func (f *Face) recvData(d *Data) {
 	}, true)
 }
 
-func (f *Face) recvInterest(i *Interest) {
+func (f *face) recvInterest(i *Interest) {
 	if f.recv != nil {
 		f.recv <- i
 	}

@@ -16,12 +16,12 @@ func producer(name string) (err error) {
 		return
 	}
 	recv := make(chan *Interest)
-	face := NewFace(conn, recv)
-	err = SendControl(face, "rib", "register", &Parameters{
+	f := NewFace(conn, recv)
+	err = SendControl(f, "rib", "register", &Parameters{
 		Name: NewName(name),
 	}, &rsaKey)
 	if err != nil {
-		face.Close()
+		f.Close()
 		return
 	}
 	d := &Data{
@@ -33,9 +33,9 @@ func producer(name string) (err error) {
 	}
 	go func() {
 		for _ = range recv {
-			face.SendData(d)
+			f.SendData(d)
 		}
-		face.Close()
+		f.Close()
 	}()
 	return
 }
@@ -45,9 +45,9 @@ func consumer(name string) (err error) {
 	if err != nil {
 		return
 	}
-	face := NewFace(conn, nil)
-	defer face.Close()
-	d, ok := <-face.SendInterest(&Interest{
+	f := NewFace(conn, nil)
+	defer f.Close()
+	d, ok := <-f.SendInterest(&Interest{
 		Name: NewName(name),
 		Selectors: Selectors{
 			MustBeFresh: true,
@@ -69,9 +69,9 @@ func TestConsumer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	face := NewFace(conn, nil)
-	defer face.Close()
-	d, ok := <-face.SendInterest(&Interest{
+	f := NewFace(conn, nil)
+	defer f.Close()
+	d, ok := <-f.SendInterest(&Interest{
 		Name: NewName("/ndn/edu/ucla/ping"),
 	})
 	if !ok {
