@@ -60,7 +60,7 @@ func TestCertificate(t *testing.T) {
 func TestSignVerify(t *testing.T) {
 	d := new(Data)
 	for _, key := range []Key{rsaKey, ecdsaKey} {
-		err := key.Sign(d)
+		err := key.SignData(d)
 		if err != nil {
 			t.Fatal(err)
 		}

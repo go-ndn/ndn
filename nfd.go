@@ -148,7 +148,7 @@ func SendControl(w Sender, module, command string, params *Parameters, key *Key)
 	cmd.Parameters.Parameters = *params
 	cmd.SignatureInfo.SignatureInfo.SignatureType = key.SignatureType()
 	cmd.SignatureInfo.SignatureInfo.KeyLocator.Name = key.Name
-	cmd.SignatureValue.SignatureValue, err = key.sign(cmd)
+	cmd.SignatureValue.SignatureValue, err = key.Sign(cmd)
 	if err != nil {
 		return
 	}

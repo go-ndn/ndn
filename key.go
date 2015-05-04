@@ -136,7 +136,7 @@ func (key *Key) EncodeCertificate(w io.Writer) (err error) {
 	if err != nil {
 		return
 	}
-	err = key.Sign(d)
+	err = key.SignData(d)
 	if err != nil {
 		return
 	}
@@ -184,14 +184,14 @@ type ecdsaSignature struct {
 	R, S *big.Int
 }
 
-func (key *Key) Sign(d *Data) (err error) {
+func (key *Key) SignData(d *Data) (err error) {
 	d.SignatureInfo.SignatureType = key.SignatureType()
 	d.SignatureInfo.KeyLocator.Name = key.Name
-	d.SignatureValue, err = key.sign(d)
+	d.SignatureValue, err = key.Sign(d)
 	return
 }
 
-func (key *Key) sign(v interface{}) (signature []byte, err error) {
+func (key *Key) Sign(v interface{}) (signature []byte, err error) {
 	digest, err := NewSHA256(v)
 	if err != nil {
 		return
