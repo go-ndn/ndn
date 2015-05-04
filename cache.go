@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	ContentStore = NewCache(1000)
+	ContentStore = NewCache(65536)
 )
 
 type Cache interface {
