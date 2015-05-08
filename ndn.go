@@ -96,18 +96,6 @@ func newNonce() []byte {
 	return b
 }
 
-// WriteTo writes interest to tlv.Writer after it populates nonce
-func (i *Interest) WriteTo(w tlv.Writer) error {
-	if len(i.Nonce) == 0 {
-		i.Nonce = newNonce()
-	}
-	return tlv.Marshal(w, i, 5)
-}
-
-func (i *Interest) ReadFrom(r tlv.Reader) error {
-	return tlv.Unmarshal(r, i, 5)
-}
-
 func NewSHA256(v interface{}) (digest []byte, err error) {
 	h := sha256.New()
 	err = tlv.Data(h, v)
@@ -116,6 +104,27 @@ func NewSHA256(v interface{}) (digest []byte, err error) {
 	}
 	digest = h.Sum(nil)
 	return
+}
+
+func writePacketTLV(w tlv.Writer, v interface{}, valType uint64) (err error) {
+	b, err := tlv.MarshalByte(v, valType)
+	if err != nil {
+		return
+	}
+	_, err = w.Write(b)
+	return
+}
+
+// WriteTo writes interest to tlv.Writer after it populates nonce
+func (i *Interest) WriteTo(w tlv.Writer) error {
+	if len(i.Nonce) == 0 {
+		i.Nonce = newNonce()
+	}
+	return writePacketTLV(w, i, 5)
+}
+
+func (i *Interest) ReadFrom(r tlv.Reader) error {
+	return tlv.Unmarshal(r, i, 5)
 }
 
 // WriteTo writes data to tlv.Writer after it populates sha256 digest
@@ -127,7 +136,7 @@ func (d *Data) WriteTo(w tlv.Writer) (err error) {
 			return
 		}
 	}
-	err = tlv.Marshal(w, d, 6)
+	err = writePacketTLV(w, d, 6)
 	return
 }
 
