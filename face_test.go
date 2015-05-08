@@ -20,10 +20,10 @@ func newTestFace(network, addr string) (f *testFace, err error) {
 	if err != nil {
 		return
 	}
-	ch := make(chan *Interest)
+	recv := make(chan *Interest)
 	f = &testFace{
-		Face: NewFace(conn, ch),
-		recv: ch,
+		Face: NewFace(conn, recv),
+		recv: recv,
 	}
 	return
 }
@@ -163,6 +163,7 @@ func BenchmarkForwardRTT(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
+	defer consumer.Close()
 	time.Sleep(time.Second)
 	b.ResetTimer()
 
