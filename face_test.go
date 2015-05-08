@@ -2,52 +2,53 @@ package ndn
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
-	"net"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/go-ndn/packet"
 )
 
-func producer(name string) (err error) {
-	conn, err := net.Dial("tcp", ":6363")
+type testFace struct {
+	Face
+	recv <-chan *Interest
+}
+
+func newTestFace(network, addr string) (f *testFace, err error) {
+	conn, err := packet.Dial(network, addr)
 	if err != nil {
 		return
 	}
-	recv := make(chan *Interest)
-	f := NewFace(conn, recv)
+	ch := make(chan *Interest)
+	f = &testFace{
+		Face: NewFace(conn, ch),
+		recv: ch,
+	}
+	return
+}
+
+func (f *testFace) produce(name string) (err error) {
 	err = SendControl(f, "rib", "register", &Parameters{
 		Name: NewName(name),
 	}, &rsaKey)
 	if err != nil {
-		f.Close()
 		return
 	}
 	d := &Data{
-		Name: NewName(name),
-		MetaInfo: MetaInfo{
-			FreshnessPeriod: 4000,
-		},
+		Name:    NewName(name),
 		Content: bytes.Repeat([]byte("0123456789"), 100),
 	}
 	go func() {
-		for _ = range recv {
+		for _ = range f.recv {
 			f.SendData(d)
 		}
-		f.Close()
 	}()
 	return
 }
 
-func consumer(name string) (err error) {
-	conn, err := net.Dial("tcp", ":6363")
-	if err != nil {
-		return
-	}
-	f := NewFace(conn, nil)
-	defer f.Close()
-	d, ok := <-f.SendInterest(&Interest{
+func (f *testFace) consume(name string) (err error) {
+	_, ok := <-f.SendInterest(&Interest{
 		Name: NewName(name),
 		Selectors: Selectors{
 			MustBeFresh: true,
@@ -57,37 +58,39 @@ func consumer(name string) (err error) {
 		err = ErrTimeout
 		return
 	}
-	if d.Name.String() != name {
-		err = errors.New(name)
-		return
-	}
 	return
 }
 
 func TestConsumer(t *testing.T) {
-	conn, err := net.Dial("tcp4", "spurs.cs.ucla.edu:6363")
+	consumer, err := newTestFace("udp", "spurs.cs.ucla.edu:6363")
 	if err != nil {
 		t.Fatal(err)
 	}
-	f := NewFace(conn, nil)
-	defer f.Close()
-	d, ok := <-f.SendInterest(&Interest{
-		Name: NewName("/ndn/edu/ucla/ping"),
-	})
-	if !ok {
-		t.Fatal("timeout")
+	defer consumer.Close()
+	err = consumer.consume("/ndn/edu/ucla/ping")
+	if err != nil {
+		t.Fatal(err)
 	}
-	t.Logf("name: %s, key: %s", d.Name, d.SignatureInfo.KeyLocator.Name)
 }
 
 func TestProducer(t *testing.T) {
 	name := fmt.Sprintf("/%x", newNonce())
-	err := producer(name)
+	producer, err := newTestFace("udp", ":6363")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer producer.Close()
+	err = producer.produce(name)
 	if err != nil {
 		t.Fatal(err)
 	}
 	time.Sleep(time.Second)
-	err = consumer(name)
+	consumer, err := newTestFace("udp", ":6363")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer consumer.Close()
+	err = consumer.consume(name)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,44 +98,68 @@ func TestProducer(t *testing.T) {
 
 func BenchmarkBurstyForward(b *testing.B) {
 	names := make([]string, 64)
+	consumers := make([]*testFace, 64)
 	for i := 0; i < len(names); i++ {
 		names[i] = fmt.Sprintf("/%x", newNonce())
-	}
-	for _, name := range names {
-		err := producer(name)
+		// producer
+		producer, err := newTestFace("udp", ":6363")
 		if err != nil {
 			b.Fatal(err)
 		}
+		defer producer.Close()
+		err = producer.produce(names[i])
+		if err != nil {
+			b.Fatal(err)
+		}
+		// consumer
+		consumers[i], err = newTestFace("udp", ":6363")
+		if err != nil {
+			b.Fatal(err)
+		}
+		defer consumers[i].Close()
 	}
 	time.Sleep(time.Second)
 	b.ResetTimer()
 
+	ch := make(chan error, 1)
 	for i := 0; i < b.N; i++ {
-		ch := make(chan error)
 		var wg sync.WaitGroup
 		wg.Add(len(names))
-		for _, name := range names {
-			go func(name string) {
-				err := consumer(name)
+		for i := range names {
+			go func() {
+				err := consumers[i].consume(names[i])
 				if err != nil {
-					ch <- err
+					select {
+					case ch <- err:
+					default:
+					}
 				}
 				wg.Done()
-			}(name)
+			}()
 		}
-		go func() {
-			wg.Wait()
-			close(ch)
-		}()
-		for err := range ch {
-			b.Error(err)
-		}
+		wg.Wait()
+	}
+	select {
+	case err := <-ch:
+		b.Error(err)
+	default:
 	}
 }
 
 func BenchmarkForwardRTT(b *testing.B) {
 	name := fmt.Sprintf("/%x", newNonce())
-	err := producer(name)
+	// producer
+	producer, err := newTestFace("udp", ":6363")
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer producer.Close()
+	err = producer.produce(name)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	consumer, err := newTestFace("udp", ":6363")
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -140,7 +167,7 @@ func BenchmarkForwardRTT(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		err := consumer(name)
+		err := consumer.consume(name)
 		if err != nil {
 			b.Fatal(err)
 		}
