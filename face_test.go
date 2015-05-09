@@ -98,7 +98,7 @@ func TestProducer(t *testing.T) {
 
 func BenchmarkBurstyForward(b *testing.B) {
 	names := make([]string, 64)
-	consumers := make([]*testFace, 64)
+	consumers := make([]*testFace, len(names))
 	for i := 0; i < len(names); i++ {
 		names[i] = fmt.Sprintf("/%x", newNonce())
 		// producer
