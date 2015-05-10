@@ -6,7 +6,10 @@ import (
 )
 
 func TestExclude(t *testing.T) {
-	e1 := NewExclude(nil, Component("AB"))
+	ex1 := Exclude{
+		{Any: true},
+		{Component: Component("AB")},
+	}
 
 	for _, test := range []struct {
 		in   string
@@ -16,19 +19,19 @@ func TestExclude(t *testing.T) {
 		{"AA", true},
 		{"ABC", false},
 	} {
-		got := e1.Match(Component(test.in))
+		got := ex1.Match(Component(test.in))
 		if got != test.want {
 			t.Fatalf("..AB Match(%s) == %v, got %v", test.in, test.want, got)
 		}
 	}
 
-	b, err := e1.MarshalBinary()
+	b, err := ex1.MarshalBinary()
 	if err != nil {
 		t.Fatal(err)
 	}
-	var e2 Exclude
-	e2.UnmarshalBinary(b)
-	if !reflect.DeepEqual(e1, e2) {
-		t.Fatal("not equal", e1, e2)
+	var ex2 Exclude
+	ex2.UnmarshalBinary(b)
+	if !reflect.DeepEqual(ex1, ex2) {
+		t.Fatal("not equal", ex1, ex2)
 	}
 }
