@@ -106,7 +106,7 @@ func NewSHA256(v interface{}) (digest []byte, err error) {
 	return
 }
 
-func writePacketTLV(w tlv.Writer, v interface{}, valType uint64) (err error) {
+func writePacket(w tlv.Writer, v interface{}, valType uint64) (err error) {
 	b, err := tlv.MarshalByte(v, valType)
 	if err != nil {
 		return
@@ -120,7 +120,7 @@ func (i *Interest) WriteTo(w tlv.Writer) error {
 	if len(i.Nonce) == 0 {
 		i.Nonce = newNonce()
 	}
-	return writePacketTLV(w, i, 5)
+	return writePacket(w, i, 5)
 }
 
 func (i *Interest) ReadFrom(r tlv.Reader) error {
@@ -136,7 +136,7 @@ func (d *Data) WriteTo(w tlv.Writer) (err error) {
 			return
 		}
 	}
-	err = writePacketTLV(w, d, 6)
+	err = writePacket(w, d, 6)
 	return
 }
 
