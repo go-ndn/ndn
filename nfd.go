@@ -14,7 +14,7 @@ var (
 
 // see http://redmine.named-data.net/projects/nfd/wiki/Management
 type Command struct {
-	Localhost      string                  `tlv:"8"`
+	Localhop       string                  `tlv:"8"`
 	NFD            string                  `tlv:"8"`
 	Module         string                  `tlv:"8"`
 	Command        string                  `tlv:"8"`
@@ -138,7 +138,7 @@ type StrategyChoice struct {
 
 func SendControl(w Sender, module, command string, params *Parameters, key *Key) (err error) {
 	cmd := &Command{
-		Localhost: "localhost",
+		Localhop:  "localhop",
 		NFD:       "nfd",
 		Module:    module,
 		Command:   command,
