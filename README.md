@@ -5,13 +5,13 @@ NDN evolves quickly, and the latest format that the current implementation follo
 
 The author is taylorchu (Tai-Lin Chu). This package is released under GPL2 license.
 
+[![GoDoc](https://godoc.org/github.com/go-ndn/ndn?status.svg)](https://godoc.org/github.com/go-ndn/ndn)
+
 # Get started
 
 1. [Install and run nfd](http://named-data.net/doc/NFD/current/INSTALL.html)
 2. [Set up go work environment](https://golang.org/doc/install)
 3. Get this package by running `go get "github.com/go-ndn/ndn"`
-4. Read documentation on [![GoDoc](https://godoc.org/github.com/go-ndn/ndn?status.svg)](https://godoc.org/github.com/go-ndn/ndn)
-
 
 ![Imgur](http://i.imgur.com/mWMese2.jpg)
 
