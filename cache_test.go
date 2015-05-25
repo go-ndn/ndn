@@ -36,7 +36,7 @@ func TestCache(t *testing.T) {
 			got = d.Name.String()
 		}
 		if got != test.want {
-			t.Fatalf("Cache.Get(%s) == %v, got %v", test.in, test.want, got)
+			t.Fatalf("Cache.Get(%v) == %v, got %v", test.in, test.want, got)
 		}
 	}
 }
