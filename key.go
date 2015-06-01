@@ -24,6 +24,12 @@ var (
 	ErrInvalidPEM       = errors.New("invalid pem")
 )
 
+const (
+	pemHeaderName = "NAME"
+	pemTypeRSA    = "RSA PRIVATE KEY"
+	pemTypeECDSA  = "ECDSA PRIVATE KEY"
+)
+
 type Key struct {
 	Name       Name
 	PrivateKey crypto.PrivateKey
@@ -36,11 +42,11 @@ func (key *Key) DecodePrivateKey(pemData []byte) (err error) {
 		err = ErrInvalidPEM
 		return
 	}
-	key.Name = NewName(block.Headers["NAME"])
+	key.Name = NewName(block.Headers[pemHeaderName])
 	switch block.Type {
-	case "RSA PRIVATE KEY":
+	case pemTypeRSA:
 		key.PrivateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-	case "ECDSA PRIVATE KEY":
+	case pemTypeECDSA:
 		key.PrivateKey, err = x509.ParseECPrivateKey(block.Bytes)
 	default:
 		err = ErrNotSupported
@@ -55,13 +61,13 @@ func (key *Key) EncodePrivateKey(w io.Writer) (err error) {
 	switch pri := key.PrivateKey.(type) {
 	case *rsa.PrivateKey:
 		keyBytes = x509.MarshalPKCS1PrivateKey(pri)
-		keyType = "RSA PRIVATE KEY"
+		keyType = pemTypeRSA
 	case *ecdsa.PrivateKey:
 		keyBytes, err = x509.MarshalECPrivateKey(pri)
 		if err != nil {
 			return
 		}
-		keyType = "ECDSA PRIVATE KEY"
+		keyType = pemTypeECDSA
 	default:
 		err = ErrNotSupported
 		return
@@ -69,7 +75,7 @@ func (key *Key) EncodePrivateKey(w io.Writer) (err error) {
 	err = pem.Encode(w, &pem.Block{
 		Type: keyType,
 		Headers: map[string]string{
-			"NAME": key.Name.String(),
+			pemHeaderName: key.Name.String(),
 		},
 		Bytes: keyBytes,
 	})
