@@ -2,7 +2,7 @@ package ndn
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -12,25 +12,28 @@ var (
 	ecdsaKey = readKey("key/ecdsa.pri")
 )
 
-func readKey(file string) (key Key) {
-	pem, err := ioutil.ReadFile(file)
+func readKey(file string) Key {
+	pem, err := os.Open(file)
 	if err != nil {
-		return
+		return nil
 	}
-	key.DecodePrivateKey(pem)
-	return
+	defer pem.Close()
+	key, err := DecodePrivateKey(pem)
+	if err != nil {
+		return nil
+	}
+	return key
 }
 
 func TestPrivateKey(t *testing.T) {
 	for _, key1 := range []Key{rsaKey, ecdsaKey} {
 		buf := new(bytes.Buffer)
-		err := key1.EncodePrivateKey(buf)
+		err := EncodePrivateKey(key1, buf)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		var key2 Key
-		err = key2.DecodePrivateKey(buf.Bytes())
+		key2, err := DecodePrivateKey(buf)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -42,15 +45,14 @@ func TestPrivateKey(t *testing.T) {
 }
 
 func TestCertificate(t *testing.T) {
-	for _, key1 := range []Key{rsaKey, ecdsaKey} {
+	for _, key := range []Key{rsaKey, ecdsaKey} {
 		buf := new(bytes.Buffer)
-		err := key1.EncodeCertificate(buf)
+		err := EncodeCertificate(key, buf)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		var key2 Key
-		err = key2.DecodeCertificate(buf)
+		_, err = DecodeCertificate(buf)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -60,7 +62,7 @@ func TestCertificate(t *testing.T) {
 func TestSignVerify(t *testing.T) {
 	d := new(Data)
 	for _, key := range []Key{rsaKey, ecdsaKey} {
-		err := key.SignData(d)
+		err := SignData(key, d)
 		if err != nil {
 			t.Fatal(err)
 		}

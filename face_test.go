@@ -41,7 +41,7 @@ func newTestFace(address string) (f *testFace, err error) {
 func (f *testFace) produce(name string) (err error) {
 	err = SendControl(f, "rib", "register", &Parameters{
 		Name: NewName(name),
-	}, &rsaKey)
+	}, rsaKey)
 	if err != nil {
 		return
 	}

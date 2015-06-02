@@ -137,7 +137,7 @@ type StrategyChoice struct {
 	Strategy Strategy `tlv:"107"`
 }
 
-func SendControl(w Sender, module, command string, params *Parameters, key *Key) (err error) {
+func SendControl(w Sender, module, command string, params *Parameters, key Key) (err error) {
 	cmd := &Command{
 		Localhop:  "localhop",
 		NFD:       "nfd",
@@ -148,7 +148,7 @@ func SendControl(w Sender, module, command string, params *Parameters, key *Key)
 	}
 	cmd.Parameters.Parameters = *params
 	cmd.SignatureInfo.SignatureInfo.SignatureType = key.SignatureType()
-	cmd.SignatureInfo.SignatureInfo.KeyLocator.Name = key.Name
+	cmd.SignatureInfo.SignatureInfo.KeyLocator.Name = key.Locator()
 	cmd.SignatureValue.SignatureValue, err = key.Sign(cmd)
 	if err != nil {
 		return

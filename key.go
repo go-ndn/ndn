@@ -3,7 +3,6 @@ package ndn
 import (
 	"crypto"
 	"crypto/ecdsa"
-	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -12,7 +11,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"io"
-	"math/big"
+	"io/ioutil"
 	"time"
 
 	"github.com/go-ndn/tlv"
@@ -30,69 +29,76 @@ const (
 	pemTypeECDSA  = "ECDSA PRIVATE KEY"
 )
 
-type Key struct {
-	Name       Name
-	PrivateKey crypto.PrivateKey
+type Key interface {
+	Locator() Name
+	SignatureType() uint64
+	Private() crypto.PrivateKey
+	Public() crypto.PublicKey
+
+	Sign(interface{}) ([]byte, error)
+	Verify(interface{}, []byte) error
 }
 
-// DecodePrivateKey reads key from pem bytes
-func (key *Key) DecodePrivateKey(pemData []byte) (err error) {
-	block, _ := pem.Decode(pemData)
-	if block == nil {
-		err = ErrInvalidPEM
-		return
-	}
-	key.Name = NewName(block.Headers[pemHeaderName])
-	switch block.Type {
-	case pemTypeRSA:
-		key.PrivateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-	case pemTypeECDSA:
-		key.PrivateKey, err = x509.ParseECPrivateKey(block.Bytes)
-	default:
-		err = ErrNotSupported
-	}
-	return
-}
-
-// EncodePrivateKey writes key to io.Writer
-func (key *Key) EncodePrivateKey(w io.Writer) (err error) {
-	var keyBytes []byte
+func EncodePrivateKey(key Key, w io.Writer) (err error) {
 	var keyType string
-	switch pri := key.PrivateKey.(type) {
+	var keyBytes []byte
+	switch pri := key.Private().(type) {
 	case *rsa.PrivateKey:
-		keyBytes = x509.MarshalPKCS1PrivateKey(pri)
 		keyType = pemTypeRSA
+		keyBytes = x509.MarshalPKCS1PrivateKey(pri)
 	case *ecdsa.PrivateKey:
+		keyType = pemTypeECDSA
 		keyBytes, err = x509.MarshalECPrivateKey(pri)
 		if err != nil {
 			return
 		}
-		keyType = pemTypeECDSA
-	default:
-		err = ErrNotSupported
-		return
 	}
 	err = pem.Encode(w, &pem.Block{
 		Type: keyType,
 		Headers: map[string]string{
-			pemHeaderName: key.Name.String(),
+			pemHeaderName: key.Locator().String(),
 		},
 		Bytes: keyBytes,
 	})
 	return
 }
 
-// SignatureType shows key type in ndn signature type
-//
-// If the key is not initialized, it will return SignatureTypeDigestSHA256.
-func (key *Key) SignatureType() uint64 {
-	switch key.PrivateKey.(type) {
-	case *rsa.PrivateKey:
-		return SignatureTypeSHA256WithRSA
-	case *ecdsa.PrivateKey:
-		return SignatureTypeSHA256WithECDSA
+func DecodePrivateKey(r io.Reader) (key Key, err error) {
+	pemData, err := ioutil.ReadAll(r)
+	if err != nil {
+		return
 	}
-	return SignatureTypeDigestSHA256
+	block, _ := pem.Decode(pemData)
+	if block == nil {
+		err = ErrInvalidPEM
+		return
+	}
+	name := NewName(block.Headers[pemHeaderName])
+	switch block.Type {
+	case pemTypeRSA:
+		var pri *rsa.PrivateKey
+		pri, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+		if err != nil {
+			return
+		}
+		key = &RSAKey{
+			Name:       name,
+			PrivateKey: pri,
+		}
+	case pemTypeECDSA:
+		var pri *ecdsa.PrivateKey
+		pri, err = x509.ParseECPrivateKey(block.Bytes)
+		if err != nil {
+			return
+		}
+		key = &ECDSAKey{
+			Name:       name,
+			PrivateKey: pri,
+		}
+	default:
+		err = ErrNotSupported
+	}
+	return
 }
 
 type certificate struct {
@@ -105,27 +111,15 @@ type validity struct {
 	NotBefore, NotAfter time.Time
 }
 
-func (key *Key) EncodeCertificate(w io.Writer) (err error) {
+func EncodeCertificate(key Key, w io.Writer) (err error) {
 	d := &Data{
-		Name: key.Name,
+		Name: key.Locator(),
 		MetaInfo: MetaInfo{
 			ContentType: 2, //key
 		},
 	}
-	var keyBytes []byte
-	switch pri := key.PrivateKey.(type) {
-	case *rsa.PrivateKey:
-		keyBytes, err = x509.MarshalPKIXPublicKey(&pri.PublicKey)
-		if err != nil {
-			return
-		}
-	case *ecdsa.PrivateKey:
-		keyBytes, err = x509.MarshalPKIXPublicKey(&pri.PublicKey)
-		if err != nil {
-			return
-		}
-	default:
-		err = ErrNotSupported
+	keyBytes, err := x509.MarshalPKIXPublicKey(key.Public())
+	if err != nil {
 		return
 	}
 	d.Content, err = asn1.Marshal(certificate{
@@ -142,7 +136,7 @@ func (key *Key) EncodeCertificate(w io.Writer) (err error) {
 	if err != nil {
 		return
 	}
-	err = key.SignData(d)
+	err = SignData(key, d)
 	if err != nil {
 		return
 	}
@@ -155,13 +149,12 @@ func (key *Key) EncodeCertificate(w io.Writer) (err error) {
 	return
 }
 
-func (key *Key) DecodeCertificate(r io.Reader) (err error) {
+func DecodeCertificate(r io.Reader) (key Key, err error) {
 	var d Data
 	err = d.ReadFrom(tlv.NewReader(base64.NewDecoder(base64.StdEncoding, r)))
 	if err != nil {
 		return
 	}
-	key.Name = d.Name
 	var cert certificate
 	_, err = asn1.Unmarshal(d.Content, &cert)
 	if err != nil {
@@ -173,75 +166,26 @@ func (key *Key) DecodeCertificate(r io.Reader) (err error) {
 	}
 	switch pub := pub.(type) {
 	case *rsa.PublicKey:
-		key.PrivateKey = &rsa.PrivateKey{
-			PublicKey: *pub,
+		key = &RSAKey{
+			Name: d.Name,
+			PrivateKey: &rsa.PrivateKey{
+				PublicKey: *pub,
+			},
 		}
 	case *ecdsa.PublicKey:
-		key.PrivateKey = &ecdsa.PrivateKey{
-			PublicKey: *pub,
+		key = &ECDSAKey{
+			Name: d.Name,
+			PrivateKey: &ecdsa.PrivateKey{
+				PublicKey: *pub,
+			},
 		}
-	default:
-		err = ErrNotSupported
 	}
 	return
 }
 
-type ecdsaSignature struct {
-	R, S *big.Int
-}
-
-func (key *Key) SignData(d *Data) (err error) {
+func SignData(key Key, d *Data) (err error) {
 	d.SignatureInfo.SignatureType = key.SignatureType()
-	d.SignatureInfo.KeyLocator.Name = key.Name
+	d.SignatureInfo.KeyLocator.Name = key.Locator()
 	d.SignatureValue, err = key.Sign(d)
-	return
-}
-
-func (key *Key) Sign(v interface{}) (signature []byte, err error) {
-	digest, err := NewSHA256(v)
-	if err != nil {
-		return
-	}
-	switch pri := key.PrivateKey.(type) {
-	case *rsa.PrivateKey:
-		signature, err = rsa.SignPKCS1v15(rand.Reader, pri, crypto.SHA256, digest)
-	case *ecdsa.PrivateKey:
-		var sig ecdsaSignature
-		sig.R, sig.S, err = ecdsa.Sign(rand.Reader, pri, digest)
-		if err != nil {
-			return
-		}
-		signature, err = asn1.Marshal(sig)
-	default:
-		err = ErrNotSupported
-	}
-	return
-}
-
-func (key *Key) Verify(v interface{}, signature []byte) (err error) {
-	digest, err := NewSHA256(v)
-	if err != nil {
-		return
-	}
-	switch pri := key.PrivateKey.(type) {
-	case *rsa.PrivateKey:
-		err = rsa.VerifyPKCS1v15(&pri.PublicKey, crypto.SHA256, digest, signature)
-		if err != nil {
-			err = ErrInvalidSignature
-			return
-		}
-	case *ecdsa.PrivateKey:
-		var sig ecdsaSignature
-		_, err = asn1.Unmarshal(signature, &sig)
-		if err != nil {
-			return
-		}
-		if !ecdsa.Verify(&pri.PublicKey, digest, sig.R, sig.S) {
-			err = ErrInvalidSignature
-			return
-		}
-	default:
-		err = ErrNotSupported
-	}
 	return
 }

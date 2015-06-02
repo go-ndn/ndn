@@ -15,7 +15,7 @@ var (
 
 func BenchmarkDataEncodeRSA(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		err := rsaKey.SignData(data)
+		err := SignData(rsaKey, data)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -28,7 +28,7 @@ func BenchmarkDataEncodeRSA(b *testing.B) {
 
 func BenchmarkDataEncodeECDSA(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		err := ecdsaKey.SignData(data)
+		err := SignData(ecdsaKey, data)
 		if err != nil {
 			b.Fatal(err)
 		}
