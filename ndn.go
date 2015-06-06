@@ -18,7 +18,6 @@ type Interest struct {
 	Name      Name      `tlv:"7"`
 	Selectors Selectors `tlv:"9?"`
 	Nonce     []byte    `tlv:"10"`
-	Scope     uint64    `tlv:"11?"`
 	LifeTime  uint64    `tlv:"12?"`
 }
 
