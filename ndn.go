@@ -8,6 +8,8 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
+	"hash"
+	"hash/crc32"
 	"strings"
 	"time"
 
@@ -81,7 +83,8 @@ type SignatureInfo struct {
 const (
 	SignatureTypeDigestSHA256    uint64 = 0
 	SignatureTypeSHA256WithRSA          = 1
-	SignatureTypeSHA256WithECDSA        = 3 // 2 is already used
+	SignatureTypeDigestCRC32C           = 2
+	SignatureTypeSHA256WithECDSA        = 3
 )
 
 type KeyLocator struct {
@@ -93,16 +96,6 @@ func newNonce() []byte {
 	b := make([]byte, 4)
 	rand.Read(b)
 	return b
-}
-
-func NewSHA256(v interface{}) (digest []byte, err error) {
-	h := sha256.New()
-	err = tlv.Data(h, v)
-	if err != nil {
-		return
-	}
-	digest = h.Sum(nil)
-	return
 }
 
 func writePacket(w tlv.Writer, v interface{}, valType uint64) (err error) {
@@ -126,11 +119,28 @@ func (i *Interest) ReadFrom(r tlv.Reader) error {
 	return tlv.Unmarshal(r, i, 5)
 }
 
-// WriteTo writes data to tlv.Writer after it populates sha256 digest
+var (
+	castagnoliTable = crc32.MakeTable(crc32.Castagnoli)
+)
+
+func NewCRC32C() hash.Hash {
+	return crc32.New(castagnoliTable)
+}
+
+// WriteTo writes data to tlv.Writer after it populates digest
 func (d *Data) WriteTo(w tlv.Writer) (err error) {
 	if len(d.SignatureValue) == 0 {
-		d.SignatureInfo.SignatureType = SignatureTypeDigestSHA256
-		d.SignatureValue, err = NewSHA256(d)
+		var f func() hash.Hash
+		switch d.SignatureInfo.SignatureType {
+		case SignatureTypeDigestSHA256:
+			f = sha256.New
+		case SignatureTypeDigestCRC32C:
+			f = NewCRC32C
+		default:
+			err = ErrNotSupported
+			return
+		}
+		d.SignatureValue, err = tlv.Hash(f, d)
 		if err != nil {
 			return
 		}

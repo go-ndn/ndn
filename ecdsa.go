@@ -4,8 +4,11 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/asn1"
 	"math/big"
+
+	"github.com/go-ndn/tlv"
 )
 
 type ECDSAKey struct {
@@ -30,7 +33,7 @@ type ecdsaSignature struct {
 }
 
 func (key *ECDSAKey) Sign(v interface{}) (signature []byte, err error) {
-	digest, err := NewSHA256(v)
+	digest, err := tlv.Hash(sha256.New, v)
 	if err != nil {
 		return
 	}
@@ -44,7 +47,7 @@ func (key *ECDSAKey) Sign(v interface{}) (signature []byte, err error) {
 }
 
 func (key *ECDSAKey) Verify(v interface{}, signature []byte) (err error) {
-	digest, err := NewSHA256(v)
+	digest, err := tlv.Hash(sha256.New, v)
 	if err != nil {
 		return
 	}

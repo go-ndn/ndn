@@ -4,6 +4,9 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
+
+	"github.com/go-ndn/tlv"
 )
 
 type RSAKey struct {
@@ -24,7 +27,7 @@ func (key *RSAKey) SignatureType() uint64 {
 }
 
 func (key *RSAKey) Sign(v interface{}) (signature []byte, err error) {
-	digest, err := NewSHA256(v)
+	digest, err := tlv.Hash(sha256.New, v)
 	if err != nil {
 		return
 	}
@@ -33,7 +36,7 @@ func (key *RSAKey) Sign(v interface{}) (signature []byte, err error) {
 }
 
 func (key *RSAKey) Verify(v interface{}, signature []byte) (err error) {
-	digest, err := NewSHA256(v)
+	digest, err := tlv.Hash(sha256.New, v)
 	if err != nil {
 		return
 	}
