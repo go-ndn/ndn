@@ -39,6 +39,19 @@ func BenchmarkDataEncodeECDSA(b *testing.B) {
 	}
 }
 
+func BenchmarkDataEncodeHMAC(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		err := SignData(hmacKey, data)
+		if err != nil {
+			b.Fatal(err)
+		}
+		err = data.WriteTo(ioutil.Discard)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func BenchmarkDataEncode(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		err := data.WriteTo(ioutil.Discard)

@@ -27,6 +27,7 @@ const (
 	pemHeaderName = "NAME"
 	pemTypeRSA    = "RSA PRIVATE KEY"
 	pemTypeECDSA  = "ECDSA PRIVATE KEY"
+	pemTypeHMAC   = "HMAC PRIVATE KEY"
 )
 
 type Key interface {
@@ -52,6 +53,12 @@ func EncodePrivateKey(key Key, w io.Writer) (err error) {
 		if err != nil {
 			return
 		}
+	case *HMACKey:
+		keyType = pemTypeHMAC
+		keyBytes = pri.PrivateKey
+	default:
+		err = ErrNotSupported
+		return
 	}
 	err = pem.Encode(w, &pem.Block{
 		Type: keyType,
@@ -94,6 +101,11 @@ func DecodePrivateKey(r io.Reader) (key Key, err error) {
 		key = &ECDSAKey{
 			Name:       name,
 			PrivateKey: pri,
+		}
+	case pemTypeHMAC:
+		key = &HMACKey{
+			Name:       name,
+			PrivateKey: block.Bytes,
 		}
 	default:
 		err = ErrNotSupported
@@ -179,6 +191,8 @@ func DecodeCertificate(r io.Reader) (key Key, err error) {
 				PublicKey: *pub,
 			},
 		}
+	default:
+		err = ErrNotSupported
 	}
 	return
 }

@@ -10,6 +10,10 @@ import (
 var (
 	rsaKey   = readKey("key/default.pri")
 	ecdsaKey = readKey("key/ecdsa.pri")
+	hmacKey  = Key(&HMACKey{
+		Name:       NewName("/ndn/guest/alice/KEY/ksk-1427395000016/ID-CERT/%00%00"),
+		PrivateKey: []byte("example key 1234"),
+	})
 )
 
 func readKey(file string) Key {
@@ -26,7 +30,7 @@ func readKey(file string) Key {
 }
 
 func TestPrivateKey(t *testing.T) {
-	for _, key1 := range []Key{rsaKey, ecdsaKey} {
+	for _, key1 := range []Key{rsaKey, ecdsaKey, hmacKey} {
 		buf := new(bytes.Buffer)
 		err := EncodePrivateKey(key1, buf)
 		if err != nil {
@@ -61,7 +65,7 @@ func TestCertificate(t *testing.T) {
 
 func TestSignVerify(t *testing.T) {
 	d := new(Data)
-	for _, key := range []Key{rsaKey, ecdsaKey} {
+	for _, key := range []Key{rsaKey, ecdsaKey, hmacKey} {
 		err := SignData(key, d)
 		if err != nil {
 			t.Fatal(err)

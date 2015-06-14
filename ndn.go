@@ -85,6 +85,7 @@ const (
 	SignatureTypeSHA256WithRSA          = 1
 	SignatureTypeDigestCRC32C           = 2
 	SignatureTypeSHA256WithECDSA        = 3
+	SignatureTypeSHA256WithHMAC         = 4
 )
 
 type KeyLocator struct {
