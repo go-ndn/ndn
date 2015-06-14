@@ -33,19 +33,24 @@ func NewName(s string) (n Name) {
 //
 // -1 if a < b; 0 if a == b; 1 if a > b
 func (n *Name) Compare(n2 Name) int {
-	for i := 0; i < len(n.Components) && i < len(n2.Components); i++ {
+	l1, l2 := n.Len(), n2.Len()
+	for i := 0; i < l1 && i < l2; i++ {
 		cmp := bytes.Compare(n.Components[i], n2.Components[i])
 		if cmp != 0 {
 			return cmp
 		}
 	}
-	if len(n.Components) < len(n2.Components) {
+	if l1 < l2 {
 		return -1
 	}
-	if len(n.Components) > len(n2.Components) {
+	if l1 > l2 {
 		return 1
 	}
 	return 0
+}
+
+func (n *Name) Len() int {
+	return len(n.Components)
 }
 
 func (n *Name) WriteTo(w tlv.Writer) error {

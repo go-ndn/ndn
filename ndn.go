@@ -33,14 +33,15 @@ type Selectors struct {
 }
 
 func (sel *Selectors) Match(name string, d *Data, t time.Time) bool {
-	suffix := len(d.Name.Components) - strings.Count(name, "/")
+	interestLen := strings.Count(name, "/")
+	suffix := d.Name.Len() - interestLen
 	if sel.MinSuffixComponents > uint64(suffix) {
 		return false
 	}
 	if sel.MaxSuffixComponents != 0 && sel.MaxSuffixComponents < uint64(suffix) {
 		return false
 	}
-	if len(sel.PublisherPublicKeyLocator.Name.Components) != 0 &&
+	if sel.PublisherPublicKeyLocator.Name.Len() != 0 &&
 		sel.PublisherPublicKeyLocator.Name.Compare(d.SignatureInfo.KeyLocator.Name) != 0 {
 		return false
 	}
@@ -48,7 +49,7 @@ func (sel *Selectors) Match(name string, d *Data, t time.Time) bool {
 		!bytes.Equal(sel.PublisherPublicKeyLocator.Digest, d.SignatureInfo.KeyLocator.Digest) {
 		return false
 	}
-	if suffix > 0 && sel.Exclude.Match(d.Name.Components[len(d.Name.Components)-suffix]) {
+	if suffix > 0 && sel.Exclude.Match(d.Name.Components[interestLen]) {
 		return false
 	}
 	if sel.MustBeFresh && !t.IsZero() && time.Since(t) > time.Duration(d.MetaInfo.FreshnessPeriod)*time.Millisecond {
@@ -69,11 +70,23 @@ type MetaInfo struct {
 	ContentType     uint64       `tlv:"24?"`
 	FreshnessPeriod uint64       `tlv:"25?"`
 	FinalBlockID    FinalBlockID `tlv:"26?"`
+	EncryptionType  uint64       `tlv:"30?"`
+	CompressionType uint64       `tlv:"31?"`
 }
 
 type FinalBlockID struct {
 	Component Component `tlv:"8"`
 }
+
+const (
+	EncryptionTypeNone       uint64 = 0
+	EncryptionTypeAESWithCTR        = 1
+)
+
+const (
+	CompressionTypeNone uint64 = 0
+	CompressionTypeGZIP        = 1
+)
 
 type SignatureInfo struct {
 	SignatureType uint64     `tlv:"27"`
