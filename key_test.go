@@ -11,7 +11,7 @@ var (
 	rsaKey   = readKey("key/default.pri")
 	ecdsaKey = readKey("key/ecdsa.pri")
 	hmacKey  = Key(&HMACKey{
-		Name:       NewName("/ndn/guest/alice/KEY/ksk-1427395000016/ID-CERT/%00%00"),
+		Name:       NewName("/ndn/guest/alice/1434508942077/KEY/%00%00"),
 		PrivateKey: []byte("example key 1234"),
 	})
 )
