@@ -5,14 +5,11 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/asn1"
 	"encoding/base64"
 	"encoding/pem"
 	"errors"
 	"io"
 	"io/ioutil"
-	"time"
 
 	"github.com/go-ndn/tlv"
 )
@@ -113,38 +110,15 @@ func DecodePrivateKey(r io.Reader) (key Key, err error) {
 	return
 }
 
-type certificate struct {
-	Validity      validity
-	Subject       []pkix.AttributeTypeAndValue
-	PublicKeyInfo asn1.RawValue
-}
-
-type validity struct {
-	NotBefore, NotAfter time.Time
-}
-
 func EncodeCertificate(key Key, w io.Writer) (err error) {
 	d := &Data{
 		Name: key.Locator(),
 		MetaInfo: MetaInfo{
-			ContentType: 2, //key
+			ContentType:     2,       // key
+			FreshnessPeriod: 3600000, // 1 hour
 		},
 	}
-	keyBytes, err := x509.MarshalPKIXPublicKey(key.Public())
-	if err != nil {
-		return
-	}
-	d.Content, err = asn1.Marshal(certificate{
-		Validity: validity{
-			NotBefore: time.Now().UTC(),
-			NotAfter:  time.Date(2049, 12, 31, 23, 59, 59, 0, time.UTC), // end of asn.1
-		},
-		Subject: []pkix.AttributeTypeAndValue{{
-			Type:  asn1.ObjectIdentifier{2, 5, 4, 41},
-			Value: "go ndn",
-		}},
-		PublicKeyInfo: asn1.RawValue{FullBytes: keyBytes},
-	})
+	d.Content, err = x509.MarshalPKIXPublicKey(key.Public())
 	if err != nil {
 		return
 	}
@@ -167,12 +141,7 @@ func DecodeCertificate(r io.Reader) (key Key, err error) {
 	if err != nil {
 		return
 	}
-	var cert certificate
-	_, err = asn1.Unmarshal(d.Content, &cert)
-	if err != nil {
-		return
-	}
-	pub, err := x509.ParsePKIXPublicKey(cert.PublicKeyInfo.FullBytes)
+	pub, err := x509.ParsePKIXPublicKey(d.Content)
 	if err != nil {
 		return
 	}
