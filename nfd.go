@@ -45,15 +45,14 @@ type signatureValueComponent struct {
 	SignatureValue []byte `tlv:"23"`
 }
 
-// TODO: all fields are optional, but the zero value still needs to be encoded
 type Parameters struct {
 	Name                Name     `tlv:"7?"`
-	FaceID              uint64   `tlv:"105"`
+	FaceID              uint64   `tlv:"105?"`
 	URI                 string   `tlv:"114?"`
 	LocalControlFeature uint64   `tlv:"110?"`
-	Origin              uint64   `tlv:"111"`
-	Cost                uint64   `tlv:"106"`
-	Flags               uint64   `tlv:"108"`
+	Origin              uint64   `tlv:"111?"`
+	Cost                uint64   `tlv:"106?"`
+	Flags               uint64   `tlv:"108?"`
 	Strategy            Strategy `tlv:"107?"`
 	ExpirationPeriod    uint64   `tlv:"109?"`
 }
