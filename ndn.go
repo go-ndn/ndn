@@ -27,7 +27,7 @@ type Selectors struct {
 	MinSuffixComponents       uint64     `tlv:"13?"`
 	MaxSuffixComponents       uint64     `tlv:"14?"`
 	PublisherPublicKeyLocator KeyLocator `tlv:"15?"`
-	Exclude                   Exclude    `tlv:"16?+"`
+	Exclude                   Exclude    `tlv:"16?"`
 	ChildSelector             uint64     `tlv:"17?"`
 	MustBeFresh               bool       `tlv:"18?"`
 }
