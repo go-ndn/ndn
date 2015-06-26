@@ -2,7 +2,6 @@ package ndn
 
 import (
 	"bytes"
-	"crypto"
 	"crypto/hmac"
 	"crypto/sha256"
 	"hash"
@@ -19,12 +18,12 @@ func (key *HMACKey) Locator() Name {
 	return key.Name
 }
 
-func (key *HMACKey) Private() crypto.PrivateKey {
-	return key
+func (key *HMACKey) Private() ([]byte, error) {
+	return key.PrivateKey, nil
 }
 
-func (key *HMACKey) Public() crypto.PublicKey {
-	return nil
+func (key *HMACKey) Public() ([]byte, error) {
+	return nil, ErrNotSupported
 }
 
 func (key *HMACKey) SignatureType() uint64 {

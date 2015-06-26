@@ -1,10 +1,10 @@
 package ndn
 
 import (
-	"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/asn1"
 	"math/big"
 
@@ -20,8 +20,12 @@ func (key *ECDSAKey) Locator() Name {
 	return key.Name
 }
 
-func (key *ECDSAKey) Private() crypto.PrivateKey {
-	return key.PrivateKey
+func (key *ECDSAKey) Private() ([]byte, error) {
+	return x509.MarshalECPrivateKey(key.PrivateKey)
+}
+
+func (key *ECDSAKey) Public() ([]byte, error) {
+	return x509.MarshalPKIXPublicKey(key.PrivateKey.Public())
 }
 
 func (key *ECDSAKey) SignatureType() uint64 {

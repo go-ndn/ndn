@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/x509"
 
 	"github.com/go-ndn/tlv"
 )
@@ -18,8 +19,12 @@ func (key *RSAKey) Locator() Name {
 	return key.Name
 }
 
-func (key *RSAKey) Private() crypto.PrivateKey {
-	return key.PrivateKey
+func (key *RSAKey) Private() ([]byte, error) {
+	return x509.MarshalPKCS1PrivateKey(key.PrivateKey), nil
+}
+
+func (key *RSAKey) Public() ([]byte, error) {
+	return x509.MarshalPKIXPublicKey(key.PrivateKey.Public())
 }
 
 func (key *RSAKey) SignatureType() uint64 {

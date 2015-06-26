@@ -1,7 +1,6 @@
 package ndn
 
 import (
-	"crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/x509"
@@ -30,8 +29,8 @@ const (
 type Key interface {
 	Locator() Name
 	SignatureType() uint64
-	Private() crypto.PrivateKey
-	Public() crypto.PublicKey
+	Private() ([]byte, error)
+	Public() ([]byte, error)
 
 	Sign(interface{}) ([]byte, error)
 	Verify(interface{}, []byte) error
@@ -39,22 +38,19 @@ type Key interface {
 
 func EncodePrivateKey(key Key, w io.Writer) (err error) {
 	var keyType string
-	var keyBytes []byte
-	switch pri := key.Private().(type) {
-	case *rsa.PrivateKey:
+	switch key.SignatureType() {
+	case SignatureTypeSHA256WithRSA:
 		keyType = pemTypeRSA
-		keyBytes = x509.MarshalPKCS1PrivateKey(pri)
-	case *ecdsa.PrivateKey:
+	case SignatureTypeSHA256WithECDSA:
 		keyType = pemTypeECDSA
-		keyBytes, err = x509.MarshalECPrivateKey(pri)
-		if err != nil {
-			return
-		}
-	case *HMACKey:
+	case SignatureTypeSHA256WithHMAC:
 		keyType = pemTypeHMAC
-		keyBytes = pri.PrivateKey
 	default:
 		err = ErrNotSupported
+		return
+	}
+	keyBytes, err := key.Private()
+	if err != nil {
 		return
 	}
 	err = pem.Encode(w, &pem.Block{
@@ -118,7 +114,7 @@ func EncodeCertificate(key Key, w io.Writer) (err error) {
 			FreshnessPeriod: 3600000, // 1 hour
 		},
 	}
-	d.Content, err = x509.MarshalPKIXPublicKey(key.Public())
+	d.Content, err = key.Public()
 	if err != nil {
 		return
 	}
