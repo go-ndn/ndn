@@ -89,8 +89,9 @@ const (
 )
 
 type SignatureInfo struct {
-	SignatureType uint64     `tlv:"27"`
-	KeyLocator    KeyLocator `tlv:"28?"`
+	SignatureType  uint64         `tlv:"27"`
+	KeyLocator     KeyLocator     `tlv:"28?"`
+	ValidityPeriod ValidityPeriod `tlv:"253?"`
 }
 
 const (
@@ -104,6 +105,15 @@ const (
 type KeyLocator struct {
 	Name   Name   `tlv:"7?"`
 	Digest []byte `tlv:"29?"`
+}
+
+const (
+	ISO8601 = "20060102T150405"
+)
+
+type ValidityPeriod struct {
+	NotBefore string `tlv:"254"`
+	NotAfter  string `tlv:"255"`
 }
 
 func newNonce() []byte {
