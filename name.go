@@ -10,6 +10,10 @@ import (
 
 type Component []byte
 
+func (c Component) String() string {
+	return url.QueryEscape(string(c))
+}
+
 type Name struct {
 	Components []Component `tlv:"8"`
 }
@@ -65,7 +69,7 @@ func (n Name) String() string {
 	buf := new(bytes.Buffer)
 	for _, c := range n.Components {
 		buf.WriteByte('/')
-		buf.WriteString(url.QueryEscape(string(c)))
+		buf.WriteString(c.String())
 	}
 	return buf.String()
 }
