@@ -17,7 +17,7 @@ func TestName(t *testing.T) {
 	} {
 		got := name.Compare(NewName(test.in))
 		if got != test.want {
-			t.Fatalf("/A/B Compare(%v) == %v, got %v", test.in, test.want, got)
+			t.Fatalf("Compare(%v) == %v, got %v", test.in, test.want, got)
 		}
 	}
 }

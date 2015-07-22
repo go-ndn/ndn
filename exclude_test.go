@@ -21,7 +21,7 @@ func TestExclude(t *testing.T) {
 	} {
 		got := ex1.Match(Component(test.in))
 		if got != test.want {
-			t.Fatalf("..AB Match(%v) == %v, got %v", test.in, test.want, got)
+			t.Fatalf("Match(%v) == %v, got %v", test.in, test.want, got)
 		}
 	}
 
