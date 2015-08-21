@@ -10,7 +10,7 @@ import (
 )
 
 type HMACKey struct {
-	Name       Name
+	Name
 	PrivateKey []byte
 }
 

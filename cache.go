@@ -29,17 +29,17 @@ type cache struct {
 	lpm.Matcher
 	*list.List
 	size int
-	mu   sync.Mutex
+	sync.Mutex
 }
 
 type entry struct {
-	data *Data
-	time time.Time
+	*Data
+	time.Time
 }
 
 func (c *cache) Add(d *Data) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
 	name := d.Name.String()
 
@@ -60,8 +60,8 @@ func (c *cache) Add(d *Data) {
 
 	// add new element
 	elem := c.PushFront(entry{
-		data: d,
-		time: time.Now(),
+		Data: d,
+		Time: time.Now(),
 	})
 	c.UpdateAll(name, func(_ string, v interface{}) interface{} {
 		var m map[string]*list.Element
@@ -82,7 +82,7 @@ func (c *cache) Add(d *Data) {
 	if elem == nil {
 		return
 	}
-	name = c.Remove(elem).(entry).data.Name.String()
+	name = c.Remove(elem).(entry).Data.Name.String()
 	c.UpdateAll(name, func(_ string, v interface{}) interface{} {
 		if v == nil {
 			return nil
@@ -97,8 +97,8 @@ func (c *cache) Add(d *Data) {
 }
 
 func (c *cache) Get(i *Interest) *Data {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
 	var match *list.Element
 	name := i.Name.String()
@@ -108,13 +108,13 @@ func (c *cache) Get(i *Interest) *Data {
 		}
 		for _, elem := range v.(map[string]*list.Element) {
 			ent := elem.Value.(entry)
-			if !i.Selectors.Match(name, ent.data, ent.time) {
+			if !i.Selectors.Match(name, ent.Data, ent.Time) {
 				continue
 			}
 			if match == nil {
 				match = elem
 			} else {
-				cmp := ent.data.Name.Compare(match.Value.(entry).data.Name)
+				cmp := ent.Data.Name.Compare(match.Value.(entry).Data.Name)
 				switch i.Selectors.ChildSelector {
 				case 0:
 					if cmp < 0 {
@@ -130,7 +130,7 @@ func (c *cache) Get(i *Interest) *Data {
 	}, false)
 	if match != nil {
 		c.MoveToFront(match)
-		return match.Value.(entry).data
+		return match.Value.(entry).Data
 	}
 	return nil
 }

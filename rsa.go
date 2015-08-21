@@ -11,7 +11,7 @@ import (
 )
 
 type RSAKey struct {
-	Name Name
+	Name
 	*rsa.PrivateKey
 }
 

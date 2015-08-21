@@ -12,7 +12,7 @@ import (
 )
 
 type ECDSAKey struct {
-	Name Name
+	Name
 	*ecdsa.PrivateKey
 }
 

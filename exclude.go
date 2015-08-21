@@ -7,8 +7,8 @@ import (
 )
 
 type Interval struct {
-	Component Component
-	Any       bool // Component..?
+	Component
+	Any bool // Component..?
 }
 
 type Exclude []Interval

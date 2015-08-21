@@ -22,32 +22,32 @@ type Face interface {
 }
 
 type face struct {
-	net.Conn
-	r    tlv.Reader
-	pit  lpm.Matcher
-	recv chan<- *Interest
+	net.Conn    // write & close
+	tlv.Reader  // read
+	lpm.Matcher // pit
+	recv        chan<- *Interest
 }
 
 func NewFace(transport net.Conn, ch chan<- *Interest) Face {
 	f := &face{
-		Conn: transport,
-		r:    tlv.NewReader(transport),
-		pit:  lpm.NewThreadSafe(),
-		recv: ch,
+		Conn:    transport,
+		Reader:  tlv.NewReader(transport),
+		Matcher: lpm.NewThreadSafe(),
+		recv:    ch,
 	}
 	go func() {
 		for {
-			switch f.r.Peek() {
+			switch f.Peek() {
 			case 5:
 				i := new(Interest)
-				err := i.ReadFrom(f.r)
+				err := i.ReadFrom(f.Reader)
 				if err != nil {
 					goto IDLE
 				}
 				f.recvInterest(i)
 			case 6:
 				d := new(Data)
-				err := d.ReadFrom(f.r)
+				err := d.ReadFrom(f.Reader)
 				if err != nil {
 					goto IDLE
 				}
@@ -71,7 +71,7 @@ func (f *face) SendData(d *Data) {
 func (f *face) SendInterest(i *Interest) <-chan *Data {
 	ch := make(chan *Data, 1)
 	name := i.Name.String()
-	f.pit.Update(name, func(v interface{}) interface{} {
+	f.Update(name, func(v interface{}) interface{} {
 		var m map[chan<- *Data]*Selectors
 		if v == nil {
 			m = make(map[chan<- *Data]*Selectors)
@@ -96,7 +96,7 @@ func (f *face) SendInterest(i *Interest) <-chan *Data {
 		}
 		time.Sleep(lifeTime)
 
-		f.pit.Update(name, func(v interface{}) interface{} {
+		f.Update(name, func(v interface{}) interface{} {
 			if v == nil {
 				return nil
 			}
@@ -117,7 +117,7 @@ func (f *face) SendInterest(i *Interest) <-chan *Data {
 }
 
 func (f *face) recvData(d *Data) {
-	f.pit.UpdateAll(d.Name.String(), func(name string, v interface{}) interface{} {
+	f.UpdateAll(d.Name.String(), func(name string, v interface{}) interface{} {
 		t := time.Time{}
 		m := v.(map[chan<- *Data]*Selectors)
 		for ch, sel := range m {
