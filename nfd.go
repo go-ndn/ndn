@@ -57,11 +57,6 @@ type Parameters struct {
 	ExpirationPeriod    uint64   `tlv:"109?"`
 }
 
-const (
-	FlagChildInherit uint64 = 1 << iota
-	FlagCapture
-)
-
 type Strategy struct {
 	Name Name `tlv:"7"`
 }
