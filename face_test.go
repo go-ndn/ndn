@@ -135,9 +135,9 @@ func BenchmarkBurstyForward(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		var wg sync.WaitGroup
 		wg.Add(len(names))
-		for i := range names {
-			go func() {
-				err := consumers[i].consume(names[i])
+		for j := range names {
+			go func(j int) {
+				err := consumers[j].consume(names[j])
 				if err != nil {
 					select {
 					case ch <- err:
@@ -145,7 +145,7 @@ func BenchmarkBurstyForward(b *testing.B) {
 					}
 				}
 				wg.Done()
-			}()
+			}(j)
 		}
 		wg.Wait()
 	}
