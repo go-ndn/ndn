@@ -10,10 +10,7 @@ import (
 var (
 	rsaKey   = readKey("key/default.pri")
 	ecdsaKey = readKey("key/ecdsa.pri")
-	hmacKey  = Key(&HMACKey{
-		Name:       NewName("/ndn/guest/alice/1434508942077/KEY/%00%00"),
-		PrivateKey: []byte("example key 1234"),
-	})
+	hmacKey  = readKey("key/hmac.pri")
 )
 
 func readKey(file string) Key {

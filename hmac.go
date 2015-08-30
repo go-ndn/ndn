@@ -23,7 +23,7 @@ func (key *HMACKey) Private() ([]byte, error) {
 }
 
 func (key *HMACKey) Public() ([]byte, error) {
-	return nil, ErrNotSupported
+	return key.PrivateKey, nil
 }
 
 func (key *HMACKey) SignatureType() uint64 {
