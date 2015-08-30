@@ -3,7 +3,6 @@ package ndn
 import (
 	"bytes"
 	"fmt"
-	"net"
 	"sync"
 	"testing"
 	"time"
@@ -16,17 +15,8 @@ type testFace struct {
 	recv <-chan *Interest
 }
 
-func dial(network, address string) (net.Conn, error) {
-	switch network {
-	case "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
-		return packet.Dial(network, address)
-	default:
-		return net.Dial(network, address)
-	}
-}
-
 func newTestFace(address string) (f *testFace, err error) {
-	conn, err := dial("udp", address)
+	conn, err := packet.Dial("tcp", address)
 	if err != nil {
 		return
 	}

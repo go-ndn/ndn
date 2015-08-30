@@ -133,7 +133,7 @@ type StrategyChoice struct {
 
 func SendControl(w Sender, module, command string, params *Parameters, key Key) (err error) {
 	cmd := &Command{
-		Local:     "localhop",
+		Local:     "localhost",
 		NFD:       "nfd",
 		Module:    module,
 		Command:   command,
