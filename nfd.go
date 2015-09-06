@@ -149,7 +149,7 @@ func SendControl(w Sender, module, command string, params *Parameters, key Key) 
 	}
 
 	i := new(Interest)
-	err = tlv.Copy(cmd, &i.Name)
+	err = tlv.Copy(&i.Name, cmd)
 	if err != nil {
 		return
 	}
