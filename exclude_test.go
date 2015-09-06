@@ -35,6 +35,6 @@ func TestExclude(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(ex1, ex2) {
-		t.Fatalf("expect %#v, got %#v", ex1, ex2)
+		t.Fatalf("expect %+v, got %+v", ex1, ex2)
 	}
 }

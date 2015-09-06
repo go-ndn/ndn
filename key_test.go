@@ -40,7 +40,7 @@ func TestPrivateKey(t *testing.T) {
 		}
 
 		if !reflect.DeepEqual(key1, key2) {
-			t.Fatalf("expect %#v, got %#v", key1, key2)
+			t.Fatalf("expect %+v, got %+v", key1, key2)
 		}
 	}
 }
