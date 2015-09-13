@@ -1,7 +1,7 @@
-// Copyright 2014 Tai-Lin Chu. All rights reserved.
+// Copyright 2015 Tai-Lin Chu. All rights reserved.
 // Use of this source code is governed by GPL2 license.
 
-// Package ndn implements ndn(named-data networking) client library.
+// Package ndn implements named-data networking.
 package ndn
 
 import (

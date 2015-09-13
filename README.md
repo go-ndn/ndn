@@ -7,14 +7,6 @@ The author is taylorchu (Tai-Lin Chu). This package is released under GPL2 licen
 
 [![GoDoc](https://godoc.org/github.com/go-ndn/ndn?status.svg)](https://godoc.org/github.com/go-ndn/ndn)
 
-## Get started
-
-1. [Install and run nfd](http://named-data.net/doc/NFD/current/INSTALL.html)
-2. [Set up go work environment](https://golang.org/doc/install)
-3. Get this package by running `go get "github.com/go-ndn/ndn"`
-
-![Imgur](http://i.imgur.com/mWMese2.jpg)
-
 ## Benchmark
 
 2015-03
