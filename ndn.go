@@ -122,21 +122,12 @@ func newNonce() []byte {
 	return b
 }
 
-func writePacket(w tlv.Writer, v interface{}, valType uint64) (err error) {
-	b, err := tlv.MarshalByte(v, valType)
-	if err != nil {
-		return
-	}
-	_, err = w.Write(b)
-	return
-}
-
 // WriteTo writes interest to tlv.Writer after it populates nonce
 func (i *Interest) WriteTo(w tlv.Writer) error {
 	if len(i.Nonce) == 0 {
 		i.Nonce = newNonce()
 	}
-	return writePacket(w, i, 5)
+	return tlv.Marshal(w, i, 5)
 }
 
 func (i *Interest) ReadFrom(r tlv.Reader) error {
@@ -169,7 +160,7 @@ func (d *Data) WriteTo(w tlv.Writer) (err error) {
 			return
 		}
 	}
-	err = writePacket(w, d, 6)
+	err = tlv.Marshal(w, d, 6)
 	return
 }
 
