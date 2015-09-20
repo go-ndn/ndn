@@ -58,11 +58,11 @@ func (n *Name) Len() int {
 }
 
 func (n *Name) WriteTo(w tlv.Writer) error {
-	return tlv.Marshal(w, n, 7)
+	return w.Write(n, 7)
 }
 
 func (n *Name) ReadFrom(r tlv.Reader) error {
-	return tlv.Unmarshal(r, n, 7)
+	return r.Read(n, 7)
 }
 
 func (n Name) String() string {

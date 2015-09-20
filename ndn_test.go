@@ -11,6 +11,8 @@ import (
 var (
 	interest = &Interest{Name: NewName("/hello")}
 	data     = &Data{Name: NewName("/hello")}
+
+	discard = tlv.NewWriter(ioutil.Discard)
 )
 
 func BenchmarkDataEncodeRSA(b *testing.B) {
@@ -19,7 +21,7 @@ func BenchmarkDataEncodeRSA(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
-		err = data.WriteTo(ioutil.Discard)
+		err = data.WriteTo(discard)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -32,7 +34,7 @@ func BenchmarkDataEncodeECDSA(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
-		err = data.WriteTo(ioutil.Discard)
+		err = data.WriteTo(discard)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -45,7 +47,7 @@ func BenchmarkDataEncodeHMAC(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
-		err = data.WriteTo(ioutil.Discard)
+		err = data.WriteTo(discard)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -54,7 +56,7 @@ func BenchmarkDataEncodeHMAC(b *testing.B) {
 
 func BenchmarkDataEncode(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		err := data.WriteTo(ioutil.Discard)
+		err := data.WriteTo(discard)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -63,7 +65,7 @@ func BenchmarkDataEncode(b *testing.B) {
 
 func BenchmarkDataDecode(b *testing.B) {
 	buf := new(bytes.Buffer)
-	data.WriteTo(buf)
+	data.WriteTo(tlv.NewWriter(buf))
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -76,7 +78,7 @@ func BenchmarkDataDecode(b *testing.B) {
 
 func BenchmarkInterestEncode(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		err := interest.WriteTo(ioutil.Discard)
+		err := interest.WriteTo(discard)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -85,7 +87,7 @@ func BenchmarkInterestEncode(b *testing.B) {
 
 func BenchmarkInterestDecode(b *testing.B) {
 	buf := new(bytes.Buffer)
-	interest.WriteTo(buf)
+	interest.WriteTo(tlv.NewWriter(buf))
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {

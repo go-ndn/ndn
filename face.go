@@ -3,6 +3,7 @@ package ndn
 import (
 	"net"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/go-ndn/lpm"
@@ -22,8 +23,10 @@ type Face interface {
 }
 
 type face struct {
-	net.Conn    // write & close
+	net.Conn
 	tlv.Reader  // read
+	tlv.Writer  // write
+	sync.Mutex  // write mutex
 	lpm.Matcher // pit
 	recv        chan<- *Interest
 }
@@ -32,6 +35,7 @@ func NewFace(transport net.Conn, ch chan<- *Interest) Face {
 	f := &face{
 		Conn:    transport,
 		Reader:  tlv.NewReader(transport),
+		Writer:  tlv.NewWriter(transport),
 		Matcher: lpm.NewThreadSafe(),
 		recv:    ch,
 	}
@@ -65,7 +69,9 @@ func NewFace(transport net.Conn, ch chan<- *Interest) Face {
 }
 
 func (f *face) SendData(d *Data) {
-	d.WriteTo(f.Conn)
+	f.Lock()
+	d.WriteTo(f.Writer)
+	f.Unlock()
 }
 
 func (f *face) SendInterest(i *Interest) <-chan *Data {
@@ -83,7 +89,9 @@ func (f *face) SendInterest(i *Interest) <-chan *Data {
 				goto PIT_DONE
 			}
 		}
-		i.WriteTo(f.Conn)
+		f.Lock()
+		i.WriteTo(f.Writer)
+		f.Unlock()
 	PIT_DONE:
 		m[ch] = &i.Selectors
 		return m

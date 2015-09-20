@@ -52,7 +52,8 @@ func (sel *Selectors) Match(name string, d *Data, t time.Time) bool {
 	if suffix > 0 && sel.Exclude.Match(d.Name.Components[interestLen]) {
 		return false
 	}
-	if sel.MustBeFresh && !t.IsZero() && time.Since(t) > time.Duration(d.MetaInfo.FreshnessPeriod)*time.Millisecond {
+	if sel.MustBeFresh && !t.IsZero() && d.MetaInfo.FreshnessPeriod != 0 &&
+		time.Since(t) > time.Duration(d.MetaInfo.FreshnessPeriod)*time.Millisecond {
 		return false
 	}
 	return true
@@ -127,11 +128,11 @@ func (i *Interest) WriteTo(w tlv.Writer) error {
 	if len(i.Nonce) == 0 {
 		i.Nonce = newNonce()
 	}
-	return tlv.Marshal(w, i, 5)
+	return w.Write(i, 5)
 }
 
 func (i *Interest) ReadFrom(r tlv.Reader) error {
-	return tlv.Unmarshal(r, i, 5)
+	return r.Read(i, 5)
 }
 
 var (
@@ -160,11 +161,11 @@ func (d *Data) WriteTo(w tlv.Writer) (err error) {
 			return
 		}
 	}
-	err = tlv.Marshal(w, d, 6)
+	err = w.Write(d, 6)
 	return
 }
 
 // ReadFrom reads data from tlv.Reader but it does not verify the signature
 func (d *Data) ReadFrom(r tlv.Reader) error {
-	return tlv.Unmarshal(r, d, 6)
+	return r.Read(d, 6)
 }

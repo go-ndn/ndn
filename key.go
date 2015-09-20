@@ -123,7 +123,7 @@ func EncodeCertificate(key Key, w io.Writer) (err error) {
 		return
 	}
 	enc := base64.NewEncoder(base64.StdEncoding, w)
-	err = d.WriteTo(enc)
+	err = d.WriteTo(tlv.NewWriter(enc))
 	if err != nil {
 		return
 	}

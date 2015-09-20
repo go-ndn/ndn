@@ -26,11 +26,11 @@ type Command struct {
 }
 
 func (cmd *Command) WriteTo(w tlv.Writer) error {
-	return tlv.Marshal(w, cmd, 7)
+	return w.Write(cmd, 7)
 }
 
 func (cmd *Command) ReadFrom(r tlv.Reader) error {
-	return tlv.Unmarshal(r, cmd, 7)
+	return r.Read(cmd, 7)
 }
 
 type parametersComponent struct {

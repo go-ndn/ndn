@@ -35,13 +35,13 @@ func (ex *Exclude) UnmarshalBinary(b []byte) (err error) {
 			if len(*ex) == 0 {
 				*ex = append(*ex, Interval{})
 			}
-			err = tlv.Unmarshal(r, &(*ex)[len(*ex)-1].Any, 19)
+			err = r.Read(&(*ex)[len(*ex)-1].Any, 19)
 			if err != nil {
 				return
 			}
 		case 8:
 			var intv Interval
-			err = tlv.Unmarshal(r, &intv.Component, 8)
+			err = r.Read(&intv.Component, 8)
 			if err != nil {
 				return
 			}
@@ -53,19 +53,20 @@ func (ex *Exclude) UnmarshalBinary(b []byte) (err error) {
 }
 
 func (ex Exclude) MarshalBinary() (b []byte, err error) {
-	w := new(bytes.Buffer)
+	buf := new(bytes.Buffer)
+	w := tlv.NewWriter(buf)
 	for _, intv := range ex {
 		if len(intv.Component) != 0 {
-			err = tlv.Marshal(w, intv.Component, 8)
+			err = w.Write(intv.Component, 8)
 			if err != nil {
 				return
 			}
 		}
-		err = tlv.Marshal(w, intv.Any, 19)
+		err = w.Write(intv.Any, 19)
 		if err != nil {
 			return
 		}
 	}
-	b = w.Bytes()
+	b = buf.Bytes()
 	return
 }
