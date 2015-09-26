@@ -27,7 +27,6 @@ func (ex Exclude) Match(c Component) bool {
 }
 
 func (ex *Exclude) UnmarshalBinary(b []byte) (err error) {
-	*ex = nil
 	r := tlv.NewReader(bytes.NewReader(b))
 	for {
 		switch r.Peek() {
