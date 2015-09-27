@@ -66,10 +66,13 @@ func BenchmarkDataEncode(b *testing.B) {
 func BenchmarkDataDecode(b *testing.B) {
 	buf := new(bytes.Buffer)
 	data.WriteTo(tlv.NewWriter(buf))
+	seeker := bytes.NewReader(buf.Bytes())
+	r := tlv.NewReader(seeker)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		err := new(Data).ReadFrom(tlv.NewReader(bytes.NewReader(buf.Bytes())))
+		seeker.Seek(0, 0)
+		err := new(Data).ReadFrom(r)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -88,10 +91,13 @@ func BenchmarkInterestEncode(b *testing.B) {
 func BenchmarkInterestDecode(b *testing.B) {
 	buf := new(bytes.Buffer)
 	interest.WriteTo(tlv.NewWriter(buf))
+	seeker := bytes.NewReader(buf.Bytes())
+	r := tlv.NewReader(seeker)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		err := new(Interest).ReadFrom(tlv.NewReader(bytes.NewReader(buf.Bytes())))
+		seeker.Seek(0, 0)
+		err := new(Interest).ReadFrom(r)
 		if err != nil {
 			b.Fatal(err)
 		}
