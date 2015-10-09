@@ -67,7 +67,7 @@ func TestSignVerify(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = key.Verify(d, d.SignatureValue)
+		err = VerifyData(key, d)
 		if err != nil {
 			t.Fatal(err)
 		}

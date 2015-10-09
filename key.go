@@ -9,6 +9,7 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"time"
 
 	"github.com/go-ndn/tlv"
 )
@@ -167,4 +168,24 @@ func SignData(key Key, d *Data) (err error) {
 	d.SignatureInfo.KeyLocator.Name = key.Locator()
 	d.SignatureValue, err = key.Sign(d)
 	return
+}
+
+func VerifyData(key Key, d *Data) (err error) {
+	var t time.Time
+	now := time.Now().UTC()
+	if d.SignatureInfo.ValidityPeriod.NotBefore != "" {
+		t, err = time.Parse(ISO8601, d.SignatureInfo.ValidityPeriod.NotBefore)
+		if err != nil || now.Before(t) {
+			err = ErrInvalidSignature
+			return
+		}
+	}
+	if d.SignatureInfo.ValidityPeriod.NotAfter != "" {
+		t, err = time.Parse(ISO8601, d.SignatureInfo.ValidityPeriod.NotAfter)
+		if err != nil || now.After(t) {
+			err = ErrInvalidSignature
+			return
+		}
+	}
+	return key.Verify(d, d.SignatureValue)
 }
