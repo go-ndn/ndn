@@ -107,8 +107,8 @@ func DecodePrivateKey(r io.Reader) (key Key, err error) {
 	return
 }
 
-func EncodeCertificate(key Key, w io.Writer) (err error) {
-	d := &Data{
+func CertificateToData(key Key) (d *Data, err error) {
+	d = &Data{
 		Name: key.Locator(),
 		MetaInfo: MetaInfo{
 			ContentType:     2,       // key
@@ -120,6 +120,11 @@ func EncodeCertificate(key Key, w io.Writer) (err error) {
 		return
 	}
 	err = SignData(key, d)
+	return
+}
+
+func EncodeCertificate(key Key, w io.Writer) (err error) {
+	d, err := CertificateToData(key)
 	if err != nil {
 		return
 	}
@@ -132,12 +137,7 @@ func EncodeCertificate(key Key, w io.Writer) (err error) {
 	return
 }
 
-func DecodeCertificate(r io.Reader) (key Key, err error) {
-	var d Data
-	err = d.ReadFrom(tlv.NewReader(base64.NewDecoder(base64.StdEncoding, r)))
-	if err != nil {
-		return
-	}
+func CertificateFromData(d *Data) (key Key, err error) {
 	pub, err := x509.ParsePKIXPublicKey(d.Content)
 	if err != nil {
 		return
@@ -161,6 +161,15 @@ func DecodeCertificate(r io.Reader) (key Key, err error) {
 		err = ErrNotSupported
 	}
 	return
+}
+
+func DecodeCertificate(r io.Reader) (key Key, err error) {
+	d := new(Data)
+	err = d.ReadFrom(tlv.NewReader(base64.NewDecoder(base64.StdEncoding, r)))
+	if err != nil {
+		return
+	}
+	return CertificateFromData(d)
 }
 
 func SignData(key Key, d *Data) (err error) {
