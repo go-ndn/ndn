@@ -60,18 +60,18 @@ func (sel *Selectors) Match(name string, d *Data, t time.Time) bool {
 }
 
 type Data struct {
-	Name           Name          `tlv:"7"`
-	MetaInfo       MetaInfo      `tlv:"20"`
-	Content        []byte        `tlv:"21"`
-	SignatureInfo  SignatureInfo `tlv:"22"`
-	SignatureValue []byte        `tlv:"23*"`
+	Name           Name           `tlv:"7"`
+	MetaInfo       MetaInfo       `tlv:"20"`
+	Content        []byte         `tlv:"21"`
+	EncryptionInfo EncryptionInfo `tlv:"30?"`
+	SignatureInfo  SignatureInfo  `tlv:"22"`
+	SignatureValue []byte         `tlv:"23*"`
 }
 
 type MetaInfo struct {
 	ContentType     uint64       `tlv:"24?"`
 	FreshnessPeriod uint64       `tlv:"25?"`
 	FinalBlockID    FinalBlockID `tlv:"26?"`
-	EncryptionType  uint64       `tlv:"30?"`
 	CompressionType uint64       `tlv:"31?"`
 }
 
@@ -80,13 +80,19 @@ type FinalBlockID struct {
 }
 
 const (
-	EncryptionTypeNone       uint64 = 0
-	EncryptionTypeAESWithCTR        = 1
-)
-
-const (
 	CompressionTypeNone uint64 = 0
 	CompressionTypeGZIP        = 1
+)
+
+type EncryptionInfo struct {
+	EncryptionType uint64     `tlv:"32"`
+	KeyLocator     KeyLocator `tlv:"33"`
+	IV             []byte     `tlv:"34?"`
+}
+
+const (
+	EncryptionTypeNone       uint64 = 0
+	EncryptionTypeAESWithCTR        = 1
 )
 
 type SignatureInfo struct {
