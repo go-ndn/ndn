@@ -55,6 +55,7 @@ type Parameters struct {
 	Flags               uint64   `tlv:"108?"`
 	Strategy            Strategy `tlv:"107?"`
 	ExpirationPeriod    uint64   `tlv:"109?"`
+	FacePersistency     uint64   `tlv:"133?"`
 }
 
 type Strategy struct {
@@ -79,12 +80,14 @@ type ForwarderStatus struct {
 	CSEntry          uint64 `tlv:"135"`
 	InInterest       uint64 `tlv:"144"`
 	InData           uint64 `tlv:"145"`
+	InNack           uint64 `tlv:"151"`
 	OutInterest      uint64 `tlv:"146"`
 	OutData          uint64 `tlv:"147"`
+	OutNack          uint64 `tlv:"152"`
 }
 
 // face dataset
-type FaceEntry struct {
+type FaceStatus struct {
 	FaceID           uint64 `tlv:"105"`
 	URI              string `tlv:"114"`
 	LocalURI         string `tlv:"129"`
@@ -94,8 +97,10 @@ type FaceEntry struct {
 	LinkType         uint64 `tlv:"134"`
 	InInterest       uint64 `tlv:"144"`
 	InData           uint64 `tlv:"145"`
+	InNack           uint64 `tlv:"151"`
 	OutInterest      uint64 `tlv:"146"`
 	OutData          uint64 `tlv:"147"`
+	OutNack          uint64 `tlv:"152"`
 	InByte           uint64 `tlv:"148"`
 	OutByte          uint64 `tlv:"149"`
 }
