@@ -52,8 +52,7 @@ func (sel *Selectors) Match(name string, d *Data, t time.Time) bool {
 	if suffix > 0 && sel.Exclude.Match(d.Name.Components[interestLen]) {
 		return false
 	}
-	if sel.MustBeFresh && !t.IsZero() && d.MetaInfo.FreshnessPeriod != 0 &&
-		time.Since(t) > time.Duration(d.MetaInfo.FreshnessPeriod)*time.Millisecond {
+	if sel.MustBeFresh && !t.IsZero() && time.Since(t) > time.Duration(d.MetaInfo.FreshnessPeriod)*time.Millisecond {
 		return false
 	}
 	return true
