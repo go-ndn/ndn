@@ -82,7 +82,7 @@ func (c *cache) Add(d *Data) {
 	if elem == nil {
 		return
 	}
-	name = c.Remove(elem).(entry).Data.Name.String()
+	name = c.Remove(elem).(entry).Name.String()
 	c.UpdateAll(name, func(_ string, v interface{}) interface{} {
 		if v == nil {
 			return nil
@@ -108,13 +108,16 @@ func (c *cache) Get(i *Interest) *Data {
 		}
 		for _, elem := range v.(map[string]*list.Element) {
 			ent := elem.Value.(entry)
-			if !i.Selectors.Match(name, ent.Data, ent.Time) {
+			if !i.Selectors.Match(name, ent.Data) {
+				continue
+			}
+			if i.Selectors.MustBeFresh && time.Since(ent.Time) > time.Duration(ent.MetaInfo.FreshnessPeriod)*time.Millisecond {
 				continue
 			}
 			if match == nil {
 				match = elem
 			} else {
-				cmp := ent.Data.Name.Compare(match.Value.(entry).Data.Name)
+				cmp := ent.Name.Compare(match.Value.(entry).Name)
 				switch i.Selectors.ChildSelector {
 				case 0:
 					if cmp < 0 {

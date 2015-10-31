@@ -11,7 +11,6 @@ import (
 	"hash"
 	"hash/crc32"
 	"strings"
-	"time"
 
 	"github.com/go-ndn/tlv"
 )
@@ -32,13 +31,14 @@ type Selectors struct {
 	MustBeFresh               bool       `tlv:"18?"`
 }
 
-func (sel *Selectors) Match(name string, d *Data, t time.Time) bool {
+// Match does not handle ChildSelector and MustBeFresh
+func (sel *Selectors) Match(name string, d *Data) bool {
 	interestLen := strings.Count(name, "/")
-	suffix := d.Name.Len() - interestLen
-	if sel.MinSuffixComponents > uint64(suffix) {
+	suffixLen := uint64(d.Name.Len() - interestLen)
+	if sel.MinSuffixComponents > suffixLen {
 		return false
 	}
-	if sel.MaxSuffixComponents != 0 && sel.MaxSuffixComponents < uint64(suffix) {
+	if sel.MaxSuffixComponents != 0 && sel.MaxSuffixComponents < suffixLen {
 		return false
 	}
 	if sel.PublisherPublicKeyLocator.Name.Len() != 0 &&
@@ -49,10 +49,7 @@ func (sel *Selectors) Match(name string, d *Data, t time.Time) bool {
 		!bytes.Equal(sel.PublisherPublicKeyLocator.Digest, d.SignatureInfo.KeyLocator.Digest) {
 		return false
 	}
-	if suffix > 0 && sel.Exclude.Match(d.Name.Components[interestLen]) {
-		return false
-	}
-	if sel.MustBeFresh && !t.IsZero() && time.Since(t) > time.Duration(d.MetaInfo.FreshnessPeriod)*time.Millisecond {
+	if suffixLen > 0 && sel.Exclude.Match(d.Name.Components[interestLen]) {
 		return false
 	}
 	return true
