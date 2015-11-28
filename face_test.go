@@ -50,9 +50,11 @@ func (f *testFace) produce(name string) (err error) {
 func (f *testFace) consume(name string) (err error) {
 	_, ok := <-f.SendInterest(&Interest{
 		Name: NewName(name),
-		Selectors: Selectors{
-			MustBeFresh: true,
-		},
+		/*
+			Selectors: Selectors{
+				MustBeFresh: true,
+			},
+		*/
 	})
 	if !ok {
 		err = ErrTimeout

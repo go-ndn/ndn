@@ -164,7 +164,7 @@ func SendControl(w Sender, module, command string, params *Parameters, key Key) 
 		return
 	}
 	var resp ControlResponse
-	err = tlv.UnmarshalByte(d.Content, &resp, 101)
+	err = tlv.Unmarshal(d.Content, &resp, 101)
 	if err != nil {
 		return
 	}
