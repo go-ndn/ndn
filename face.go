@@ -97,13 +97,11 @@ func (f *face) SendInterest(i *Interest) <-chan *Data {
 		return m
 	}, false)
 
-	go func() {
-		lifeTime := 4 * time.Second
-		if i.LifeTime != 0 {
-			lifeTime = time.Duration(i.LifeTime) * time.Millisecond
-		}
-		time.Sleep(lifeTime)
-
+	lifeTime := 4 * time.Second
+	if i.LifeTime != 0 {
+		lifeTime = time.Duration(i.LifeTime) * time.Millisecond
+	}
+	time.AfterFunc(lifeTime, func() {
 		f.Update(name, func(v interface{}) interface{} {
 			if v == nil {
 				return nil
@@ -119,7 +117,7 @@ func (f *face) SendInterest(i *Interest) <-chan *Data {
 			}
 			return m
 		}, false)
-	}()
+	})
 
 	return ch
 }
