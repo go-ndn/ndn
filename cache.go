@@ -32,7 +32,7 @@ type cache struct {
 	sync.Mutex
 }
 
-type entry struct {
+type cacheEntry struct {
 	*Data
 	time.Time
 }
@@ -59,7 +59,7 @@ func (c *cache) Add(d *Data) {
 	}
 
 	// add new element
-	elem := c.PushFront(entry{
+	elem := c.PushFront(cacheEntry{
 		Data: d,
 		Time: time.Now(),
 	})
@@ -82,7 +82,7 @@ func (c *cache) Add(d *Data) {
 	if elem == nil {
 		return
 	}
-	name = c.Remove(elem).(entry).Name.String()
+	name = c.Remove(elem).(cacheEntry).Name.String()
 	c.UpdateAll(name, func(_ string, v interface{}) interface{} {
 		if v == nil {
 			return nil
@@ -107,7 +107,7 @@ func (c *cache) Get(i *Interest) *Data {
 			return
 		}
 		for _, elem := range v.(map[string]*list.Element) {
-			ent := elem.Value.(entry)
+			ent := elem.Value.(cacheEntry)
 			if !i.Selectors.Match(name, ent.Data) {
 				continue
 			}
@@ -117,7 +117,7 @@ func (c *cache) Get(i *Interest) *Data {
 			if match == nil {
 				match = elem
 			} else {
-				cmp := ent.Name.Compare(match.Value.(entry).Name)
+				cmp := ent.Name.Compare(match.Value.(cacheEntry).Name)
 				switch i.Selectors.ChildSelector {
 				case 0:
 					if cmp < 0 {
@@ -133,7 +133,7 @@ func (c *cache) Get(i *Interest) *Data {
 	}, false)
 	if match != nil {
 		c.MoveToFront(match)
-		return match.Value.(entry).Data
+		return match.Value.(cacheEntry).Data
 	}
 	return nil
 }

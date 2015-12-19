@@ -31,6 +31,11 @@ type face struct {
 	recv        chan<- *Interest
 }
 
+type pitEntry struct {
+	*Selectors
+	timer *time.Timer
+}
+
 func NewFace(transport net.Conn, ch chan<- *Interest) Face {
 	f := &face{
 		Conn:    transport,
@@ -77,36 +82,17 @@ func (f *face) SendData(d *Data) {
 func (f *face) SendInterest(i *Interest) <-chan *Data {
 	ch := make(chan *Data, 1)
 	name := i.Name.String()
-	f.Update(name, func(v interface{}) interface{} {
-		var m map[chan<- *Data]*Selectors
-		if v == nil {
-			m = make(map[chan<- *Data]*Selectors)
-		} else {
-			m = v.(map[chan<- *Data]*Selectors)
-		}
-		for _, sel := range m {
-			if reflect.DeepEqual(sel, &i.Selectors) {
-				goto PIT_DONE
-			}
-		}
-		f.Lock()
-		i.WriteTo(f.Writer)
-		f.Unlock()
-	PIT_DONE:
-		m[ch] = &i.Selectors
-		return m
-	}, false)
 
 	lifeTime := 4 * time.Second
 	if i.LifeTime != 0 {
 		lifeTime = time.Duration(i.LifeTime) * time.Millisecond
 	}
-	time.AfterFunc(lifeTime, func() {
+	timer := time.AfterFunc(lifeTime, func() {
 		f.Update(name, func(v interface{}) interface{} {
 			if v == nil {
 				return nil
 			}
-			m := v.(map[chan<- *Data]*Selectors)
+			m := v.(map[chan<- *Data]pitEntry)
 			if _, ok := m[ch]; !ok {
 				return m
 			}
@@ -119,18 +105,42 @@ func (f *face) SendInterest(i *Interest) <-chan *Data {
 		}, false)
 	})
 
+	f.Update(name, func(v interface{}) interface{} {
+		var m map[chan<- *Data]pitEntry
+		if v == nil {
+			m = make(map[chan<- *Data]pitEntry)
+		} else {
+			m = v.(map[chan<- *Data]pitEntry)
+		}
+		for _, e := range m {
+			if reflect.DeepEqual(e.Selectors, &i.Selectors) {
+				goto PIT_DONE
+			}
+		}
+		f.Lock()
+		i.WriteTo(f.Writer)
+		f.Unlock()
+	PIT_DONE:
+		m[ch] = pitEntry{
+			Selectors: &i.Selectors,
+			timer:     timer,
+		}
+		return m
+	}, false)
+
 	return ch
 }
 
 func (f *face) recvData(d *Data) {
 	f.UpdateAll(d.Name.String(), func(name string, v interface{}) interface{} {
-		m := v.(map[chan<- *Data]*Selectors)
-		for ch, sel := range m {
-			if !sel.Match(name, d) {
+		m := v.(map[chan<- *Data]pitEntry)
+		for ch, e := range m {
+			if !e.Match(name, d) {
 				continue
 			}
 			ch <- d
 			close(ch)
+			e.timer.Stop()
 			delete(m, ch)
 		}
 		if len(m) == 0 {
