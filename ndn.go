@@ -10,8 +10,8 @@ import (
 	"crypto/sha256"
 	"hash"
 	"hash/crc32"
-	"strings"
 
+	"github.com/go-ndn/lpm"
 	"github.com/go-ndn/tlv"
 )
 
@@ -32,8 +32,7 @@ type Selectors struct {
 }
 
 // Match does not handle ChildSelector and MustBeFresh
-func (sel *Selectors) Match(name string, d *Data) bool {
-	interestLen := strings.Count(name, "/")
+func (sel *Selectors) Match(d *Data, interestLen int) bool {
 	suffixLen := uint64(d.Name.Len() - interestLen)
 	if sel.MinSuffixComponents > suffixLen {
 		return false
@@ -72,7 +71,7 @@ type MetaInfo struct {
 }
 
 type FinalBlockID struct {
-	Component Component `tlv:"8"`
+	Component lpm.Component `tlv:"8"`
 }
 
 const (

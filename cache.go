@@ -35,6 +35,7 @@ type cache struct {
 type cacheEntry struct {
 	*Data
 	time.Time
+	remove func()
 }
 
 func (c *cache) Add(d *Data) {
@@ -62,8 +63,21 @@ func (c *cache) Add(d *Data) {
 	elem := c.PushFront(cacheEntry{
 		Data: d,
 		Time: time.Now(),
+		remove: func() {
+			c.UpdateAll(name, func(_ []byte, v interface{}) interface{} {
+				if v == nil {
+					return nil
+				}
+				m := v.(map[string]*list.Element)
+				delete(m, name)
+				if len(m) == 0 {
+					return nil
+				}
+				return m
+			}, false)
+		},
 	})
-	c.UpdateAll(name, func(_ string, v interface{}) interface{} {
+	c.UpdateAll(name, func(_ []byte, v interface{}) interface{} {
 		var m map[string]*list.Element
 		if v == nil {
 			m = make(map[string]*list.Element)
@@ -82,18 +96,7 @@ func (c *cache) Add(d *Data) {
 	if elem == nil {
 		return
 	}
-	name = c.Remove(elem).(cacheEntry).Name.String()
-	c.UpdateAll(name, func(_ string, v interface{}) interface{} {
-		if v == nil {
-			return nil
-		}
-		m := v.(map[string]*list.Element)
-		delete(m, name)
-		if len(m) == 0 {
-			return nil
-		}
-		return m
-	}, false)
+	c.Remove(elem).(cacheEntry).remove()
 }
 
 func (c *cache) Get(i *Interest) *Data {
@@ -101,14 +104,13 @@ func (c *cache) Get(i *Interest) *Data {
 	defer c.Unlock()
 
 	var match *list.Element
-	name := i.Name.String()
-	c.Match(name, func(v interface{}) {
+	c.MatchRaw(i.Name.Components, func(v interface{}) {
 		if v == nil {
 			return
 		}
 		for _, elem := range v.(map[string]*list.Element) {
 			ent := elem.Value.(cacheEntry)
-			if !i.Selectors.Match(name, ent.Data) {
+			if !i.Selectors.Match(ent.Data, i.Name.Len()) {
 				continue
 			}
 			if i.Selectors.MustBeFresh && time.Since(ent.Time) > time.Duration(ent.MetaInfo.FreshnessPeriod)*time.Millisecond {

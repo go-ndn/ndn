@@ -3,17 +3,18 @@ package ndn
 import (
 	"bytes"
 
+	"github.com/go-ndn/lpm"
 	"github.com/go-ndn/tlv"
 )
 
 type Interval struct {
-	Component
+	lpm.Component
 	Any bool // Component..?
 }
 
 type Exclude []Interval
 
-func (ex Exclude) Match(c Component) bool {
+func (ex Exclude) Match(c lpm.Component) bool {
 	for i := len(ex) - 1; i >= 0; i-- {
 		cmp := bytes.Compare(ex[i].Component, c)
 		if cmp == 0 {

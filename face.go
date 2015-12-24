@@ -1,6 +1,7 @@
 package ndn
 
 import (
+	"bytes"
 	"net"
 	"reflect"
 	"sync"
@@ -81,14 +82,13 @@ func (f *face) SendData(d *Data) {
 
 func (f *face) SendInterest(i *Interest) <-chan *Data {
 	ch := make(chan *Data, 1)
-	name := i.Name.String()
 
 	lifeTime := 4 * time.Second
 	if i.LifeTime != 0 {
 		lifeTime = time.Duration(i.LifeTime) * time.Millisecond
 	}
 	timer := time.AfterFunc(lifeTime, func() {
-		f.Update(name, func(v interface{}) interface{} {
+		f.UpdateRaw(i.Name.Components, func(v interface{}) interface{} {
 			if v == nil {
 				return nil
 			}
@@ -105,7 +105,7 @@ func (f *face) SendInterest(i *Interest) <-chan *Data {
 		}, false)
 	})
 
-	f.Update(name, func(v interface{}) interface{} {
+	f.UpdateRaw(i.Name.Components, func(v interface{}) interface{} {
 		var m map[chan<- *Data]pitEntry
 		if v == nil {
 			m = make(map[chan<- *Data]pitEntry)
@@ -132,10 +132,11 @@ func (f *face) SendInterest(i *Interest) <-chan *Data {
 }
 
 func (f *face) recvData(d *Data) {
-	f.UpdateAll(d.Name.String(), func(name string, v interface{}) interface{} {
+	f.UpdateAllRaw(d.Name.Components, func(name []byte, v interface{}) interface{} {
 		m := v.(map[chan<- *Data]pitEntry)
+		l := bytes.Count(name, []byte{'/'})
 		for ch, e := range m {
-			if !e.Match(name, d) {
+			if !e.Match(d, l) {
 				continue
 			}
 			ch <- d

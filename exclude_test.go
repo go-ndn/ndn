@@ -3,12 +3,14 @@ package ndn
 import (
 	"reflect"
 	"testing"
+
+	"github.com/go-ndn/lpm"
 )
 
 func TestExclude(t *testing.T) {
 	ex1 := Exclude{
 		{Any: true},
-		{Component: Component("AB")},
+		{Component: lpm.Component("AB")},
 	}
 
 	for _, test := range []struct {
@@ -19,7 +21,7 @@ func TestExclude(t *testing.T) {
 		{"AA", true},
 		{"ABC", false},
 	} {
-		got := ex1.Match(Component(test.in))
+		got := ex1.Match(lpm.Component(test.in))
 		if got != test.want {
 			t.Fatalf("Match(%v) == %v, got %v", test.in, test.want, got)
 		}

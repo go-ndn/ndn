@@ -5,17 +5,12 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/go-ndn/lpm"
 	"github.com/go-ndn/tlv"
 )
 
-type Component []byte
-
-func (c Component) String() string {
-	return url.QueryEscape(string(c))
-}
-
 type Name struct {
-	Components []Component `tlv:"8"`
+	Components []lpm.Component `tlv:"8"`
 }
 
 // NewName creates a name from string representation
@@ -25,10 +20,10 @@ func NewName(s string) (n Name) {
 		return
 	}
 	parts := strings.Split(s, "/")
-	n.Components = make([]Component, len(parts))
+	n.Components = make([]lpm.Component, len(parts))
 	for i := range parts {
 		parts[i], _ = url.QueryUnescape(parts[i])
-		n.Components[i] = Component(parts[i])
+		n.Components[i] = lpm.Component(parts[i])
 	}
 	return
 }
