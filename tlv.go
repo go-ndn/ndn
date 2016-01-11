@@ -11,5 +11,5 @@ func init() {
 	tlv.CacheType(reflect.TypeOf((*Interest)(nil)))
 	tlv.CacheType(reflect.TypeOf((*Data)(nil)))
 	tlv.CacheType(reflect.TypeOf((*Command)(nil)))
-	tlv.CacheType(reflect.TypeOf((*ControlResponse)(nil)))
+	tlv.CacheType(reflect.TypeOf((*CommandResponse)(nil)))
 }

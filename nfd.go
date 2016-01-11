@@ -62,7 +62,7 @@ type Strategy struct {
 	Name Name `tlv:"7"`
 }
 
-type ControlResponse struct {
+type CommandResponse struct {
 	StatusCode uint64     `tlv:"102"`
 	StatusText string     `tlv:"103"`
 	Parameters Parameters `tlv:"104?"`
@@ -163,7 +163,7 @@ func SendControl(w Sender, module, command string, params *Parameters, key Key) 
 		err = ErrTimeout
 		return
 	}
-	var resp ControlResponse
+	var resp CommandResponse
 	err = tlv.Unmarshal(d.Content, &resp, 101)
 	if err != nil {
 		return
