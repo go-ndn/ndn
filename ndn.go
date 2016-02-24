@@ -23,8 +23,8 @@ type Interest struct {
 }
 
 type Selectors struct {
-	MinSuffixComponents       uint64     `tlv:"13?"`
-	MaxSuffixComponents       uint64     `tlv:"14?"`
+	MinComponents             uint64     `tlv:"36?"`
+	MaxComponents             uint64     `tlv:"37?"`
 	PublisherPublicKeyLocator KeyLocator `tlv:"15?"`
 	Exclude                   Exclude    `tlv:"16?"`
 	ChildSelector             uint64     `tlv:"17?"`
@@ -33,11 +33,11 @@ type Selectors struct {
 
 // Match does not handle ChildSelector and MustBeFresh
 func (sel *Selectors) Match(d *Data, interestLen int) bool {
-	suffixLen := uint64(d.Name.Len() - interestLen)
-	if sel.MinSuffixComponents > suffixLen {
+	dataLen := d.Name.Len()
+	if sel.MinComponents != 0 && sel.MinComponents > uint64(dataLen) {
 		return false
 	}
-	if sel.MaxSuffixComponents != 0 && sel.MaxSuffixComponents < suffixLen {
+	if sel.MaxComponents != 0 && sel.MaxComponents < uint64(dataLen) {
 		return false
 	}
 	if sel.PublisherPublicKeyLocator.Name.Len() != 0 &&
@@ -48,26 +48,29 @@ func (sel *Selectors) Match(d *Data, interestLen int) bool {
 		!bytes.Equal(sel.PublisherPublicKeyLocator.Digest, d.SignatureInfo.KeyLocator.Digest) {
 		return false
 	}
-	if suffixLen > 0 && sel.Exclude.Match(d.Name.Components[interestLen]) {
+	if dataLen > interestLen && sel.Exclude.Match(d.Name.Components[interestLen]) {
 		return false
 	}
 	return true
 }
 
 type Data struct {
-	Name           Name           `tlv:"7"`
-	MetaInfo       MetaInfo       `tlv:"20"`
-	Content        []byte         `tlv:"21"`
-	EncryptionInfo EncryptionInfo `tlv:"30?"`
-	SignatureInfo  SignatureInfo  `tlv:"22"`
-	SignatureValue []byte         `tlv:"23*"`
+	Name           Name          `tlv:"7"`
+	MetaInfo       MetaInfo      `tlv:"20"`
+	Content        []byte        `tlv:"21"`
+	SignatureInfo  SignatureInfo `tlv:"22"`
+	SignatureValue []byte        `tlv:"23*"`
 }
 
 type MetaInfo struct {
-	ContentType     uint64       `tlv:"24?"`
-	FreshnessPeriod uint64       `tlv:"25?"`
-	FinalBlockID    FinalBlockID `tlv:"26?"`
-	CompressionType uint64       `tlv:"31?"`
+	ContentType          uint64       `tlv:"24?"`
+	FreshnessPeriod      uint64       `tlv:"25?"`
+	FinalBlockID         FinalBlockID `tlv:"26?"`
+	CompressionType      uint64       `tlv:"31?"`
+	EncryptionType       uint64       `tlv:"32?"`
+	EncryptionKeyLocator KeyLocator   `tlv:"33?"`
+	EncryptionIV         []byte       `tlv:"34?"`
+	CacheHint            uint64       `tlv:"35?"`
 }
 
 type FinalBlockID struct {
@@ -79,11 +82,10 @@ const (
 	CompressionTypeGZIP        = 1
 )
 
-type EncryptionInfo struct {
-	EncryptionType uint64     `tlv:"32"`
-	KeyLocator     KeyLocator `tlv:"33"`
-	IV             []byte     `tlv:"34?"`
-}
+const (
+	CacheHintNone    uint64 = 0
+	CacheHintNoCache        = 1
+)
 
 const (
 	EncryptionTypeNone       uint64 = 0
