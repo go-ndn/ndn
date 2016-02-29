@@ -7,12 +7,15 @@ import (
 	"github.com/go-ndn/tlv"
 )
 
+// Errors introduced by communicating with forwarder.
 var (
 	ErrTimeout        = errors.New("timeout")
 	ErrResponseStatus = errors.New("bad command response status")
 )
 
-// see http://redmine.named-data.net/projects/nfd/wiki/Management
+// Command alters forwarder state.
+//
+// See http://redmine.named-data.net/projects/nfd/wiki/Management.
 type Command struct {
 	Local          string                  `tlv:"8"`
 	NFD            string                  `tlv:"8"`
@@ -25,10 +28,12 @@ type Command struct {
 	SignatureValue signatureValueComponent `tlv:"8*"`
 }
 
+// WriteTo implements tlv.WriteTo.
 func (cmd *Command) WriteTo(w tlv.Writer) error {
 	return w.Write(cmd, 7)
 }
 
+// ReadFrom implements tlv.ReadFrom.
 func (cmd *Command) ReadFrom(r tlv.Reader) error {
 	return r.Read(cmd, 7)
 }
@@ -45,6 +50,7 @@ type signatureValueComponent struct {
 	SignatureValue []byte `tlv:"23"`
 }
 
+// Parameters contains arguments to command.
 type Parameters struct {
 	Name                Name     `tlv:"7?"`
 	FaceID              uint64   `tlv:"105?"`
@@ -58,17 +64,21 @@ type Parameters struct {
 	FacePersistency     uint64   `tlv:"133?"`
 }
 
+// Strategy is a forwarding strategy for a namespace.
 type Strategy struct {
 	Name Name `tlv:"7"`
 }
 
+// CommandResponse contains status code and text.
+//
+// StatusCode generally follows HTTP convention [RFC2616].
 type CommandResponse struct {
 	StatusCode uint64     `tlv:"102"`
 	StatusText string     `tlv:"103"`
 	Parameters Parameters `tlv:"104?"`
 }
 
-// forwarder dataset
+// ForwarderStatus is not available in go-nfd.
 type ForwarderStatus struct {
 	NFDVersion       string `tlv:"128"`
 	StartTimestamp   uint64 `tlv:"129"`
@@ -86,7 +96,7 @@ type ForwarderStatus struct {
 	OutNack          uint64 `tlv:"152"`
 }
 
-// face dataset
+// FaceStatus is not available in go-nfd.
 type FaceStatus struct {
 	FaceID           uint64 `tlv:"105"`
 	URI              string `tlv:"114"`
@@ -105,23 +115,25 @@ type FaceStatus struct {
 	OutByte          uint64 `tlv:"149"`
 }
 
-// fib dataset
+// FIBEntry is not available in go-nfd.
 type FIBEntry struct {
 	Name    Name            `tlv:"7"`
 	NextHop []NextHopRecord `tlv:"129"`
 }
 
+// NextHopRecord is not available in go-nfd.
 type NextHopRecord struct {
 	FaceID uint64 `tlv:"105"`
 	Cost   uint64 `tlv:"106"`
 }
 
-// rib dataset
+// RIBEntry specifies all routes under a name.
 type RIBEntry struct {
 	Name  Name    `tlv:"7"`
 	Route []Route `tlv:"129"`
 }
 
+// Route contains information about a route.
 type Route struct {
 	FaceID           uint64 `tlv:"105"`
 	Origin           uint64 `tlv:"111"`
@@ -130,12 +142,15 @@ type Route struct {
 	ExpirationPeriod uint64 `tlv:"109?"`
 }
 
-// strategy choice dataset
+// StrategyChoice is not available in go-nfd.
 type StrategyChoice struct {
 	Name     Name     `tlv:"7"`
 	Strategy Strategy `tlv:"107"`
 }
 
+// SendControl sends command and waits for its response.
+//
+// ErrResponseStatus is returned if the status code is not 200.
 func SendControl(w Sender, module, command string, params *Parameters, key Key) (err error) {
 	cmd := &Command{
 		Local:     "localhost",

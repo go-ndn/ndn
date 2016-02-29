@@ -9,14 +9,17 @@ import (
 )
 
 var (
+	// ContentStore is the default in-memory storage for data packets
 	ContentStore = NewCache(65536)
 )
 
+// Cache stores data packet and finds data packet by interest
 type Cache interface {
 	Add(*Data)
 	Get(*Interest) *Data
 }
 
+// NewCache creates a new thread-safe in-memory LRU content store
 func NewCache(size int) Cache {
 	return &cache{
 		Matcher: lpm.New(),

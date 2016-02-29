@@ -11,11 +11,14 @@ import (
 	"github.com/go-ndn/tlv"
 )
 
+// Sender sends interest and data packets.
+// This is the minimum abstraction for NDN nodes.
 type Sender interface {
 	SendInterest(*Interest) <-chan *Data
 	SendData(*Data)
 }
 
+// Face implements Sender.
 type Face interface {
 	Sender
 	LocalAddr() net.Addr
@@ -37,6 +40,11 @@ type pitEntry struct {
 	timer *time.Timer
 }
 
+// NewFace creates a face from net.Conn.
+//
+// ch is the incoming interest queue.
+// If it is nil, incoming interests will be ignored.
+// Otherwise, this queue must be handled before it is full.
 func NewFace(transport net.Conn, ch chan<- *Interest) Face {
 	f := &face{
 		Conn:    transport,

@@ -9,11 +9,12 @@ import (
 	"github.com/go-ndn/tlv"
 )
 
+// Name is a hierarchical name for NDN content, which contains a sequence of name components.
 type Name struct {
 	Components []lpm.Component `tlv:"8"`
 }
 
-// NewName creates a name from string representation
+// NewName creates a name from percent-encoded form.
 func NewName(s string) (n Name) {
 	s = strings.Trim(s, "/")
 	if s == "" {
@@ -28,7 +29,7 @@ func NewName(s string) (n Name) {
 	return
 }
 
-// Compare compares two names according to http://named-data.net/doc/ndn-tlv/name.html#canonical-order
+// Compare compares two names according to http://named-data.net/doc/ndn-tlv/name.html#canonical-order.
 //
 // -1 if a < b; 0 if a == b; 1 if a > b
 func (n *Name) Compare(n2 Name) int {
@@ -48,14 +49,17 @@ func (n *Name) Compare(n2 Name) int {
 	return 0
 }
 
+// Len returns the number of components.
 func (n *Name) Len() int {
 	return len(n.Components)
 }
 
+// WriteTo implements tlv.WriteTo
 func (n *Name) WriteTo(w tlv.Writer) error {
 	return w.Write(n, 7)
 }
 
+// ReadFrom implements tlv.ReadFrom
 func (n *Name) ReadFrom(r tlv.Reader) error {
 	return r.Read(n, 7)
 }

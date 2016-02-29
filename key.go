@@ -14,6 +14,7 @@ import (
 	"github.com/go-ndn/tlv"
 )
 
+// Errors introduced by Key.
 var (
 	ErrNotSupported     = errors.New("feature not supported")
 	ErrInvalidSignature = errors.New("invalid signature")
@@ -27,9 +28,11 @@ const (
 	pemTypeHMAC   = "HMAC PRIVATE KEY"
 )
 
+// Key signs and verifies data packets.
 type Key interface {
 	Locator() Name
 	SignatureType() uint64
+	// If the key is symmetric, Private is identical to Public.
 	Private() ([]byte, error)
 	Public() ([]byte, error)
 
@@ -37,6 +40,9 @@ type Key interface {
 	Verify(interface{}, []byte) error
 }
 
+// EncodePrivateKey encodes the private key in PEM encoding.
+//
+// See DecodePrivateKey.
 func EncodePrivateKey(key Key, w io.Writer) (err error) {
 	var keyType string
 	switch key.SignatureType() {
@@ -64,6 +70,9 @@ func EncodePrivateKey(key Key, w io.Writer) (err error) {
 	return
 }
 
+// DecodePrivateKey decodes the private key in PEM encoding.
+//
+// See EncodePrivateKey.
 func DecodePrivateKey(r io.Reader) (key Key, err error) {
 	pemData, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -107,6 +116,9 @@ func DecodePrivateKey(r io.Reader) (key Key, err error) {
 	return
 }
 
+// CertificateToData creates a data packet from a self-signed public key.
+//
+// See CertificateFromData.
 func CertificateToData(key Key) (d *Data, err error) {
 	d = &Data{
 		Name: key.Locator(),
@@ -123,6 +135,10 @@ func CertificateToData(key Key) (d *Data, err error) {
 	return
 }
 
+// EncodeCertificate invokes CertificateToData and encodes
+// this data packet in base64 encoding.
+//
+// See DecodeCertificate.
 func EncodeCertificate(key Key, w io.Writer) (err error) {
 	d, err := CertificateToData(key)
 	if err != nil {
@@ -137,6 +153,9 @@ func EncodeCertificate(key Key, w io.Writer) (err error) {
 	return
 }
 
+// CertificateFromData creates a public key from a data packet.
+//
+// See CertificateToData.
 func CertificateFromData(d *Data) (key Key, err error) {
 	pub, err := x509.ParsePKIXPublicKey(d.Content)
 	if err != nil {
@@ -163,6 +182,10 @@ func CertificateFromData(d *Data) (key Key, err error) {
 	return
 }
 
+// DecodeCertificate decodes a data packet in base64 encoding,
+// and invokes CertificateFromData.
+//
+// See EncodeCertificate.
 func DecodeCertificate(r io.Reader) (key Key, err error) {
 	d := new(Data)
 	err = d.ReadFrom(tlv.NewReader(base64.NewDecoder(base64.StdEncoding, r)))
@@ -172,6 +195,7 @@ func DecodeCertificate(r io.Reader) (key Key, err error) {
 	return CertificateFromData(d)
 }
 
+// SignData signs a data packet with the given key.
 func SignData(key Key, d *Data) (err error) {
 	d.SignatureInfo.SignatureType = key.SignatureType()
 	d.SignatureInfo.KeyLocator.Name = key.Locator()
@@ -179,6 +203,9 @@ func SignData(key Key, d *Data) (err error) {
 	return
 }
 
+// VerifyData verifies a data packet with the given key.
+//
+// It also checks ValidityPeriod.
 func VerifyData(key Key, d *Data) (err error) {
 	var t time.Time
 	now := time.Now().UTC()
