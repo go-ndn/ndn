@@ -160,6 +160,7 @@ func BenchmarkForwardRTT(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
+	// consumer
 	consumer, err := newTestFace(":6363")
 	if err != nil {
 		b.Fatal(err)
