@@ -26,8 +26,8 @@ type Interest struct {
 // Selectors are optional elements that further qualify Data that may match the Interest.
 // They are used for discovering and selecting the Data that matches best to what the application wants.
 type Selectors struct {
-	MinComponents             uint64     `tlv:"36?"`
-	MaxComponents             uint64     `tlv:"37?"`
+	MinComponents             uint64     `tlv:"133?"`
+	MaxComponents             uint64     `tlv:"134?"`
 	PublisherPublicKeyLocator KeyLocator `tlv:"15?"`
 	Exclude                   Exclude    `tlv:"16?"`
 	ChildSelector             uint64     `tlv:"17?"`
@@ -72,11 +72,11 @@ type MetaInfo struct {
 	ContentType          uint64       `tlv:"24?"`
 	FreshnessPeriod      uint64       `tlv:"25?"`
 	FinalBlockID         FinalBlockID `tlv:"26?"`
-	CompressionType      uint64       `tlv:"31?"`
-	EncryptionType       uint64       `tlv:"32?"`
-	EncryptionKeyLocator KeyLocator   `tlv:"33?"`
-	EncryptionIV         []byte       `tlv:"34?"`
-	CacheHint            uint64       `tlv:"35?"`
+	CompressionType      uint64       `tlv:"128?"`
+	EncryptionType       uint64       `tlv:"129?"`
+	EncryptionKeyLocator KeyLocator   `tlv:"130?"`
+	EncryptionIV         []byte       `tlv:"131?"`
+	CacheHint            uint64       `tlv:"132?"`
 }
 
 // FinalBlockID indicates the identifier of the final block in a sequence of fragments.
