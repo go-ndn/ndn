@@ -2,10 +2,13 @@ package ndn
 
 import (
 	"container/list"
+	"crypto/sha256"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/go-ndn/lpm"
+	"github.com/go-ndn/tlv"
 )
 
 var (
@@ -42,11 +45,15 @@ type cacheEntry struct {
 }
 
 func (c *cache) Add(d *Data) {
+	h := sha256.New()
+	err := d.WriteTo(tlv.NewWriter(h))
+	if err != nil {
+		return
+	}
+	name := fmt.Sprintf("%s/%x", d.Name, h.Sum(nil))
+
 	c.Lock()
 	defer c.Unlock()
-
-	name := d.Name.String()
-
 	// check for existing element
 	var exist bool
 	c.Match(name, func(v interface{}) {
@@ -103,11 +110,15 @@ func (c *cache) Add(d *Data) {
 }
 
 func (c *cache) Get(i *Interest) *Data {
+	components := i.Name.Components
+	if len(i.Name.ImplicitDigestSHA256) != 0 {
+		components = append(components, i.Name.ImplicitDigestSHA256)
+	}
+
 	c.Lock()
 	defer c.Unlock()
-
 	var match *list.Element
-	c.MatchRaw(i.Name.Components, func(v interface{}) {
+	c.MatchRaw(components, func(v interface{}) {
 		if v == nil {
 			return
 		}

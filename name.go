@@ -11,7 +11,8 @@ import (
 
 // Name is a hierarchical name for NDN content, which contains a sequence of name components.
 type Name struct {
-	Components []lpm.Component `tlv:"8"`
+	Components           []lpm.Component `tlv:"8"`
+	ImplicitDigestSHA256 lpm.Component   `tlv:"1?"`
 }
 
 // NewName creates a name from percent-encoded form.
