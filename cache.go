@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"crypto/sha256"
 	"fmt"
+	"net/url"
 	"sync"
 	"time"
 
@@ -50,7 +51,7 @@ func (c *cache) Add(d *Data) {
 	if err != nil {
 		return
 	}
-	name := fmt.Sprintf("%s/%x", d.Name, h.Sum(nil))
+	name := fmt.Sprintf("%s/%s", d.Name, url.QueryEscape(string(h.Sum(nil))))
 
 	c.Lock()
 	defer c.Unlock()
