@@ -173,7 +173,7 @@ func NewCRC32C() hash.Hash {
 
 // WriteTo implements tlv.WriteTo.
 //
-// Digest will be populated if SignatureValue is empty.
+// SHA256 digest will be populated if SignatureValue is empty.
 func (d *Data) WriteTo(w tlv.Writer) (err error) {
 	if len(d.SignatureValue) == 0 {
 		var f func() hash.Hash
