@@ -2,8 +2,6 @@ package ndn
 
 import (
 	"bytes"
-	"net/url"
-	"strings"
 
 	"github.com/go-ndn/lpm"
 	"github.com/go-ndn/tlv"
@@ -15,18 +13,9 @@ type Name struct {
 	ImplicitDigestSHA256 lpm.Component   `tlv:"1?"`
 }
 
-// NewName creates a name from percent-encoded form.
+// NewName creates a name by invoking lpm.NewComponents.
 func NewName(s string) (n Name) {
-	s = strings.Trim(s, "/")
-	if s == "" {
-		return
-	}
-	parts := strings.Split(s, "/")
-	n.Components = make([]lpm.Component, len(parts))
-	for i := range parts {
-		parts[i], _ = url.QueryUnescape(parts[i])
-		n.Components[i] = lpm.Component(parts[i])
-	}
+	n.Components = lpm.NewComponents(s)
 	return
 }
 

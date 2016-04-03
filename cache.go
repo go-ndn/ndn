@@ -4,7 +4,6 @@ import (
 	"container/list"
 	"crypto/sha256"
 	"fmt"
-	"net/url"
 	"sync"
 	"time"
 
@@ -51,17 +50,20 @@ func (c *cache) Add(d *Data) {
 	if err != nil {
 		return
 	}
-	name := fmt.Sprintf("%s/%s", d.Name, url.QueryEscape(string(h.Sum(nil))))
+	digest := lpm.Component(h.Sum(nil))
+
+	components := append(d.Name.Components, digest)
+	key := fmt.Sprintf("%s/%s", d.Name, digest)
 
 	c.Lock()
 	defer c.Unlock()
 	// check for existing element
 	var exist bool
-	c.Match(name, func(v interface{}) {
+	c.Match(components, func(v interface{}) {
 		if v == nil {
 			return
 		}
-		if elem, ok := v.(map[string]*list.Element)[name]; ok {
+		if elem, ok := v.(map[string]*list.Element)[key]; ok {
 			c.MoveToFront(elem)
 			exist = true
 		}
@@ -75,12 +77,12 @@ func (c *cache) Add(d *Data) {
 		Data: d,
 		Time: time.Now(),
 		remove: func() {
-			c.UpdateAll(name, func(_ []byte, v interface{}) interface{} {
+			c.UpdateAll(components, func(_ []lpm.Component, v interface{}) interface{} {
 				if v == nil {
 					return nil
 				}
 				m := v.(map[string]*list.Element)
-				delete(m, name)
+				delete(m, key)
 				if len(m) == 0 {
 					return nil
 				}
@@ -88,14 +90,14 @@ func (c *cache) Add(d *Data) {
 			}, false)
 		},
 	})
-	c.UpdateAll(name, func(_ []byte, v interface{}) interface{} {
+	c.UpdateAll(components, func(_ []lpm.Component, v interface{}) interface{} {
 		var m map[string]*list.Element
 		if v == nil {
 			m = make(map[string]*list.Element)
 		} else {
 			m = v.(map[string]*list.Element)
 		}
-		m[name] = elem
+		m[key] = elem
 		return m
 	}, false)
 
@@ -119,7 +121,7 @@ func (c *cache) Get(i *Interest) *Data {
 	c.Lock()
 	defer c.Unlock()
 	var match *list.Element
-	c.MatchRaw(components, func(v interface{}) {
+	c.Match(components, func(v interface{}) {
 		if v == nil {
 			return
 		}
