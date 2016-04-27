@@ -208,7 +208,7 @@ func SignData(key Key, d *Data) (err error) {
 // It also checks ValidityPeriod.
 func VerifyData(key Key, d *Data) (err error) {
 	var t time.Time
-	now := time.Now().UTC()
+	now := time.Now()
 	if d.SignatureInfo.ValidityPeriod.NotBefore != "" {
 		t, err = time.Parse(ISO8601, d.SignatureInfo.ValidityPeriod.NotBefore)
 		if err != nil || now.Before(t) {
