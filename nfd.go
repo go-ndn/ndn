@@ -157,7 +157,7 @@ func SendControl(w Sender, module, command string, params *Parameters, key Key) 
 		NFD:       "nfd",
 		Module:    module,
 		Command:   command,
-		Timestamp: uint64(time.Now().UTC().UnixNano() / 1000000),
+		Timestamp: uint64(time.Now().UnixNano() / 1000000),
 		Nonce:     newNonce(),
 	}
 	cmd.Parameters.Parameters = *params
