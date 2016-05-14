@@ -40,7 +40,7 @@ func (f *testFace) produce(name string) (err error) {
 		Content: bytes.Repeat([]byte("0123456789"), 100),
 	}
 	go func() {
-		for _ = range f.recv {
+		for range f.recv {
 			f.SendData(d)
 		}
 	}()
