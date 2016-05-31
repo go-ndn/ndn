@@ -25,14 +25,13 @@ type Cache interface {
 // NewCache creates a new thread-safe in-memory LRU content store
 func NewCache(size int) Cache {
 	return &cache{
-		Matcher: lpm.New(),
-		List:    list.New(),
-		size:    size,
+		List: list.New(),
+		size: size,
 	}
 }
 
 type cache struct {
-	lpm.Matcher
+	cacheMatcher
 	*list.List
 	size int
 	sync.Mutex
@@ -59,11 +58,11 @@ func (c *cache) Add(d *Data) {
 	defer c.Unlock()
 	// check for existing element
 	var exist bool
-	c.Match(components, func(v interface{}) {
-		if v == nil {
+	c.Match(components, func(m map[string]*list.Element) {
+		if m == nil {
 			return
 		}
-		if elem, ok := v.(map[string]*list.Element)[key]; ok {
+		if elem, ok := m[key]; ok {
 			c.MoveToFront(elem)
 			exist = true
 		}
@@ -77,11 +76,10 @@ func (c *cache) Add(d *Data) {
 		Data: d,
 		Time: time.Now(),
 		remove: func() {
-			c.UpdateAll(components, func(_ []lpm.Component, v interface{}) interface{} {
-				if v == nil {
+			c.UpdateAll(components, func(_ []lpm.Component, m map[string]*list.Element) map[string]*list.Element {
+				if m == nil {
 					return nil
 				}
-				m := v.(map[string]*list.Element)
 				delete(m, key)
 				if len(m) == 0 {
 					return nil
@@ -90,12 +88,9 @@ func (c *cache) Add(d *Data) {
 			}, false)
 		},
 	})
-	c.UpdateAll(components, func(_ []lpm.Component, v interface{}) interface{} {
-		var m map[string]*list.Element
-		if v == nil {
+	c.UpdateAll(components, func(_ []lpm.Component, m map[string]*list.Element) map[string]*list.Element {
+		if m == nil {
 			m = make(map[string]*list.Element)
-		} else {
-			m = v.(map[string]*list.Element)
 		}
 		m[key] = elem
 		return m
@@ -121,11 +116,8 @@ func (c *cache) Get(i *Interest) *Data {
 	c.Lock()
 	defer c.Unlock()
 	var match *list.Element
-	c.Match(components, func(v interface{}) {
-		if v == nil {
-			return
-		}
-		for _, elem := range v.(map[string]*list.Element) {
+	c.Match(components, func(m map[string]*list.Element) {
+		for _, elem := range m {
 			ent := elem.Value.(cacheEntry)
 			if !i.Selectors.Match(ent.Data, i.Name.Len()) {
 				continue

@@ -27,11 +27,15 @@ type Face interface {
 
 type face struct {
 	net.Conn
-	tlv.Reader  // read
-	tlv.Writer  // write
-	sync.Mutex  // write mutex
-	lpm.Matcher // pit
-	recv        chan<- *Interest
+	tlv.Reader // read
+
+	tlv.Writer            // write
+	wm         sync.Mutex // writer mutex
+
+	pitMatcher            // pit
+	pitm       sync.Mutex // pit mutex
+
+	recv chan<- *Interest
 }
 
 type pitEntry struct {
@@ -46,11 +50,10 @@ type pitEntry struct {
 // Otherwise, this queue must be handled before it is full.
 func NewFace(transport net.Conn, ch chan<- *Interest) Face {
 	f := &face{
-		Conn:    transport,
-		Reader:  tlv.NewReader(transport),
-		Writer:  tlv.NewWriter(transport),
-		Matcher: lpm.NewThreadSafe(),
-		recv:    ch,
+		Conn:   transport,
+		Reader: tlv.NewReader(transport),
+		Writer: tlv.NewWriter(transport),
+		recv:   ch,
 	}
 	go func() {
 		for {
@@ -82,9 +85,9 @@ func NewFace(transport net.Conn, ch chan<- *Interest) Face {
 }
 
 func (f *face) SendData(d *Data) {
-	f.Lock()
+	f.wm.Lock()
 	d.WriteTo(f.Writer)
-	f.Unlock()
+	f.wm.Unlock()
 }
 
 func (f *face) SendInterest(i *Interest) <-chan *Data {
@@ -95,11 +98,11 @@ func (f *face) SendInterest(i *Interest) <-chan *Data {
 		lifeTime = time.Duration(i.LifeTime) * time.Millisecond
 	}
 	timer := time.AfterFunc(lifeTime, func() {
-		f.Update(i.Name.Components, func(v interface{}) interface{} {
-			if v == nil {
+		f.pitm.Lock()
+		f.Update(i.Name.Components, func(m map[chan<- *Data]pitEntry) map[chan<- *Data]pitEntry {
+			if m == nil {
 				return nil
 			}
-			m := v.(map[chan<- *Data]pitEntry)
 			if _, ok := m[ch]; !ok {
 				return m
 			}
@@ -110,23 +113,22 @@ func (f *face) SendInterest(i *Interest) <-chan *Data {
 			}
 			return m
 		}, false)
+		f.pitm.Unlock()
 	})
 
-	f.Update(i.Name.Components, func(v interface{}) interface{} {
-		var m map[chan<- *Data]pitEntry
-		if v == nil {
+	f.pitm.Lock()
+	f.Update(i.Name.Components, func(m map[chan<- *Data]pitEntry) map[chan<- *Data]pitEntry {
+		if m == nil {
 			m = make(map[chan<- *Data]pitEntry)
-		} else {
-			m = v.(map[chan<- *Data]pitEntry)
 		}
 		for _, e := range m {
 			if reflect.DeepEqual(e.Selectors, &i.Selectors) {
 				goto PIT_DONE
 			}
 		}
-		f.Lock()
+		f.wm.Lock()
 		i.WriteTo(f.Writer)
-		f.Unlock()
+		f.wm.Unlock()
 	PIT_DONE:
 		m[ch] = pitEntry{
 			Selectors: &i.Selectors,
@@ -134,13 +136,14 @@ func (f *face) SendInterest(i *Interest) <-chan *Data {
 		}
 		return m
 	}, false)
+	f.pitm.Unlock()
 
 	return ch
 }
 
 func (f *face) recvData(d *Data) {
-	f.UpdateAll(d.Name.Components, func(name []lpm.Component, v interface{}) interface{} {
-		m := v.(map[chan<- *Data]pitEntry)
+	f.pitm.Lock()
+	f.UpdateAll(d.Name.Components, func(name []lpm.Component, m map[chan<- *Data]pitEntry) map[chan<- *Data]pitEntry {
 		for ch, e := range m {
 			if !e.Match(d, len(name)) {
 				continue
@@ -155,6 +158,7 @@ func (f *face) recvData(d *Data) {
 		}
 		return m
 	}, true)
+	f.pitm.Unlock()
 }
 
 func (f *face) recvInterest(i *Interest) {
