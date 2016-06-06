@@ -6,10 +6,10 @@ package ndn
 
 import (
 	"bytes"
-	"crypto/rand"
 	"crypto/sha256"
 	"hash"
 	"hash/crc32"
+	"math/rand"
 
 	"github.com/go-ndn/lpm"
 	"github.com/go-ndn/tlv"
@@ -19,7 +19,7 @@ import (
 type Interest struct {
 	Name      Name      `tlv:"7"`
 	Selectors Selectors `tlv:"9?"`
-	Nonce     []byte    `tlv:"10"`
+	Nonce     uint64    `tlv:"10"`
 	LifeTime  uint64    `tlv:"12?"`
 }
 
@@ -141,18 +141,12 @@ type ValidityPeriod struct {
 	NotAfter  string `tlv:"255"`
 }
 
-func newNonce() []byte {
-	b := make([]byte, 4)
-	rand.Read(b)
-	return b
-}
-
 // WriteTo implements tlv.WriteTo.
 //
 // Nonce will be populated if it is empty.
 func (i *Interest) WriteTo(w tlv.Writer) error {
-	if len(i.Nonce) == 0 {
-		i.Nonce = newNonce()
+	if i.Nonce == 0 {
+		i.Nonce = uint64(rand.Uint32())
 	}
 	return w.Write(i, 5)
 }

@@ -3,6 +3,7 @@ package ndn
 import (
 	"bytes"
 	"fmt"
+	"math/rand"
 	"sync"
 	"testing"
 	"time"
@@ -76,7 +77,7 @@ func TestConsumer(t *testing.T) {
 }
 
 func TestProducer(t *testing.T) {
-	name := fmt.Sprintf("/%x", newNonce())
+	name := fmt.Sprintf("/%x", rand.Uint32())
 	producer, err := newTestFace(":6363")
 	if err != nil {
 		t.Fatal(err)
@@ -102,7 +103,7 @@ func BenchmarkBurstyForward(b *testing.B) {
 	names := make([]string, 64)
 	consumers := make([]*testFace, len(names))
 	for i := 0; i < len(names); i++ {
-		names[i] = fmt.Sprintf("/%x", newNonce())
+		names[i] = fmt.Sprintf("/%x", rand.Uint32())
 		// producer
 		producer, err := newTestFace(":6363")
 		if err != nil {
@@ -149,7 +150,7 @@ func BenchmarkBurstyForward(b *testing.B) {
 }
 
 func BenchmarkForwardRTT(b *testing.B) {
-	name := fmt.Sprintf("/%x", newNonce())
+	name := fmt.Sprintf("/%x", rand.Uint32())
 	// producer
 	producer, err := newTestFace(":6363")
 	if err != nil {

@@ -2,6 +2,7 @@ package ndn
 
 import (
 	"errors"
+	"math/rand"
 	"time"
 
 	"github.com/go-ndn/tlv"
@@ -23,7 +24,7 @@ type Command struct {
 	Command        string                  `tlv:"8"`
 	Parameters     parametersComponent     `tlv:"8"`
 	Timestamp      uint64                  `tlv:"8"`
-	Nonce          []byte                  `tlv:"8"`
+	Nonce          uint64                  `tlv:"8"`
 	SignatureInfo  signatureInfoComponent  `tlv:"8"`
 	SignatureValue signatureValueComponent `tlv:"8*"`
 }
@@ -158,7 +159,7 @@ func SendControl(w Sender, module, command string, params *Parameters, key Key) 
 		Module:    module,
 		Command:   command,
 		Timestamp: uint64(time.Now().UnixNano() / 1000000),
-		Nonce:     newNonce(),
+		Nonce:     uint64(rand.Uint32()),
 	}
 	cmd.Parameters.Parameters = *params
 	cmd.SignatureInfo.SignatureInfo.SignatureType = key.SignatureType()
