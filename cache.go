@@ -11,11 +11,6 @@ import (
 	"github.com/go-ndn/tlv"
 )
 
-var (
-	// ContentStore is the default in-memory storage for data packets
-	ContentStore = NewCache(65536)
-)
-
 // Cache stores data packet and finds data packet by interest
 type Cache interface {
 	Add(*Data)
