@@ -5,6 +5,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 )
 
 var (
@@ -61,7 +62,15 @@ func TestCertificate(t *testing.T) {
 }
 
 func TestSignVerify(t *testing.T) {
-	d := new(Data)
+	now := time.Now().UTC()
+	d := &Data{
+		SignatureInfo: SignatureInfo{
+			ValidityPeriod: ValidityPeriod{
+				NotBefore: now.Add(-time.Hour).Format(ISO8601),
+				NotAfter:  now.Add(time.Hour).Format(ISO8601),
+			},
+		},
+	}
 	for _, key := range []Key{rsaKey, ecdsaKey, hmacKey} {
 		err := SignData(key, d)
 		if err != nil {

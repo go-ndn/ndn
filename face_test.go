@@ -39,6 +39,9 @@ func (f *testFace) produce(name string) (err error) {
 	d := &Data{
 		Name:    NewName(name),
 		Content: bytes.Repeat([]byte("0123456789"), 100),
+		SignatureInfo: SignatureInfo{
+			SignatureType: SignatureTypeDigestCRC32C,
+		},
 	}
 	go func() {
 		for range f.recv {
@@ -73,6 +76,21 @@ func TestConsumer(t *testing.T) {
 	err = consumer.consume("/ndn/edu/ucla/ping")
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestConsumerTimeout(t *testing.T) {
+	consumer, err := newTestFace("spurs.cs.ucla.edu:6363")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer consumer.Close()
+	_, ok := <-consumer.SendInterest(&Interest{
+		Name:     NewName("/ndn/edu/ucla/ping"),
+		LifeTime: 1,
+	})
+	if ok {
+		t.Fatalf("expect closed data channel")
 	}
 }
 
