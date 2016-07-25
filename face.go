@@ -45,15 +45,15 @@ type pitEntry struct {
 
 // NewFace creates a face from net.Conn.
 //
-// ch is the incoming interest queue.
+// recv is the incoming interest queue.
 // If it is nil, incoming interests will be ignored.
 // Otherwise, this queue must be handled before it is full.
-func NewFace(transport net.Conn, ch chan<- *Interest) Face {
+func NewFace(transport net.Conn, recv chan<- *Interest) Face {
 	f := &face{
 		Conn:   transport,
 		Reader: tlv.NewReader(transport),
 		Writer: tlv.NewWriter(transport),
-		recv:   ch,
+		recv:   recv,
 	}
 	go func() {
 		for {

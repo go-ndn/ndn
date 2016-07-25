@@ -13,7 +13,6 @@ import (
 
 type testFace struct {
 	Face
-	recv <-chan *Interest
 }
 
 func newTestFace(address string) (f *testFace, err error) {
@@ -21,49 +20,47 @@ func newTestFace(address string) (f *testFace, err error) {
 	if err != nil {
 		return
 	}
-	recv := make(chan *Interest)
 	f = &testFace{
-		Face: NewFace(conn, recv),
-		recv: recv,
+		Face: NewFace(conn, nil),
 	}
 	return
 }
 
-func (f *testFace) produce(name string) (err error) {
+func (f *testFace) consume(name string) error {
+	_, ok := <-f.SendInterest(&Interest{
+		Name: NewName(name),
+	})
+	if !ok {
+		return ErrTimeout
+	}
+	return nil
+}
+
+func newProducer(address, name string) (f Face, err error) {
+	conn, err := packet.Dial("tcp", address)
+	if err != nil {
+		return
+	}
+	recv := make(chan *Interest)
+	f = NewFace(conn, recv)
 	err = SendControl(f, "rib", "register", &Parameters{
 		Name: NewName(name),
 	}, rsaKey)
 	if err != nil {
 		return
 	}
-	d := &Data{
-		Name:    NewName(name),
-		Content: bytes.Repeat([]byte("0123456789"), 100),
-		SignatureInfo: SignatureInfo{
-			SignatureType: SignatureTypeDigestCRC32C,
-		},
-	}
 	go func() {
-		for range f.recv {
+		d := &Data{
+			Name:    NewName(name),
+			Content: bytes.Repeat([]byte("0123456789"), 100),
+			SignatureInfo: SignatureInfo{
+				SignatureType: SignatureTypeDigestCRC32C,
+			},
+		}
+		for range recv {
 			f.SendData(d)
 		}
 	}()
-	return
-}
-
-func (f *testFace) consume(name string) (err error) {
-	_, ok := <-f.SendInterest(&Interest{
-		Name: NewName(name),
-		/*
-			Selectors: Selectors{
-				MustBeFresh: true,
-			},
-		*/
-	})
-	if !ok {
-		err = ErrTimeout
-		return
-	}
 	return
 }
 
@@ -96,15 +93,11 @@ func TestConsumerTimeout(t *testing.T) {
 
 func TestProducer(t *testing.T) {
 	name := fmt.Sprintf("/%x", rand.Uint32())
-	producer, err := newTestFace(":6363")
+	producer, err := newProducer(":6363", name)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer producer.Close()
-	err = producer.produce(name)
-	if err != nil {
-		t.Fatal(err)
-	}
 	time.Sleep(time.Second)
 	consumer, err := newTestFace(":6363")
 	if err != nil {
@@ -123,15 +116,11 @@ func BenchmarkBurstyForward(b *testing.B) {
 	for i := 0; i < len(names); i++ {
 		names[i] = fmt.Sprintf("/%x", rand.Uint32())
 		// producer
-		producer, err := newTestFace(":6363")
+		producer, err := newProducer(":6363", names[i])
 		if err != nil {
 			b.Fatal(err)
 		}
 		defer producer.Close()
-		err = producer.produce(names[i])
-		if err != nil {
-			b.Fatal(err)
-		}
 		// consumer
 		consumers[i], err = newTestFace(":6363")
 		if err != nil {
@@ -170,15 +159,11 @@ func BenchmarkBurstyForward(b *testing.B) {
 func BenchmarkForwardRTT(b *testing.B) {
 	name := fmt.Sprintf("/%x", rand.Uint32())
 	// producer
-	producer, err := newTestFace(":6363")
+	producer, err := newProducer(":6363", name)
 	if err != nil {
 		b.Fatal(err)
 	}
 	defer producer.Close()
-	err = producer.produce(name)
-	if err != nil {
-		b.Fatal(err)
-	}
 	// consumer
 	consumer, err := newTestFace(":6363")
 	if err != nil {
