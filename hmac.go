@@ -1,7 +1,6 @@
 package ndn
 
 import (
-	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"hash"
@@ -48,7 +47,7 @@ func (key *HMACKey) Verify(v interface{}, signature []byte) (err error) {
 	if err != nil {
 		return
 	}
-	if !bytes.Equal(signature, expectedMAC) {
+	if !hmac.Equal(signature, expectedMAC) {
 		err = ErrInvalidSignature
 		return
 	}
