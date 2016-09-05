@@ -19,9 +19,6 @@ func (n *pitNode) empty() bool {
 
 func (n *pitNode) update(key []lpm.Component, depth int, f func([]lpm.Component, map[chan<- *Data]pitEntry) map[chan<- *Data]pitEntry, exist, all bool) {
 	try := func() {
-		if depth == 0 {
-			return
-		}
 		if !exist || !pitNodeValEmpty(n.val) {
 			n.val = f(key[:depth], n.val)
 		}
@@ -61,9 +58,6 @@ func (n *pitNode) update(key []lpm.Component, depth int, f func([]lpm.Component,
 
 func (n *pitNode) match(key []lpm.Component, depth int, f func(map[chan<- *Data]pitEntry), exist bool) {
 	try := func() {
-		if depth == 0 {
-			return
-		}
 		if !exist || !pitNodeValEmpty(n.val) {
 			f(n.val)
 		}

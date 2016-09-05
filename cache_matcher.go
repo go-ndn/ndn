@@ -22,9 +22,6 @@ func (n *cacheNode) empty() bool {
 
 func (n *cacheNode) update(key []lpm.Component, depth int, f func([]lpm.Component, map[string]*list.Element) map[string]*list.Element, exist, all bool) {
 	try := func() {
-		if depth == 0 {
-			return
-		}
 		if !exist || !cacheNodeValEmpty(n.val) {
 			n.val = f(key[:depth], n.val)
 		}
@@ -64,9 +61,6 @@ func (n *cacheNode) update(key []lpm.Component, depth int, f func([]lpm.Componen
 
 func (n *cacheNode) match(key []lpm.Component, depth int, f func(map[string]*list.Element), exist bool) {
 	try := func() {
-		if depth == 0 {
-			return
-		}
 		if !exist || !cacheNodeValEmpty(n.val) {
 			f(n.val)
 		}
