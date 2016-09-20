@@ -43,7 +43,7 @@ type Key interface {
 // EncodePrivateKey encodes the private key in PEM encoding.
 //
 // See DecodePrivateKey.
-func EncodePrivateKey(key Key, w io.Writer) (err error) {
+func EncodePrivateKey(key Key, w io.Writer) error {
 	var keyType string
 	switch key.SignatureType() {
 	case SignatureTypeSHA256WithRSA:
@@ -53,21 +53,19 @@ func EncodePrivateKey(key Key, w io.Writer) (err error) {
 	case SignatureTypeSHA256WithHMAC:
 		keyType = pemTypeHMAC
 	default:
-		err = ErrNotSupported
-		return
+		return ErrNotSupported
 	}
 	keyBytes, err := key.Private()
 	if err != nil {
-		return
+		return err
 	}
-	err = pem.Encode(w, &pem.Block{
+	return pem.Encode(w, &pem.Block{
 		Type: keyType,
 		Headers: map[string]string{
 			pemHeaderName: key.Locator().String(),
 		},
 		Bytes: keyBytes,
 	})
-	return
 }
 
 // DecodePrivateKey decodes the private key in PEM encoding.
@@ -139,18 +137,17 @@ func CertificateToData(key Key) (d *Data, err error) {
 // this data packet in base64 encoding.
 //
 // See DecodeCertificate.
-func EncodeCertificate(key Key, w io.Writer) (err error) {
+func EncodeCertificate(key Key, w io.Writer) error {
 	d, err := CertificateToData(key)
 	if err != nil {
-		return
+		return err
 	}
 	enc := base64.NewEncoder(base64.StdEncoding, w)
 	err = d.WriteTo(tlv.NewWriter(enc))
 	if err != nil {
-		return
+		return err
 	}
-	enc.Close()
-	return
+	return enc.Close()
 }
 
 // CertificateFromData creates a public key from a data packet.

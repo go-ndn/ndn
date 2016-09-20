@@ -42,34 +42,32 @@ type ecdsaSignature struct {
 }
 
 // Sign creates signature.
-func (key *ECDSAKey) Sign(v interface{}) (signature []byte, err error) {
+func (key *ECDSAKey) Sign(v interface{}) ([]byte, error) {
 	digest, err := tlv.Hash(sha256.New, v)
 	if err != nil {
-		return
+		return nil, err
 	}
 	var sig ecdsaSignature
 	sig.R, sig.S, err = ecdsa.Sign(rand.Reader, key.PrivateKey, digest)
 	if err != nil {
-		return
+		return nil, err
 	}
-	signature, err = asn1.Marshal(sig)
-	return
+	return asn1.Marshal(sig)
 }
 
 // Verify checks signature.
-func (key *ECDSAKey) Verify(v interface{}, signature []byte) (err error) {
+func (key *ECDSAKey) Verify(v interface{}, signature []byte) error {
 	digest, err := tlv.Hash(sha256.New, v)
 	if err != nil {
-		return
+		return err
 	}
 	var sig ecdsaSignature
 	_, err = asn1.Unmarshal(signature, &sig)
 	if err != nil {
-		return
+		return err
 	}
 	if !ecdsa.Verify(&key.PrivateKey.PublicKey, digest, sig.R, sig.S) {
-		err = ErrInvalidSignature
-		return
+		return ErrInvalidSignature
 	}
-	return
+	return nil
 }

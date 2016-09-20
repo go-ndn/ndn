@@ -46,7 +46,7 @@ func (ex Exclude) Match(c lpm.Component) bool {
 // Exclude is a special case in tlv package.
 // It needs to implement encoding.BinaryUnmarshaler to unmarshal
 // a binary representation of itself.
-func (ex *Exclude) UnmarshalBinary(b []byte) (err error) {
+func (ex *Exclude) UnmarshalBinary(b []byte) error {
 	r := tlv.NewReader(bytes.NewReader(b))
 	for {
 		switch r.Peek() {
@@ -54,19 +54,21 @@ func (ex *Exclude) UnmarshalBinary(b []byte) (err error) {
 			if len(*ex) == 0 {
 				*ex = append(*ex, Interval{})
 			}
-			err = r.Read(&(*ex)[len(*ex)-1].Any, 19)
+			err := r.Read(&(*ex)[len(*ex)-1].Any, 19)
 			if err != nil {
-				return
+				return err
 			}
 		case 8:
 			var intv Interval
-			err = r.Read(&intv.Component, 8)
+			err := r.Read(&intv.Component, 8)
 			if err != nil {
-				return
+				return err
 			}
 			*ex = append(*ex, intv)
+		case 0:
+			return nil
 		default:
-			return
+			return ErrNotSupported
 		}
 	}
 }
@@ -76,21 +78,20 @@ func (ex *Exclude) UnmarshalBinary(b []byte) (err error) {
 // Exclude is a special case in tlv package.
 // It needs to implement encoding.BinaryMarshaler to marshal itself
 // into a binary form.
-func (ex Exclude) MarshalBinary() (b []byte, err error) {
+func (ex Exclude) MarshalBinary() ([]byte, error) {
 	buf := new(bytes.Buffer)
 	w := tlv.NewWriter(buf)
 	for _, intv := range ex {
 		if len(intv.Component) != 0 {
-			err = w.Write(intv.Component, 8)
+			err := w.Write(intv.Component, 8)
 			if err != nil {
-				return
+				return nil, err
 			}
 		}
-		err = w.Write(intv.Any, 19)
+		err := w.Write(intv.Any, 19)
 		if err != nil {
-			return
+			return nil, err
 		}
 	}
-	b = buf.Bytes()
-	return
+	return buf.Bytes(), nil
 }

@@ -42,14 +42,13 @@ func (key *HMACKey) Sign(v interface{}) ([]byte, error) {
 }
 
 // Verify checks signature.
-func (key *HMACKey) Verify(v interface{}, signature []byte) (err error) {
+func (key *HMACKey) Verify(v interface{}, signature []byte) error {
 	expectedMAC, err := key.Sign(v)
 	if err != nil {
-		return
+		return err
 	}
 	if !hmac.Equal(signature, expectedMAC) {
-		err = ErrInvalidSignature
-		return
+		return ErrInvalidSignature
 	}
-	return
+	return nil
 }

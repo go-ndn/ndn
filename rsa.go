@@ -37,25 +37,23 @@ func (key *RSAKey) SignatureType() uint64 {
 }
 
 // Sign creates signature.
-func (key *RSAKey) Sign(v interface{}) (signature []byte, err error) {
+func (key *RSAKey) Sign(v interface{}) ([]byte, error) {
 	digest, err := tlv.Hash(sha256.New, v)
 	if err != nil {
-		return
+		return nil, err
 	}
-	signature, err = rsa.SignPKCS1v15(rand.Reader, key.PrivateKey, crypto.SHA256, digest)
-	return
+	return rsa.SignPKCS1v15(rand.Reader, key.PrivateKey, crypto.SHA256, digest)
 }
 
 // Verify checks signature.
-func (key *RSAKey) Verify(v interface{}, signature []byte) (err error) {
+func (key *RSAKey) Verify(v interface{}, signature []byte) error {
 	digest, err := tlv.Hash(sha256.New, v)
 	if err != nil {
-		return
+		return err
 	}
 	err = rsa.VerifyPKCS1v15(&key.PrivateKey.PublicKey, crypto.SHA256, digest, signature)
 	if err != nil {
-		err = ErrInvalidSignature
-		return
+		return ErrInvalidSignature
 	}
-	return
+	return nil
 }

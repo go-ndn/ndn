@@ -168,7 +168,7 @@ func NewCRC32C() hash.Hash {
 // WriteTo implements tlv.WriteTo.
 //
 // SHA256 digest will be populated if SignatureValue is empty.
-func (d *Data) WriteTo(w tlv.Writer) (err error) {
+func (d *Data) WriteTo(w tlv.Writer) error {
 	if len(d.SignatureValue) == 0 {
 		var f func() hash.Hash
 		switch d.SignatureInfo.SignatureType {
@@ -177,16 +177,15 @@ func (d *Data) WriteTo(w tlv.Writer) (err error) {
 		case SignatureTypeDigestCRC32C:
 			f = NewCRC32C
 		default:
-			err = ErrNotSupported
-			return
+			return ErrNotSupported
 		}
+		var err error
 		d.SignatureValue, err = tlv.Hash(f, d)
 		if err != nil {
-			return
+			return err
 		}
 	}
-	err = w.Write(d, 6)
-	return
+	return w.Write(d, 6)
 }
 
 // ReadFrom implements tlv.ReadFrom.

@@ -15,15 +15,14 @@ type testFace struct {
 	Face
 }
 
-func newTestFace(address string) (f *testFace, err error) {
+func newTestFace(address string) (*testFace, error) {
 	conn, err := packet.Dial("tcp", address)
 	if err != nil {
-		return
+		return nil, err
 	}
-	f = &testFace{
+	return &testFace{
 		Face: NewFace(conn, nil),
-	}
-	return
+	}, nil
 }
 
 func (f *testFace) consume(name string) error {
@@ -36,18 +35,18 @@ func (f *testFace) consume(name string) error {
 	return nil
 }
 
-func newProducer(address, name string) (f Face, err error) {
+func newProducer(address, name string) (Face, error) {
 	conn, err := packet.Dial("tcp", address)
 	if err != nil {
-		return
+		return nil, err
 	}
 	recv := make(chan *Interest)
-	f = NewFace(conn, recv)
+	f := NewFace(conn, recv)
 	err = SendControl(f, "rib", "register", &Parameters{
 		Name: NewName(name),
 	}, rsaKey)
 	if err != nil {
-		return
+		return nil, err
 	}
 	go func() {
 		d := &Data{
@@ -61,7 +60,7 @@ func newProducer(address, name string) (f Face, err error) {
 			f.SendData(d)
 		}
 	}()
-	return
+	return f, nil
 }
 
 func TestConsumer(t *testing.T) {

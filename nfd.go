@@ -152,7 +152,7 @@ type StrategyChoice struct {
 // SendControl sends command and waits for its response.
 //
 // ErrResponseStatus is returned if the status code is not 200.
-func SendControl(w Sender, module, command string, params *Parameters, key Key) (err error) {
+func SendControl(w Sender, module, command string, params *Parameters, key Key) error {
 	cmd := &Command{
 		Local:     "localhost",
 		NFD:       "nfd",
@@ -161,32 +161,31 @@ func SendControl(w Sender, module, command string, params *Parameters, key Key) 
 		Timestamp: uint64(time.Now().UnixNano() / 1000000),
 		Nonce:     uint64(rand.Uint32()),
 	}
+	var err error
 	cmd.Parameters.Parameters = *params
 	cmd.SignatureInfo.SignatureInfo.SignatureType = key.SignatureType()
 	cmd.SignatureInfo.SignatureInfo.KeyLocator.Name = key.Locator()
 	cmd.SignatureValue.SignatureValue, err = key.Sign(cmd)
 	if err != nil {
-		return
+		return err
 	}
 
 	i := new(Interest)
 	err = tlv.Copy(&i.Name, cmd)
 	if err != nil {
-		return
+		return err
 	}
 	d, ok := <-w.SendInterest(i)
 	if !ok {
-		err = ErrTimeout
-		return
+		return ErrTimeout
 	}
 	var resp CommandResponse
 	err = tlv.Unmarshal(d.Content, &resp, 101)
 	if err != nil {
-		return
+		return err
 	}
 	if resp.StatusCode != 200 {
-		err = ErrResponseStatus
-		return
+		return ErrResponseStatus
 	}
-	return
+	return nil
 }
