@@ -1,4 +1,4 @@
-// Copyright 2016 Tai-Lin Chu. All rights reserved.
+// Copyright 2014-2017 Tai-Lin Chu. All rights reserved.
 // Use of this source code is governed by GPL2 license.
 
 // Package ndn implements named-data networking.

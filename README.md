@@ -9,6 +9,17 @@ The author is taylorchu (Tai-Lin Chu). This package is released under GPL2 licen
 
 ## Benchmark
 
+2017-01
+```
+BenchmarkDataEncodeRSA-8     	     500	   2459538 ns/op
+BenchmarkDataEncodeECDSA-8   	    2000	    813159 ns/op
+BenchmarkDataEncodeHMAC-8    	  200000	      6028 ns/op
+BenchmarkDataEncode-8        	 1000000	      1779 ns/op
+BenchmarkDataDecode-8        	  500000	      3067 ns/op
+BenchmarkInterestEncode-8    	 2000000	       614 ns/op
+BenchmarkInterestDecode-8    	 2000000	       910 ns/op
+```
+
 2015-10
 ```
 BenchmarkDataEncodeRSA-8         50000   2732604 ns/op
