@@ -53,16 +53,16 @@ type signatureValueComponent struct {
 
 // Parameters contains arguments to command.
 type Parameters struct {
-	Name                Name     `tlv:"7?"`
-	FaceID              uint64   `tlv:"105?"`
-	URI                 string   `tlv:"114?"`
-	LocalControlFeature uint64   `tlv:"110?"`
-	Origin              uint64   `tlv:"111?"`
-	Cost                uint64   `tlv:"106?"`
-	Flags               uint64   `tlv:"108?"`
-	Strategy            Strategy `tlv:"107?"`
-	ExpirationPeriod    uint64   `tlv:"109?"`
-	FacePersistency     uint64   `tlv:"133?"`
+	Name             Name     `tlv:"7?"`
+	FaceID           uint64   `tlv:"105?"`
+	URI              string   `tlv:"114?"`
+	Origin           uint64   `tlv:"111?"`
+	Cost             uint64   `tlv:"106?"`
+	Flags            uint64   `tlv:"108?"`
+	Mask             uint64   `tlv:"112?"`
+	Strategy         Strategy `tlv:"107?"`
+	ExpirationPeriod uint64   `tlv:"109?"`
+	FacePersistency  uint64   `tlv:"133?"`
 }
 
 // Strategy is a forwarding strategy for a namespace.
@@ -106,6 +106,7 @@ type FaceStatus struct {
 	Scope            uint64 `tlv:"132"`
 	Persistency      uint64 `tlv:"133"`
 	LinkType         uint64 `tlv:"134"`
+	Flags            uint64 `tlv:"108"`
 	InInterest       uint64 `tlv:"144"`
 	InData           uint64 `tlv:"145"`
 	InNack           uint64 `tlv:"151"`
