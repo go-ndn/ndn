@@ -3,8 +3,6 @@
 This package provides elegant and simple ndn library for research and testing purpose.
 NDN evolves quickly, and the latest format that the current implementation follows is on [ndn doc](http://named-data.net/doc/ndn-tlv/)
 
-The author is taylorchu (Tai-Lin Chu). This package is released under GPL2 license.
-
 [![GoDoc](https://godoc.org/github.com/go-ndn/ndn?status.svg)](https://godoc.org/github.com/go-ndn/ndn)
 
 ## Benchmark
