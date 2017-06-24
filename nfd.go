@@ -176,9 +176,9 @@ func SendControl(w Sender, module, command string, params *Parameters, key Key) 
 	if err != nil {
 		return err
 	}
-	d, ok := <-w.SendInterest(i)
-	if !ok {
-		return ErrTimeout
+	d, err := w.SendInterest(i)
+	if err != nil {
+		return err
 	}
 	var resp CommandResponse
 	err = tlv.Unmarshal(d.Content, &resp, 101)
