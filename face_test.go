@@ -26,11 +26,11 @@ func newTestFace(address string) (*testFace, error) {
 }
 
 func (f *testFace) consume(name string) error {
-	_, ok := <-f.SendInterest(&Interest{
+	_, err := f.SendInterest(&Interest{
 		Name: NewName(name),
 	})
-	if !ok {
-		return ErrTimeout
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -81,12 +81,12 @@ func TestConsumerTimeout(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer consumer.Close()
-	_, ok := <-consumer.SendInterest(&Interest{
+	_, err = consumer.SendInterest(&Interest{
 		Name:     NewName("/ndn/edu/ucla/ping"),
 		LifeTime: 1,
 	})
-	if ok {
-		t.Fatalf("expect closed data channel")
+	if err != ErrTimeout {
+		t.Fatalf("expect interest timeout")
 	}
 }
 

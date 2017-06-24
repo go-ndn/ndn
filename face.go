@@ -13,8 +13,8 @@ import (
 // Sender sends interest and data packets.
 // This is the minimum abstraction for NDN nodes.
 type Sender interface {
-	SendInterest(*Interest) <-chan *Data
-	SendData(*Data)
+	SendInterest(*Interest) (*Data, error)
+	SendData(*Data) error
 }
 
 // Face implements Sender.
@@ -84,13 +84,14 @@ func NewFace(transport net.Conn, recv chan<- *Interest) Face {
 	return f
 }
 
-func (f *face) SendData(d *Data) {
+func (f *face) SendData(d *Data) error {
 	f.wm.Lock()
-	d.WriteTo(f.Writer)
-	f.wm.Unlock()
+	defer f.wm.Unlock()
+	return d.WriteTo(f.Writer)
 }
 
-func (f *face) SendInterest(i *Interest) <-chan *Data {
+func (f *face) SendInterest(i *Interest) (*Data, error) {
+	var err error
 	ch := make(chan *Data, 1)
 
 	lifeTime := 4 * time.Second
@@ -118,18 +119,21 @@ func (f *face) SendInterest(i *Interest) <-chan *Data {
 
 	f.pitm.Lock()
 	f.Update(i.Name.Components, func(m map[chan<- *Data]pitEntry) map[chan<- *Data]pitEntry {
-		if m == nil {
-			m = make(map[chan<- *Data]pitEntry)
-		}
 		for _, e := range m {
 			if reflect.DeepEqual(e.Selectors, &i.Selectors) {
 				goto PIT_DONE
 			}
 		}
 		f.wm.Lock()
-		i.WriteTo(f.Writer)
-		f.wm.Unlock()
+		defer f.wm.Unlock()
+		err = i.WriteTo(f.Writer)
+		if err != nil {
+			return m
+		}
 	PIT_DONE:
+		if m == nil {
+			m = make(map[chan<- *Data]pitEntry)
+		}
 		m[ch] = pitEntry{
 			Selectors: &i.Selectors,
 			timer:     timer,
@@ -138,7 +142,14 @@ func (f *face) SendInterest(i *Interest) <-chan *Data {
 	}, false)
 	f.pitm.Unlock()
 
-	return ch
+	if err != nil {
+		return nil, err
+	}
+	d, ok := <-ch
+	if !ok {
+		return nil, ErrTimeout
+	}
+	return d, nil
 }
 
 func (f *face) recvData(d *Data) {
