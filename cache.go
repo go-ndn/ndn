@@ -117,7 +117,8 @@ func (c *cache) Get(i *Interest) *Data {
 			if !i.Selectors.Match(ent.Data, i.Name.Len()) {
 				continue
 			}
-			if i.Selectors.MustBeFresh && time.Since(ent.Time) > time.Duration(ent.MetaInfo.FreshnessPeriod)*time.Millisecond {
+			if i.Selectors.MustBeFresh && ent.MetaInfo.FreshnessPeriod > 0 &&
+				time.Since(ent.Time) > time.Duration(ent.MetaInfo.FreshnessPeriod)*time.Millisecond {
 				continue
 			}
 			if match == nil {

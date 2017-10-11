@@ -76,7 +76,7 @@ type MetaInfo struct {
 	EncryptionType       uint64       `tlv:"129?"`
 	EncryptionKeyLocator KeyLocator   `tlv:"130?"`
 	EncryptionIV         []byte       `tlv:"131?"`
-	CacheHint            uint64       `tlv:"132?"`
+	CacheControl         uint64       `tlv:"132?"`
 }
 
 // FinalBlockID indicates the identifier of the final block in a sequence of fragments.
@@ -93,10 +93,11 @@ const (
 	CompressionTypeGZIP        = 1
 )
 
-// CacheHint specifies caching strategy for data packets.
+// CacheControl specifies caching strategy for data packets.
 const (
-	CacheHintNone    uint64 = 0
-	CacheHintNoCache        = 1
+	CacheControlPublic  uint64 = 0
+	CacheControlNoStore        = 1
+	CacheControlPrivate        = 2
 )
 
 // EncryptionType specifies encryption algorithm for data packets.
