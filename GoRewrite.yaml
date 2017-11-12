@@ -1,0 +1,19 @@
+spec:
+  - name: pit
+    local: true
+    import: github.com/go-ndn/lpm/matcher
+    typeMap:
+      Type:
+        expr: map[chan<-*Data]pitEntry
+      TypeMatcher:
+        expr: pitMatcher
+  - name: cache
+    local: true
+    import: github.com/go-ndn/lpm/matcher
+    typeMap:
+      Type:
+        expr: map[string]*list.Element
+        import:
+          - container/list
+      TypeMatcher:
+        expr: cacheMatcher
