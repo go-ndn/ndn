@@ -100,48 +100,50 @@ func (f *face) SendInterest(i *Interest) (*Data, error) {
 	}
 	timer := time.AfterFunc(lifeTime, func() {
 		f.pitm.Lock()
-		f.Update(i.Name.Components, func(m map[chan<- *Data]pitEntry) map[chan<- *Data]pitEntry {
-			if m == nil {
-				return nil
-			}
-			if _, ok := m[ch]; !ok {
-				return m
-			}
-			close(ch)
-			delete(m, ch)
-			if len(m) == 0 {
-				return nil
-			}
-			return m
-		}, false)
-		f.pitm.Unlock()
+		defer f.pitm.Unlock()
+		m, ok := f.Get(i.Name.Components)
+		if !ok {
+			return
+		}
+		if _, ok := m[ch]; !ok {
+			return
+		}
+		close(ch)
+		delete(m, ch)
+		if len(m) == 0 {
+			f.Delete(i.Name.Components)
+		}
 	})
 
-	f.pitm.Lock()
-	f.Update(i.Name.Components, func(m map[chan<- *Data]pitEntry) map[chan<- *Data]pitEntry {
+	err = func() error {
+		f.pitm.Lock()
+		defer f.pitm.Unlock()
+		m, ok := f.Get(i.Name.Components)
+		if !ok {
+			m = make(map[chan<- *Data]pitEntry)
+			f.Update(i.Name.Components, m)
+		}
+		var found bool
 		for _, e := range m {
 			if reflect.DeepEqual(e.Selectors, &i.Selectors) {
-				goto PIT_DONE
+				found = true
+				break
 			}
 		}
-		f.wm.Lock()
-		defer f.wm.Unlock()
-		err = i.WriteTo(f.Writer)
-		if err != nil {
-			return m
-		}
-	PIT_DONE:
-		if m == nil {
-			m = make(map[chan<- *Data]pitEntry)
+		if !found {
+			f.wm.Lock()
+			defer f.wm.Unlock()
+			err = i.WriteTo(f.Writer)
+			if err != nil {
+				return err
+			}
 		}
 		m[ch] = pitEntry{
 			Selectors: &i.Selectors,
 			timer:     timer,
 		}
-		return m
-	}, false)
-	f.pitm.Unlock()
-
+		return nil
+	}()
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +156,7 @@ func (f *face) SendInterest(i *Interest) (*Data, error) {
 
 func (f *face) recvData(d *Data) {
 	f.pitm.Lock()
-	f.UpdateAll(d.Name.Components, func(name []lpm.Component, m map[chan<- *Data]pitEntry) map[chan<- *Data]pitEntry {
+	f.UpdateAll(d.Name.Components, func(name []lpm.Component, m map[chan<- *Data]pitEntry) (map[chan<- *Data]pitEntry, bool) {
 		for ch, e := range m {
 			if !e.Match(d, len(name)) {
 				continue
@@ -165,10 +167,10 @@ func (f *face) recvData(d *Data) {
 			delete(m, ch)
 		}
 		if len(m) == 0 {
-			return nil
+			return nil, true
 		}
-		return m
-	}, true)
+		return m, false
+	})
 	f.pitm.Unlock()
 }
 

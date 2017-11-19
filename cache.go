@@ -52,18 +52,11 @@ func (c *cache) Add(d *Data) {
 	c.Lock()
 	defer c.Unlock()
 	// check for existing element
-	var exist bool
-	c.Match(components, func(m map[string]*list.Element) {
-		if m == nil {
-			return
-		}
+	if m, ok := c.cacheMatcher.Get(components); ok {
 		if elem, ok := m[key]; ok {
 			c.MoveToFront(elem)
-			exist = true
+			return
 		}
-	}, false)
-	if exist {
-		return
 	}
 
 	// add new element
@@ -71,25 +64,22 @@ func (c *cache) Add(d *Data) {
 		Data: d,
 		Time: time.Now(),
 		remove: func() {
-			c.UpdateAll(components, func(_ []lpm.Component, m map[string]*list.Element) map[string]*list.Element {
-				if m == nil {
-					return nil
-				}
+			c.UpdateAll(components, func(_ []lpm.Component, m map[string]*list.Element) (map[string]*list.Element, bool) {
 				delete(m, key)
 				if len(m) == 0 {
-					return nil
+					return nil, true
 				}
-				return m
-			}, false)
+				return m, false
+			})
 		},
 	})
-	c.UpdateAll(components, func(_ []lpm.Component, m map[string]*list.Element) map[string]*list.Element {
+	c.UpdateAll(components, func(_ []lpm.Component, m map[string]*list.Element) (map[string]*list.Element, bool) {
 		if m == nil {
 			m = make(map[string]*list.Element)
 		}
 		m[key] = elem
-		return m
-	}, false)
+		return m, false
+	})
 
 	// evict oldest element
 	if c.Len() <= c.size {
@@ -111,33 +101,35 @@ func (c *cache) Get(i *Interest) *Data {
 	c.Lock()
 	defer c.Unlock()
 	var match *list.Element
-	c.Match(components, func(m map[string]*list.Element) {
-		for _, elem := range m {
-			ent := elem.Value.(cacheEntry)
-			if !i.Selectors.Match(ent.Data, i.Name.Len()) {
-				continue
-			}
-			if i.Selectors.MustBeFresh && ent.MetaInfo.FreshnessPeriod > 0 &&
-				time.Since(ent.Time) > time.Duration(ent.MetaInfo.FreshnessPeriod)*time.Millisecond {
-				continue
-			}
-			if match == nil {
-				match = elem
-			} else {
-				cmp := ent.Name.Compare(match.Value.(cacheEntry).Name)
-				switch i.Selectors.ChildSelector {
-				case 0:
-					if cmp < 0 {
-						match = elem
-					}
-				case 1:
-					if cmp > 0 {
-						match = elem
-					}
+	m, ok := c.cacheMatcher.Get(components)
+	if !ok {
+		return nil
+	}
+	for _, elem := range m {
+		ent := elem.Value.(cacheEntry)
+		if !i.Selectors.Match(ent.Data, i.Name.Len()) {
+			continue
+		}
+		if i.Selectors.MustBeFresh && ent.MetaInfo.FreshnessPeriod > 0 &&
+			time.Since(ent.Time) > time.Duration(ent.MetaInfo.FreshnessPeriod)*time.Millisecond {
+			continue
+		}
+		if match == nil {
+			match = elem
+		} else {
+			cmp := ent.Name.Compare(match.Value.(cacheEntry).Name)
+			switch i.Selectors.ChildSelector {
+			case 0:
+				if cmp < 0 {
+					match = elem
+				}
+			case 1:
+				if cmp > 0 {
+					match = elem
 				}
 			}
 		}
-	}, false)
+	}
 	if match != nil {
 		c.MoveToFront(match)
 		return match.Value.(cacheEntry).Data

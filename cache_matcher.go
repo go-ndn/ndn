@@ -6,101 +6,110 @@ import (
 )
 
 type cacheMatcher struct{ cacheNode }
-
-var cacheNodeValEmpty func(map[string]*list.Element) bool
-
 type cacheNode struct {
-	val   map[string]*list.Element
-	table map[string]cacheNode
+	val   *map[string]*list.Element
+	table map[string]*cacheNode
 }
 
-func (n *cacheNode) empty() bool {
-	return cacheNodeValEmpty(n.val) && len(n.table) == 0
+func (n *cacheNode) Empty() bool {
+	return n.val == nil && len(n.table) == 0
 }
-func (n *cacheNode) update(key []lpm.Component, depth int, f func([]lpm.Component, map[string]*list.Element) map[string]*list.Element, exist, all bool) {
-	try := func() {
-		if !exist || !cacheNodeValEmpty(n.val) {
-			n.val = f(key[:depth], n.val)
-		}
+func cacheDeref(val *map[string]*list.Element) (map[string]*list.Element, bool) {
+	if val == nil {
+		var t map[string]*list.Element
+		return t, false
 	}
-	if len(key) == depth {
-		try()
+	return *val, true
+}
+func (n *cacheNode) Match(key []lpm.Component) (val map[string]*list.Element, found bool) {
+	if len(key) == 0 {
+		return cacheDeref(n.val)
+	}
+	if n.table == nil {
+		return cacheDeref(n.val)
+	}
+	child, ok := n.table[string(key[0])]
+	if !ok {
+		return cacheDeref(n.val)
+	}
+	return child.Match(key[1:])
+}
+func (n *cacheNode) Get(key []lpm.Component) (val map[string]*list.Element, found bool) {
+	if len(key) == 0 {
+		return cacheDeref(n.val)
+	}
+	if n.table == nil {
+		return cacheDeref(nil)
+	}
+	child, ok := n.table[string(key[0])]
+	if !ok {
+		return cacheDeref(nil)
+	}
+	return child.Get(key[1:])
+}
+func (n *cacheNode) Update(key []lpm.Component, val map[string]*list.Element) {
+	if len(key) == 0 {
+		n.val = &val
 		return
 	}
 	if n.table == nil {
-		if exist {
-			try()
-			return
-		}
-		n.table = make(map[string]cacheNode)
+		n.table = make(map[string]*cacheNode)
 	}
-	v, ok := n.table[string(key[depth])]
-	if !ok {
-		if exist {
-			try()
-			return
-		}
+	if _, ok := n.table[string(key[0])]; !ok {
+		n.table[string(key[0])] = &cacheNode{}
 	}
-	if all {
-		try()
-	}
-	v.update(key, depth+1, f, exist, all)
-	if v.empty() {
-		delete(n.table, string(key[depth]))
-	} else {
-		n.table[string(key[depth])] = v
-	}
+	n.table[string(key[0])].Update(key[1:], val)
 }
-func (n *cacheNode) match(key []lpm.Component, depth int, f func(map[string]*list.Element), exist bool) {
-	try := func() {
-		if !exist || !cacheNodeValEmpty(n.val) {
-			f(n.val)
-		}
-	}
-	if len(key) == depth {
-		try()
+func (n *cacheNode) Delete(key []lpm.Component) {
+	if len(key) == 0 {
+		n.val = nil
 		return
 	}
 	if n.table == nil {
-		if exist {
-			try()
-		}
 		return
 	}
-	v, ok := n.table[string(key[depth])]
+	child, ok := n.table[string(key[0])]
 	if !ok {
-		if exist {
-			try()
-		}
 		return
 	}
-	v.match(key, depth+1, f, exist)
-}
-func (n *cacheNode) visit(key []lpm.Component, f func([]lpm.Component, map[string]*list.Element) map[string]*list.Element) {
-	if !cacheNodeValEmpty(n.val) {
-		n.val = f(key, n.val)
+	child.Delete(key[1:])
+	if child.Empty() {
+		delete(n.table, string(key[0]))
 	}
+}
+
+type cacheUpdateFunc func([]lpm.Component, map[string]*list.Element) (val map[string]*list.Element, del bool)
+
+func (n *cacheNode) UpdateAll(key []lpm.Component, f cacheUpdateFunc) {
+	for i := len(key); i > 0; i-- {
+		k := key[:i]
+		val, _ := n.Get(k)
+		val2, del := f(k, val)
+		if !del {
+			n.Update(k, val2)
+		} else {
+			n.Delete(k)
+		}
+	}
+}
+func (n *cacheNode) visit(key []lpm.Component, f func([]lpm.Component)) {
 	for k, v := range n.table {
 		v.visit(append(key, lpm.Component(k)), f)
-		if v.empty() {
-			delete(n.table, k)
-		} else {
-			n.table[k] = v
-		}
+	}
+	if n.val != nil {
+		f(key)
 	}
 }
-func (n *cacheNode) Update(key []lpm.Component, f func(map[string]*list.Element) map[string]*list.Element, exist bool) {
-	n.update(key, 0, func(_ []lpm.Component, v map[string]*list.Element) map[string]*list.Element {
-		return f(v)
-	}, exist, false)
-}
-func (n *cacheNode) UpdateAll(key []lpm.Component, f func([]lpm.Component, map[string]*list.Element) map[string]*list.Element, exist bool) {
-	n.update(key, 0, f, exist, true)
-}
-func (n *cacheNode) Match(key []lpm.Component, f func(map[string]*list.Element), exist bool) {
-	n.match(key, 0, f, exist)
-}
-func (n *cacheNode) Visit(f func([]lpm.Component, map[string]*list.Element) map[string]*list.Element) {
-	key := make([]lpm.Component, 0, 16)
-	n.visit(key, f)
+func (n *cacheNode) Visit(f cacheUpdateFunc) {
+	n.visit(make([]lpm.Component, 0, 16), func(k []lpm.Component) {
+		val, found := n.Get(k)
+		if found {
+			val2, del := f(k, val)
+			if !del {
+				n.Update(k, val2)
+			} else {
+				n.Delete(k)
+			}
+		}
+	})
 }
